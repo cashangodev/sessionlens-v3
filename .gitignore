@@ -1,0 +1,27 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# next.js
+.next/
+out/
+build/
+
+# env files
+.env
+.env.local
+.env.*.local
+
+# misc
+.DS_Store
+*.pem
+*.tsbuildinfo
+next-env.d.ts
+
+# debug
+npm-debug.log*
+
+# coverage
+coverage/
