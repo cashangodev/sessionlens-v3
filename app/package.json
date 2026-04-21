@@ -9,7 +9,8 @@
     "lint": "next lint",
     "ingest": "tsx scripts/ingest-research-data.ts",
     "ingest:data-only": "tsx scripts/ingest-research-data.ts --skip-embeddings",
-    "ingest:embeddings": "tsx scripts/ingest-research-data.ts --embeddings-only"
+    "ingest:embeddings": "tsx scripts/ingest-research-data.ts --embeddings-only",
+    "seed:demo": "tsx scripts/seed-demo.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.12.0",

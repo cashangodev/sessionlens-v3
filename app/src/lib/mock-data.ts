@@ -388,4 +388,7 @@ Suggestions for You:
 - Remember that progress isn't linear; some days will feel harder than others, and that's okay
 
 We're moving in a really positive direction. Your nervous system is already learning that it's okay to feel safer. Keep practicing.`,
+
+  analysisStatus: 'mock',
+  analysisWarnings: ['This is mock data — not derived from a real analysis pipeline'],
 };

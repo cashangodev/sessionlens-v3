@@ -16,6 +16,13 @@ export function getTherapistId(): string {
 
 // ─── Types ───
 
+export interface OutcomeScoreEntry {
+  date: string;
+  phq9: number | null;
+  gad7: number | null;
+  note: string;
+}
+
 export interface DbClientRow {
   client_id: string;
   therapist_id: string;
@@ -36,6 +43,8 @@ export interface DbClientRow {
   status: string;
   created_at: string;
   updated_at: string;
+  outcome_tracking_enabled: boolean;
+  outcome_scores: OutcomeScoreEntry[];
 }
 
 export interface DbSessionRow {
@@ -154,6 +163,8 @@ export async function dbUpsertClientProfile(profile: {
   clinicalNotes?: string;
   totalSessions?: number;
   isConfirmed?: boolean;
+  outcomeTrackingEnabled?: boolean;
+  outcomeScores?: OutcomeScoreEntry[];
 }): Promise<DbClientRow | null> {
   const supabase = createClient();
   const therapistId = getTherapistId();
@@ -177,6 +188,8 @@ export async function dbUpsertClientProfile(profile: {
     total_sessions: profile.totalSessions ?? existing?.total_sessions ?? 0,
     is_confirmed: profile.isConfirmed ?? existing?.is_confirmed ?? false,
     last_confirmed_at: profile.isConfirmed ? new Date().toISOString() : (existing?.last_confirmed_at ?? null),
+    outcome_tracking_enabled: profile.outcomeTrackingEnabled ?? existing?.outcome_tracking_enabled ?? false,
+    outcome_scores: profile.outcomeScores ?? existing?.outcome_scores ?? [],
     updated_at: new Date().toISOString(),
   };
 
@@ -204,13 +217,18 @@ export async function dbCreateBlankClient(
   clientCode: string,
   gender: string = '',
   ageRange: string = '',
-  clinicalNotes: string = ''
+  clinicalNotes: string = '',
+  _email: string = '',
+  presentingConcerns: string[] = [],
+  treatmentGoals: string[] = []
 ): Promise<DbClientRow | null> {
   return dbUpsertClientProfile({
     clientCode,
     gender,
     ageRange,
     clinicalNotes,
+    presentingConcerns,
+    treatmentGoals,
     totalSessions: 0,
     isConfirmed: false,
   });

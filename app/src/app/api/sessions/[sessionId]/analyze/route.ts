@@ -19,12 +19,14 @@ export async function POST(
       return NextResponse.json({ error: 'No transcript to analyze' }, { status: 400 });
     }
 
-    // Run analysis (rule-based for now, Claude API in Phase 2)
+    // Run analysis
+    console.log('[analyze] Starting analysis for session:', sessionId, 'transcript length:', session.transcript.length);
     const analysisResult = await analyzeSession({
       transcript: session.transcript,
       treatmentGoals: session.treatmentGoals,
       sessionNumber: session.sessionNumber,
     });
+    console.log('[analyze] Analysis complete. Moments:', analysisResult.moments.length, 'SimilarCases:', analysisResult.similarCases.length, 'PractitionerMatches:', analysisResult.practitionerMatches.length);
 
     // Serialize to plain JSON to ensure no class instances or circular refs
     const serialized = JSON.parse(JSON.stringify(analysisResult));

@@ -16,7 +16,9 @@ export function detectExperiences(
   structureProfile: Record<StructureName, number>
 ): DetectedExperience[] {
   const experiences: DetectedExperience[] = [];
-  const allQuotes = moments.map((m) => m.quote.toLowerCase()).join(' ');
+  const safeMoments = Array.isArray(moments) ? moments : [];
+  const safeProfile = structureProfile || {} as Record<StructureName, number>;
+  const allQuotes = safeMoments.map((m) => (m.quote || '').toLowerCase()).join(' ');
 
   // Anxiety detection
   if (
@@ -24,19 +26,19 @@ export function detectExperiences(
     allQuotes.includes('worry') ||
     allQuotes.includes('nervous') ||
     allQuotes.includes('panic') ||
-    structureProfile[StructureName.BODY] > 0.1
+    (safeProfile[StructureName.BODY] || 0) > 0.1
   ) {
-    const triggerMoment = moments.find(
+    const triggerMoment = safeMoments.find(
       (m) =>
-        m.quote.toLowerCase().includes('anxi') ||
-        m.quote.toLowerCase().includes('worry') ||
-        m.quote.toLowerCase().includes('nervous')
+        (m.quote || '').toLowerCase().includes('anxi') ||
+        (m.quote || '').toLowerCase().includes('worry') ||
+        (m.quote || '').toLowerCase().includes('nervous')
     );
     experiences.push({
       id: 'exp-anxiety-1',
       label: 'Performance Anxiety',
       category: 'anxiety',
-      triggerQuote: triggerMoment?.quote || moments[0]?.quote || '',
+      triggerQuote: triggerMoment?.quote || safeMoments[0]?.quote || '',
       confidence: 0.87,
       structures: [StructureName.EMOTION, StructureName.BODY, StructureName.COGNITIVE],
       description:
@@ -52,16 +54,16 @@ export function detectExperiences(
     allQuotes.includes('standard') ||
     allQuotes.includes('expect')
   ) {
-    const triggerMoment = moments.find(
+    const triggerMoment = safeMoments.find(
       (m) =>
-        m.quote.toLowerCase().includes('perfect') ||
-        m.quote.toLowerCase().includes('good enough')
+        (m.quote || '').toLowerCase().includes('perfect') ||
+        (m.quote || '').toLowerCase().includes('good enough')
     );
     experiences.push({
       id: 'exp-perfectionism-1',
       label: 'Perfectionism Loop',
       category: 'cognitive',
-      triggerQuote: triggerMoment?.quote || moments[1]?.quote || '',
+      triggerQuote: triggerMoment?.quote || safeMoments[1]?.quote || '',
       confidence: 0.82,
       structures: [StructureName.COGNITIVE, StructureName.NORMATIVE, StructureName.EMOTION],
       description:
@@ -77,16 +79,16 @@ export function detectExperiences(
     allQuotes.includes('not enough') ||
     allQuotes.includes('identity')
   ) {
-    const triggerMoment = moments.find(
+    const triggerMoment = safeMoments.find(
       (m) =>
-        m.quote.toLowerCase().includes('worth') ||
-        m.quote.toLowerCase().includes('failure')
+        (m.quote || '').toLowerCase().includes('worth') ||
+        (m.quote || '').toLowerCase().includes('failure')
     );
     experiences.push({
       id: 'exp-selfworth-1',
       label: 'Self-Worth Deficit',
       category: 'identity',
-      triggerQuote: triggerMoment?.quote || moments[2]?.quote || '',
+      triggerQuote: triggerMoment?.quote || safeMoments[2]?.quote || '',
       confidence: 0.74,
       structures: [StructureName.NARRATIVE, StructureName.REFLECTIVE, StructureName.EMOTION],
       description:
@@ -101,12 +103,12 @@ export function detectExperiences(
     allQuotes.includes('partner') ||
     allQuotes.includes('friend') ||
     allQuotes.includes('alone') ||
-    structureProfile[StructureName.SOCIAL] > 0.1
+    (safeProfile[StructureName.SOCIAL] || 0) > 0.1
   ) {
-    const triggerMoment = moments.find(
+    const triggerMoment = safeMoments.find(
       (m) =>
-        m.quote.toLowerCase().includes('relationship') ||
-        m.quote.toLowerCase().includes('alone')
+        (m.quote || '').toLowerCase().includes('relationship') ||
+        (m.quote || '').toLowerCase().includes('alone')
     );
     if (triggerMoment) {
       experiences.push({
@@ -131,11 +133,11 @@ export function detectExperiences(
     allQuotes.includes('chest') ||
     allQuotes.includes('stomach')
   ) {
-    const triggerMoment = moments.find(
+    const triggerMoment = safeMoments.find(
       (m) =>
-        m.quote.toLowerCase().includes('tension') ||
-        m.quote.toLowerCase().includes('body') ||
-        m.quote.toLowerCase().includes('sleep')
+        (m.quote || '').toLowerCase().includes('tension') ||
+        (m.quote || '').toLowerCase().includes('body') ||
+        (m.quote || '').toLowerCase().includes('sleep')
     );
     if (triggerMoment) {
       experiences.push({
@@ -159,7 +161,7 @@ export function detectExperiences(
         id: 'exp-general-1',
         label: 'Emotional Dysregulation',
         category: 'anxiety',
-        triggerQuote: moments[0]?.quote || 'No specific quote detected',
+        triggerQuote: safeMoments[0]?.quote || 'No specific quote detected',
         confidence: 0.65,
         structures: [StructureName.EMOTION, StructureName.COGNITIVE],
         description:
@@ -170,7 +172,7 @@ export function detectExperiences(
         id: 'exp-general-2',
         label: 'Cognitive Rigidity',
         category: 'cognitive',
-        triggerQuote: moments[1]?.quote || 'No specific quote detected',
+        triggerQuote: safeMoments[1]?.quote || 'No specific quote detected',
         confidence: 0.58,
         structures: [StructureName.COGNITIVE, StructureName.REFLECTIVE],
         description:

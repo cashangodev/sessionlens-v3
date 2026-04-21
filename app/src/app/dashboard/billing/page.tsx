@@ -90,7 +90,7 @@ export default function BillingPage() {
         </div>
 
         {/* Professional Plan - Highlighted */}
-        <div className="bg-white border-2 border-primary rounded-xl p-8 flex flex-col relative md:scale-105 md:z-10 shadow-lg">
+        <div className="bg-white border-2 border-primary rounded-xl p-8 flex flex-col relative md:scale-105 md:z-10 shadow-sm">
           <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary text-white text-xs font-bold rounded-full">
             RECOMMENDED
           </div>

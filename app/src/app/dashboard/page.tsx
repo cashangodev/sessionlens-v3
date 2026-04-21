@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Plus, CalendarDays, Settings, HelpCircle, CreditCard, ArrowRight, Sparkles, Brain, Shield, BarChart3, Search, Users } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Plus, CalendarDays, Settings, HelpCircle, CreditCard, ArrowRight, Brain, Shield, BarChart3, Search, Users, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useApi } from '@/hooks/use-api';
 
@@ -21,8 +22,10 @@ export default function HomePage() {
   const [lastSession, setLastSession] = useState<SessionSummary | null>(null);
   const [hasAnySessions, setHasAnySessions] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const router = useRouter();
 
   const { data: sessionsData } = useApi<{ sessions: SessionSummary[] }>('/api/sessions');
+  const { data: clientsData } = useApi<{ clients: { clientCode: string }[] }>('/api/clients');
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -44,33 +47,66 @@ export default function HomePage() {
   return (
     <div className="max-w-5xl mx-auto">
       {/* Welcome + Search Row */}
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-12">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">{greeting}</h1>
-          <p className="text-slate-500 mt-1">What would you like to do?</p>
+          <h1 className="font-playfair text-4xl font-bold text-gray-900 tracking-tight">{greeting}</h1>
+          <p className="text-secondary mt-2 text-base">What would you like to do?</p>
         </div>
-        <div className="relative w-full md:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search client code..."
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative w-full md:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search client code..."
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/40 transition-all"
+            />
+            {/* Search results dropdown */}
+            {searchQuery.trim() && clientsData?.clients && (
+              <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-sm z-50 overflow-hidden">
+                {clientsData.clients
+                  .filter((c) => c.clientCode.toLowerCase().includes(searchQuery.toLowerCase()))
+                  .slice(0, 5)
+                  .map((c) => (
+                    <Link
+                      key={c.clientCode}
+                      href={`/dashboard/clients/${encodeURIComponent(c.clientCode)}`}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-mint-50 transition-colors"
+                      onClick={() => setSearchQuery('')}
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-primary/8 flex items-center justify-center">
+                        <span className="font-mono text-xs font-bold text-primary">{c.clientCode.slice(0, 2)}</span>
+                      </div>
+                      <span className="font-mono text-sm font-medium text-gray-900">{c.clientCode}</span>
+                    </Link>
+                  ))}
+                {clientsData.clients.filter((c) => c.clientCode.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                  <div className="px-4 py-3 text-sm text-gray-400">No clients found</div>
+                )}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => router.push('/dashboard/clients?new=1')}
+            className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-dark transition-all whitespace-nowrap"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span className="hidden sm:inline">New Client</span>
+          </button>
         </div>
       </div>
 
       {/* === NEW USER: Onboarding === */}
       {!hasAnySessions && (
-        <div className="mb-10 bg-gradient-to-br from-indigo-50 via-white to-violet-50 rounded-2xl border border-indigo-100 p-8 md:p-10">
-          <div className="flex items-start gap-4 mb-6">
+        <div className="mb-12 bg-mint-50 rounded-2xl border border-mint-200/60 p-8 md:p-10">
+          <div className="flex items-start gap-4 mb-8">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-              <Sparkles className="w-5 h-5 text-primary" />
+              <Brain className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-900 mb-1">Welcome to SessionLens</h2>
-              <p className="text-slate-600 leading-relaxed">
+              <h2 className="font-playfair text-2xl font-bold text-gray-900 mb-2">Welcome to SessionLens</h2>
+              <p className="text-secondary leading-relaxed">
                 Analyze therapy sessions using AI-powered phenomenological coding. Paste a transcript,
                 and get instant insights on emotional structures, risk signals, and evidence-based recommendations.
               </p>
@@ -79,32 +115,32 @@ export default function HomePage() {
 
           {/* What you'll get */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            <div className="flex items-start gap-3 bg-white/70 rounded-xl p-4">
-              <Brain className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 bg-white/80 rounded-xl p-4 border border-mint-200/40">
+              <Brain className="w-5 h-5 text-primary shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-semibold text-slate-900">10 Structure Codes</p>
-                <p className="text-xs text-slate-500">Body, emotion, cognitive, reflective and more</p>
+                <p className="text-sm font-semibold text-gray-900">10 Structure Codes</p>
+                <p className="text-xs text-secondary">Body, emotion, cognitive, reflective and more</p>
               </div>
             </div>
-            <div className="flex items-start gap-3 bg-white/70 rounded-xl p-4">
-              <Shield className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 bg-white/80 rounded-xl p-4 border border-mint-200/40">
+              <Shield className="w-5 h-5 text-primary shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-semibold text-slate-900">Risk Detection</p>
-                <p className="text-xs text-slate-500">16 clinical and social risk categories</p>
+                <p className="text-sm font-semibold text-gray-900">Risk Detection</p>
+                <p className="text-xs text-secondary">16 clinical and social risk categories</p>
               </div>
             </div>
-            <div className="flex items-start gap-3 bg-white/70 rounded-xl p-4">
-              <BarChart3 className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 bg-white/80 rounded-xl p-4 border border-mint-200/40">
+              <BarChart3 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-semibold text-slate-900">Case Matching</p>
-                <p className="text-xs text-slate-500">Compare against 10,000+ coded sessions</p>
+                <p className="text-sm font-semibold text-gray-900">Case Matching</p>
+                <p className="text-xs text-secondary">Compare against research archive</p>
               </div>
             </div>
           </div>
 
           <Link
             href="/dashboard/session/new"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-lg shadow-primary/25 hover:shadow-xl transition-all duration-200 group"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark transition-all duration-200 group"
           >
             Try Your First Analysis
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -116,22 +152,22 @@ export default function HomePage() {
       {hasAnySessions && lastSession && (
         <Link
           href={`/dashboard/session/${lastSession.id}/summary`}
-          className="block mb-10 bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-lg hover:border-primary/20 transition-all duration-200 group"
+          className="block mb-12 bg-white rounded-2xl border border-gray-200 p-6 hover:border-primary/30 transition-all duration-200 group"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-mint-50 flex items-center justify-center">
                 <BarChart3 className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Last Session</p>
-                <p className="text-lg font-bold text-slate-900">
+                <p className="text-xs font-medium text-secondary uppercase tracking-wide">Last Session</p>
+                <p className="text-lg font-bold text-gray-900">
                   {lastSession.clientCode} — Session #{lastSession.sessionNumber}
                 </p>
-                <p className="text-sm text-slate-500">{lastSession.date} at {lastSession.time}</p>
+                <p className="text-sm text-secondary">{lastSession.date} at {lastSession.time}</p>
               </div>
             </div>
-            <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+            <ArrowRight className="w-5 h-5 text-gray-300 group-hover:text-primary group-hover:translate-x-1 transition-all" />
           </div>
         </Link>
       )}
@@ -141,16 +177,16 @@ export default function HomePage() {
         {/* New Session */}
         <Link
           href="/dashboard/session/new"
-          className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-indigo-800 text-white rounded-2xl p-8 hover:shadow-xl hover:shadow-indigo-500/20 hover:-translate-y-0.5 transition-all duration-200 group"
+          className="relative overflow-hidden bg-primary-dark text-white rounded-2xl p-8 hover:bg-primary transition-all duration-200 group"
         >
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
           <div className="relative">
-            <div className="w-12 h-12 mb-4 rounded-xl bg-white/15 group-hover:bg-white/25 flex items-center justify-center transition-colors">
+            <div className="w-12 h-12 mb-5 rounded-xl bg-white/10 group-hover:bg-white/20 flex items-center justify-center transition-colors">
               <Plus className="w-6 h-6" />
             </div>
-            <h3 className="text-xl font-bold mb-1">New Session</h3>
-            <p className="text-indigo-200 text-sm leading-relaxed">
+            <h3 className="font-playfair text-xl font-bold mb-1.5">New Session</h3>
+            <p className="text-white/70 text-sm leading-relaxed">
               Analyze a session for an existing or new client
             </p>
           </div>
@@ -159,13 +195,13 @@ export default function HomePage() {
         {/* My Clients */}
         <Link
           href="/dashboard/clients"
-          className="group bg-white rounded-2xl p-8 border border-slate-200 hover:shadow-xl hover:border-indigo-200 hover:-translate-y-0.5 transition-all duration-200"
+          className="group bg-white rounded-2xl p-8 border border-gray-200 hover:border-primary/30 transition-all duration-200"
         >
-          <div className="w-12 h-12 mb-4 rounded-xl bg-indigo-50 group-hover:bg-indigo-100 flex items-center justify-center transition-colors">
-            <Users className="w-6 h-6 text-indigo-600" />
+          <div className="w-12 h-12 mb-5 rounded-xl bg-mint-50 group-hover:bg-mint-100 flex items-center justify-center transition-colors">
+            <Users className="w-6 h-6 text-primary" />
           </div>
-          <h3 className="text-xl font-bold text-slate-900 mb-1">My Clients</h3>
-          <p className="text-slate-500 text-sm leading-relaxed">
+          <h3 className="font-playfair text-xl font-bold text-gray-900 mb-1.5">My Clients</h3>
+          <p className="text-secondary text-sm leading-relaxed">
             View all clients, session history, and profiles
           </p>
         </Link>
@@ -173,31 +209,31 @@ export default function HomePage() {
         {/* Calendar */}
         <Link
           href="/dashboard/calendar"
-          className="group bg-white rounded-2xl p-8 border border-slate-200 hover:shadow-xl hover:border-indigo-200 hover:-translate-y-0.5 transition-all duration-200"
+          className="group bg-white rounded-2xl p-8 border border-gray-200 hover:border-primary/30 transition-all duration-200"
         >
-          <div className="w-12 h-12 mb-4 rounded-xl bg-indigo-50 group-hover:bg-indigo-100 flex items-center justify-center transition-colors">
-            <CalendarDays className="w-6 h-6 text-indigo-600" />
+          <div className="w-12 h-12 mb-5 rounded-xl bg-mint-50 group-hover:bg-mint-100 flex items-center justify-center transition-colors">
+            <CalendarDays className="w-6 h-6 text-primary" />
           </div>
-          <h3 className="text-xl font-bold text-slate-900 mb-1">Calendar</h3>
-          <p className="text-slate-500 text-sm leading-relaxed">
+          <h3 className="font-playfair text-xl font-bold text-gray-900 mb-1.5">Calendar</h3>
+          <p className="text-secondary text-sm leading-relaxed">
             Browse sessions by date and track progress
           </p>
         </Link>
       </div>
 
       {/* Footer links */}
-      <div className="flex items-center justify-center gap-6 pt-8 mt-4 border-t border-slate-100">
-        <Link href="/dashboard/settings" className="flex items-center gap-2 text-sm text-slate-400 hover:text-primary transition-colors">
+      <div className="flex items-center justify-center gap-6 pt-10 mt-6 border-t border-gray-100">
+        <Link href="/dashboard/settings" className="flex items-center gap-2 text-sm text-gray-400 hover:text-primary transition-colors">
           <Settings className="w-4 h-4" />
           Settings
         </Link>
-        <span className="text-slate-200">·</span>
-        <Link href="/dashboard/billing" className="flex items-center gap-2 text-sm text-slate-400 hover:text-primary transition-colors">
+        <span className="text-gray-200">·</span>
+        <Link href="/dashboard/billing" className="flex items-center gap-2 text-sm text-gray-400 hover:text-primary transition-colors">
           <CreditCard className="w-4 h-4" />
           Billing
         </Link>
-        <span className="text-slate-200">·</span>
-        <Link href="/dashboard/help" className="flex items-center gap-2 text-sm text-slate-400 hover:text-primary transition-colors">
+        <span className="text-gray-200">·</span>
+        <Link href="/dashboard/help" className="flex items-center gap-2 text-sm text-gray-400 hover:text-primary transition-colors">
           <HelpCircle className="w-4 h-4" />
           Help
         </Link>

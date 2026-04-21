@@ -1,17 +1,28 @@
-import { DEMO_TRANSCRIPT } from './demo-transcript';
-
 /**
- * Mock audio transcription for MVP.
- * In production, this will call AssemblyAI / OpenAI Whisper.
- * For now, returns the demo transcript after a simulated delay.
+ * Transcribe audio using OpenAI's Whisper API.
+ * Sends the audio file to /api/transcribe endpoint which handles the API call.
+ *
+ * @param file - The audio File object to transcribe
+ * @returns The transcribed text
+ * @throws Error if transcription fails
  */
-export async function mockTranscribeAudio(fileName: string): Promise<string> {
-  // Simulate transcription delay (1-2 seconds)
-  const delay = 1000 + Math.random() * 1000;
-  await new Promise((resolve) => setTimeout(resolve, delay));
+export async function transcribeAudio(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
 
-  // Return demo transcript as stand-in
-  return DEMO_TRANSCRIPT;
+  const response = await fetch('/api/transcribe', {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData.error || `Transcription failed with status ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  const data = await response.json();
+  return data.transcript;
 }
 
 /** Format file size in human-readable form */
@@ -34,4 +45,4 @@ export function estimateDuration(bytes: number): string {
 /** Accepted audio file extensions */
 export const ACCEPTED_AUDIO_TYPES = '.mp3,.wav,.m4a,.webm,.ogg,.aac,.flac';
 export const ACCEPTED_AUDIO_MIME = 'audio/mpeg,audio/wav,audio/mp4,audio/webm,audio/ogg,audio/aac,audio/flac';
-export const MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024; // 500MB
+export const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25MB (OpenAI Whisper limit)

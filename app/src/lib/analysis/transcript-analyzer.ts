@@ -1,19 +1,11 @@
-import { AnalysisResult, SessionInput, Moment, EmotionalValence, StructureName, RiskSeverity, RiskFlag, QuickInsight, PractitionerMatch } from '@/types';
+import { AnalysisResult, SessionInput, Moment, EmotionalValence, StructureName, RiskSeverity, RiskFlag, QuickInsight, PractitionerMatch, SimilarCase } from '@/types';
 import { segmentTranscript } from './segmenter';
 import { codeStructures } from './structure-coder';
 import { detectRisks } from './risk-detector';
 import { codeTherapistMoves, classifyTherapistMoveForMoment } from './therapist-coder';
 import { generateReports } from './report-generator';
-import { matchSessionMoments } from './matching-engine';
+import { matchSessionMoments, matchPractitionerMethods } from './matching-engine';
 import { analyzeCognitiveDistortions } from './cbt-analyzer';
-
-// Stub — practitioner matching will be implemented later
-async function matchPractitionerMethods(
-  _structures: StructureName[],
-  _riskFlags: RiskFlag[]
-): Promise<PractitionerMatch[]> {
-  return [];
-}
 
 interface SessionHistoryPoint {
   session: number;
@@ -23,20 +15,10 @@ interface SessionHistoryPoint {
   therapeuticAlliance: number;
 }
 
-async function buildSessionHistory(sessionNumber: number): Promise<SessionHistoryPoint[]> {
-  // WARNING: MOCK — In production, this data comes from actual session history in the database.
-  // These values are placeholder defaults — NOT derived from real analysis.
-  const history = [];
-  for (let i = 1; i <= sessionNumber; i++) {
-    history.push({
-      session: i,
-      emotionalIntensity: 0.5,
-      reflectiveCapacity: 0.5,
-      emotionalRegulation: 0.5,
-      therapeuticAlliance: 0.5,
-    });
-  }
-  return history;
+function buildSessionHistory(): SessionHistoryPoint[] {
+  // Session history is derived from actual analyzed sessions via the progress API endpoint.
+  // We don't fabricate historical data here — the frontend fetches real longitudinal data.
+  return [];
 }
 
 async function buildStructureProfile(
@@ -154,37 +136,69 @@ export async function analyzeSession(input: SessionInput): Promise<AnalysisResul
   // Step 5: Build structure profile
   const structureProfile = await buildStructureProfile(moments);
 
+  // Track which analysis steps succeeded/failed
+  const warnings: string[] = [];
+
   // Step 6: Match similar cases (3-layer matching engine: semantic + structural + metadata)
-  const similarCases = await matchSessionMoments(moments, structureProfile);
+  let similarCases: SimilarCase[] = [];
+  try {
+    similarCases = await matchSessionMoments(moments, structureProfile);
+  } catch (err) {
+    console.error('[analyzeSession] Step 6 (matchSessionMoments) failed:', err);
+    warnings.push('Similar case matching unavailable — Supabase not configured');
+  }
 
   // Step 7: CBT cognitive distortion analysis (Diagnosis-of-Thought framework)
-  const cbtAnalysis = await analyzeCognitiveDistortions(
-    moments.map(m => ({ quote: m.quote, context: m.context }))
-  );
+  let cbtAnalysis;
+  try {
+    cbtAnalysis = await analyzeCognitiveDistortions(
+      moments.map(m => ({ quote: m.quote, context: m.context }))
+    );
+  } catch (err) {
+    console.error('[analyzeSession] Step 7 (CBT analysis) failed:', err);
+    warnings.push('CBT cognitive distortion analysis failed — using empty defaults');
+    cbtAnalysis = { distortions: [], overallDistortionLoad: 0, treatmentReadiness: 0.5, dominantPatterns: [], automaticThoughts: [], behavioralPatterns: [] };
+  }
 
-  // Step 8: Match practitioners
-  const practitionerMatches = await matchPractitionerMethods(
-    Object.entries(structureProfile)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 4)
-      .map(([s]) => s as StructureName),
-    riskFlags
-  );
+  // Step 8: Match practitioners (semantic vector search against 20 evidence-based methods)
+  let practitionerMatches: PractitionerMatch[] = [];
+  try {
+    practitionerMatches = await matchPractitionerMethods(
+      moments,
+      structureProfile,
+      riskFlags
+    );
+  } catch (err) {
+    console.error('[analyzeSession] Step 8 (matchPractitionerMethods) failed:', err);
+    warnings.push('Practitioner matching unavailable — Supabase not configured');
+  }
 
   // Step 9: Build quick insight
   const quickInsight = generateQuickInsight(moments, riskFlags, structureProfile, sessionNumber);
 
   // Step 10: Generate reports
-  const { clinicianReport, patientReport } = await generateReports(
-    moments,
-    riskFlags,
-    structureProfile,
-    practitionerMatches,
-    sessionNumber
-  );
+  let clinicianReport = '';
+  let patientReport = '';
+  try {
+    const reports = await generateReports(
+      moments,
+      riskFlags,
+      structureProfile,
+      practitionerMatches,
+      sessionNumber
+    );
+    clinicianReport = reports.clinicianReport;
+    patientReport = reports.patientReport;
+  } catch (err) {
+    console.error('[analyzeSession] Step 10 (generateReports) failed:', err);
+    warnings.push('Report generation failed — clinician and patient reports unavailable');
+  }
 
   // Step 11: Build session history
-  const sessionHistory = await buildSessionHistory(sessionNumber);
+  const sessionHistory = buildSessionHistory();
+
+  // Determine analysis status based on warnings
+  const analysisStatus: 'complete' | 'partial' = warnings.length > 0 ? 'partial' : 'complete';
 
   return {
     quickInsight,
@@ -197,6 +211,8 @@ export async function analyzeSession(input: SessionInput): Promise<AnalysisResul
     therapistMoves,
     clinicianReport,
     patientReport,
-    cbtAnalysis
+    cbtAnalysis,
+    analysisStatus,
+    analysisWarnings: warnings
   };
 }

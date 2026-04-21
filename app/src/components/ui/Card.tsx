@@ -16,9 +16,9 @@ export function Card({
   const baseStyles = 'bg-white rounded-xl border shadow-sm transition-all duration-200 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2';
 
   const variantStyles = {
-    default: 'border-gray-200 hover:shadow-lg hover:-translate-y-0.5 hover:border-gray-300 focus-within:ring-primary',
-    highlighted: 'border-primary hover:shadow-lg hover:-translate-y-0.5 hover:border-primary/60 focus-within:ring-primary',
-    warning: 'border-secondary hover:shadow-lg hover:-translate-y-0.5 hover:border-secondary/60 focus-within:ring-secondary',
+    default: 'border-gray-200 hover:border-gray-300 focus-within:ring-primary',
+    highlighted: 'border-primary hover:border-primary/60 focus-within:ring-primary',
+    warning: 'border-secondary hover:border-secondary/60 focus-within:ring-secondary',
   };
 
   const cursorStyle = onClick ? 'cursor-pointer' : '';

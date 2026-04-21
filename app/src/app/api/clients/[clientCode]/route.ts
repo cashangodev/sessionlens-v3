@@ -31,6 +31,8 @@ export async function GET(
         isConfirmed: profile.is_confirmed,
         lastConfirmedAt: profile.last_confirmed_at,
         createdAt: profile.created_at,
+        outcomeTrackingEnabled: profile.outcome_tracking_enabled ?? false,
+        outcomeScores: profile.outcome_scores ?? [],
       },
       sessions,
     });

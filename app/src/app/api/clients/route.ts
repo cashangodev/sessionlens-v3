@@ -14,14 +14,22 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { clientCode, gender, ageRange, clinicalNotes, autoGenerate } = body;
+    const { clientCode, gender, ageRange, clinicalNotes, autoGenerate, email, presentingConcerns, treatmentGoals } = body;
 
     const code = autoGenerate ? await dbGenerateClientCode() : clientCode;
     if (!code) {
       return NextResponse.json({ error: 'Client code is required' }, { status: 400 });
     }
 
-    const client = await dbCreateBlankClient(code, gender || '', ageRange || '', clinicalNotes || '');
+    const client = await dbCreateBlankClient(
+      code,
+      gender || '',
+      ageRange || '',
+      clinicalNotes || '',
+      email || '',
+      presentingConcerns || [],
+      treatmentGoals || []
+    );
     if (!client) {
       return NextResponse.json({ error: 'Failed to create client' }, { status: 500 });
     }

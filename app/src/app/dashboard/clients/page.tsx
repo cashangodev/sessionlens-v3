@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useApi } from '@/hooks/use-api';
 import {
   Users,
@@ -69,34 +70,69 @@ export default function ClientsPage() {
   const [newGender, setNewGender] = useState<ClientGender>('');
   const [newAgeRange, setNewAgeRange] = useState<ClientAgeRange>('');
   const [newNotes, setNewNotes] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [newConcerns, setNewConcerns] = useState('');
+  const [newGoals, setNewGoals] = useState('');
+  const [showMoreDetails, setShowMoreDetails] = useState(false);
+  const [creating, setCreating] = useState(false);
 
+  const searchParams = useSearchParams();
   const { data: clientsData, mutate: refreshClients } = useApi<{ clients: ClientInfo[] }>('/api/clients');
 
   useEffect(() => {
     if (clientsData?.clients) setClients(clientsData.clients);
   }, [clientsData]);
 
+  // Auto-open modal if ?new=1 in URL (from dashboard "New Client" button)
+  useEffect(() => {
+    if (searchParams.get('new') === '1') {
+      openAddModal();
+    }
+  }, [searchParams]);
+
   const openAddModal = () => {
     setNewCode(generateClientCode());
     setNewGender('');
     setNewAgeRange('');
     setNewNotes('');
+    setNewEmail('');
+    setNewConcerns('');
+    setNewGoals('');
+    setShowMoreDetails(false);
     setShowAddModal(true);
   };
 
   const handleCreateClient = async () => {
     const code = newCode.trim();
     if (!code) return;
+    setCreating(true);
     try {
+      const concerns = newConcerns.trim()
+        ? newConcerns.split(',').map((c) => c.trim()).filter(Boolean)
+        : [];
+      const goals = newGoals.trim()
+        ? newGoals.split(',').map((g) => g.trim()).filter(Boolean)
+        : [];
+
       await fetch('/api/clients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientCode: code, gender: newGender, ageRange: newAgeRange, clinicalNotes: newNotes.trim() }),
+        body: JSON.stringify({
+          clientCode: code,
+          gender: newGender,
+          ageRange: newAgeRange,
+          clinicalNotes: newNotes.trim(),
+          email: newEmail.trim() || undefined,
+          presentingConcerns: concerns.length > 0 ? concerns : undefined,
+          treatmentGoals: goals.length > 0 ? goals : undefined,
+        }),
       });
       setShowAddModal(false);
       refreshClients();
     } catch (err) {
       console.error(err);
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -131,7 +167,7 @@ export default function ClientsPage() {
         <div>
           <div className="flex items-center gap-3 mb-1">
             <Users className="w-7 h-7 text-primary" />
-            <h1 className="text-3xl font-bold text-gray-900">My Clients</h1>
+            <h1 className="font-playfair text-3xl font-bold text-gray-900 tracking-tight">My Clients</h1>
           </div>
           <p className="text-gray-500 text-sm">
             {clients.length} client{clients.length !== 1 ? 's' : ''} &middot;{' '}
@@ -140,7 +176,7 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      {/* Search + Sort */}
+      {/* Search + Sort + New Client */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -152,24 +188,33 @@ export default function ClientsPage() {
             className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
           />
         </div>
-        <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1">
-          {([
-            { value: 'recent', label: 'Recent' },
-            { value: 'alpha', label: 'A-Z' },
-            { value: 'sessions', label: 'Sessions' },
-          ] as { value: SortOption; label: string }[]).map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => setSort(opt.value)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
-                sort === opt.value
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1">
+            {([
+              { value: 'recent', label: 'Recent' },
+              { value: 'alpha', label: 'A-Z' },
+              { value: 'sessions', label: 'Sessions' },
+            ] as { value: SortOption; label: string }[]).map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setSort(opt.value)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                  sort === opt.value
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={openAddModal}
+            className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-dark transition-all duration-200"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span className="hidden sm:inline">New Client</span>
+          </button>
         </div>
       </div>
 
@@ -184,7 +229,7 @@ export default function ClientsPage() {
               <Link
                 key={client.clientCode}
                 href={`/dashboard/clients/${encodeURIComponent(client.clientCode)}`}
-                className="flex items-center gap-4 p-5 bg-white rounded-2xl border border-gray-200 hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group"
+                className="flex items-center gap-4 p-5 bg-white rounded-2xl border border-gray-200 hover:border-primary/30 transition-all duration-200 group"
               >
                 {/* Avatar */}
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -297,10 +342,13 @@ export default function ClientsPage() {
       {/* ─── Add Client Modal ─── */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col">
             {/* Modal header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h2 className="text-lg font-bold text-gray-900">Add New Client</h2>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">New Client</h2>
+                <p className="text-xs text-gray-400 mt-0.5">All fields except client code are optional</p>
+              </div>
               <button
                 onClick={() => setShowAddModal(false)}
                 className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -309,8 +357,8 @@ export default function ClientsPage() {
               </button>
             </div>
 
-            {/* Modal body */}
-            <div className="px-6 py-5 space-y-5">
+            {/* Modal body — scrollable */}
+            <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1">
               {/* Client Code */}
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">Client Code</label>
@@ -335,14 +383,16 @@ export default function ClientsPage() {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600" />
                   </span>
-                  This is the only identifier stored. No real names.
+                  Anonymous identifier — no real names stored
                 </p>
               </div>
 
               {/* Gender + Age Range (side by side) */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">Gender</label>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Gender <span className="font-normal text-gray-400">(optional)</span>
+                  </label>
                   <select
                     value={newGender}
                     onChange={(e) => setNewGender(e.target.value as ClientGender)}
@@ -351,44 +401,114 @@ export default function ClientsPage() {
                     <option value="">Not specified</option>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
-                    <option value="other">Other</option>
+                    <option value="other">Other / Non-binary</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">Age Range</label>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Age Range <span className="font-normal text-gray-400">(optional)</span>
+                  </label>
                   <select
                     value={newAgeRange}
                     onChange={(e) => setNewAgeRange(e.target.value as ClientAgeRange)}
                     className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-white"
                   >
                     <option value="">Not specified</option>
-                    <option value="child">0–12 (Child)</option>
-                    <option value="adolescent">13–17 (Adolescent)</option>
-                    <option value="young-adult">18–25 (Young Adult)</option>
-                    <option value="adult">26–39 (Adult)</option>
-                    <option value="middle-aged">40–59 (Middle-aged)</option>
+                    <option value="child">0-12 (Child)</option>
+                    <option value="adolescent">13-17 (Adolescent)</option>
+                    <option value="young-adult">18-25 (Young Adult)</option>
+                    <option value="adult">26-39 (Adult)</option>
+                    <option value="middle-aged">40-59 (Middle-aged)</option>
                     <option value="senior">60+ (Senior)</option>
                   </select>
                 </div>
               </div>
 
-              {/* Notes */}
+              {/* Email */}
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Initial Notes <span className="font-normal text-gray-400">(optional)</span>
+                  Email <span className="font-normal text-gray-400">(optional — for your reference only)</span>
                 </label>
-                <textarea
-                  value={newNotes}
-                  onChange={(e) => setNewNotes(e.target.value)}
-                  placeholder="Referral source, initial observations, anything to remember..."
-                  rows={3}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none"
+                <input
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="client@example.com"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                 />
+              </div>
+
+              {/* Expandable: More Details */}
+              <div>
+                <button
+                  onClick={() => setShowMoreDetails(!showMoreDetails)}
+                  className="flex items-center gap-2 text-sm text-primary hover:text-primary-dark font-medium transition-colors"
+                >
+                  <ChevronRight className={`w-4 h-4 transition-transform ${showMoreDetails ? 'rotate-90' : ''}`} />
+                  {showMoreDetails ? 'Less details' : 'More details'}
+                </button>
+
+                {showMoreDetails && (
+                  <div className="mt-4 space-y-4">
+                    {/* Presenting Concerns */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">
+                        Presenting Concerns <span className="font-normal text-gray-400">(optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={newConcerns}
+                        onChange={(e) => setNewConcerns(e.target.value)}
+                        placeholder="e.g. anxiety, sleep issues, work stress"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Separate with commas</p>
+                    </div>
+
+                    {/* Treatment Goals */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">
+                        Treatment Goals <span className="font-normal text-gray-400">(optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={newGoals}
+                        onChange={(e) => setNewGoals(e.target.value)}
+                        placeholder="e.g. reduce anxiety, improve sleep, build coping skills"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Separate with commas</p>
+                    </div>
+
+                    {/* Clinical Notes */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">
+                        Clinical Notes <span className="font-normal text-gray-400">(optional)</span>
+                      </label>
+                      <textarea
+                        value={newNotes}
+                        onChange={(e) => setNewNotes(e.target.value)}
+                        placeholder="Referral source, initial observations, anything to remember..."
+                        rows={3}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Anonymous notice */}
+              <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  <span className="font-semibold text-gray-600">Fully anonymous by default.</span>{' '}
+                  Only the client code is required. All other fields are optional and for your reference only.
+                  No real names or identifying information is needed to use the platform.
+                </p>
               </div>
             </div>
 
             {/* Modal footer */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex gap-3">
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex gap-3 flex-shrink-0">
               <button
                 onClick={() => setShowAddModal(false)}
                 className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-100 transition-colors"
@@ -397,10 +517,11 @@ export default function ClientsPage() {
               </button>
               <button
                 onClick={handleCreateClient}
-                disabled={!newCode.trim()}
-                className="flex-1 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-dark shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!newCode.trim() || creating}
+                className="flex-1 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-dark shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Create Client
+                {creating && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                {creating ? 'Creating...' : 'Create Client'}
               </button>
             </div>
           </div>

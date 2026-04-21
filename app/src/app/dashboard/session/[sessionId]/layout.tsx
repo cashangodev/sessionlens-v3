@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
-import { LayoutDashboard, Heart, Stethoscope, TrendingUp, ArrowLeft } from 'lucide-react';
+import { LayoutDashboard, Heart, TrendingUp, FileText, ArrowLeft } from 'lucide-react';
 
 const tabs = [
   { id: 'overview', label: 'Session Overview', icon: LayoutDashboard, href: 'summary' },
   { id: 'experiences', label: 'Lived Experiences', icon: Heart, href: 'experiences' },
-  { id: 'analysis', label: 'Session Analysis', icon: Stethoscope, href: 'analysis' },
   { id: 'progress', label: 'Client Progress', icon: TrendingUp, href: 'progress' },
+  { id: 'report', label: 'Full Report', icon: FileText, href: 'report' },
 ];
 
 export default function SessionLayout({ children }: { children: React.ReactNode }) {

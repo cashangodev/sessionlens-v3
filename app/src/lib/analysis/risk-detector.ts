@@ -11,7 +11,7 @@ const RISK_PATTERNS = {
     baseScore: 1.0
   },
   self_harm: {
-    keywords: ['cut', 'cutting', 'self harm', 'harm myself', 'burn', 'hit myself', 'scratch'],
+    keywords: ['cutting myself', 'cut myself', 'self harm', 'self-harm', 'harm myself', 'hurting myself', 'burn myself', 'hit myself', 'scratch myself', 'I cut', 'started cutting'],
     severity: RiskSeverity.HIGH,
     interventionType: 'safety_planning',
     baseScore: 1.0
@@ -23,7 +23,7 @@ const RISK_PATTERNS = {
     baseScore: 1.0
   },
   domestic_violence: {
-    keywords: ['hit', 'abuse', 'abusive', 'violent', 'hitting me', 'afraid', 'scared', 'beaten', 'assault', 'controlling behavior', 'threaten'],
+    keywords: ['hits me', 'hitting me', 'he hit me', 'she hit me', 'partner hit', 'punched', 'slapped', 'abusive relationship', 'abusive partner', 'domestic violence', 'violent toward', 'beaten up', 'physically abused', 'controlling behavior', 'threaten me', 'threatens me', 'afraid of him', 'afraid of her', 'scared of him', 'scared of her', 'choked me', 'pushed me'],
     severity: RiskSeverity.HIGH,
     interventionType: 'safety_planning',
     baseScore: 1.0

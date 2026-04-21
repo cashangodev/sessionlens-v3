@@ -1,0 +1,308 @@
+================================================================================
+                    SessionLens V3: ARCHITECTURE COMPLETE
+                    Clinical AI Backend for Therapy Analysis
+================================================================================
+
+PROJECT SCOPE
+=============
+Transform SessionLens from keyword-matching prototype to production-grade clinical AI platform 
+that matches therapy sessions against 10K+ learned lived experiences using:
+  - Vector embeddings (semantic understanding)
+  - Cognitive-Behavioral Therapy framework (automatic distortion detection)
+  - Phenomenological coding (10 structures of human experience)
+  - Context-aware risk detection (understands negation, temporal shifts)
+  - Responsible synthetic data generation (quality gates, clinical validation)
+
+DELIVERABLES (Ready to Hand to Engineering)
+=============================================
+
+1. SESSIONLENS_V3_SCIENCE_ARCHITECTURE.md (74 KB, 3000+ lines)
+   - Part 1: PostgreSQL schema (9 tables, vectors, relationships)
+   - Part 2: Embedding strategy (multi-level, similarity metrics, model rationale)
+   - Part 3: AI-CBT integration (DoT prompting, distortion detection, automatic thoughts)
+   - Part 4: Matching engine (semantic + structural + metadata, situation-aware)
+   - Part 5: Synthetic data (conditional generation, quality gates, responsible scaling)
+   - Part 6: Safety & guardrails (risk detection, confidence thresholds, clinical boundaries)
+   - Part 7-9: Roadmap, decisions, privacy/compliance
+
+2. DATABASE_SCHEMA_REFERENCE.sql (20 KB, 450+ lines)
+   - Production-ready PostgreSQL/Supabase schema
+   - 9 fully-defined tables with pgvector integration
+   - HNSW indexing on all embeddings
+   - Helper functions (search_moments_semantic, search_moments_structural)
+   - Seed data, maintenance queries
+   - Copy-paste ready
+
+3. IMPLEMENTATION_GUIDE.md (21 KB, 700+ lines)
+   - Database setup procedures
+   - Embedding pipeline code (OpenAI integration)
+   - Matching API endpoints
+   - CBT analysis pipeline (streaming with Claude)
+   - Risk detection multi-layer implementation
+   - Session processing end-to-end
+   - Testing strategy (unit + integration tests)
+   - Performance benchmarks, monitoring, deployment
+   - Common issues & solutions
+
+4. README.md (10 KB summary and usage guide)
+
+TOTAL: 3,900+ lines of production-ready specification
+
+KEY ARCHITECTURE DECISIONS
+===========================
+
+EMBEDDINGS
+  Model:          OpenAI text-embedding-3-small (1536 dimensions)
+  Why:            Sweet spot between expressiveness & performance
+  Levels:         Moment-level, participant-level (aggregate), session-level, structure profiles
+  Similarity:     Cosine distance, capped at 95% confidence
+
+MATCHING (Multi-Level)
+  Semantic:       Vector embeddings (50% weight) - captures meaning
+  Structural:     10-dimensional phenomenological profiles (30%) - captures lived experience signature
+  Metadata:       Demographics, themes, diagnoses (20%) - grounds in context
+  Combined:       0.5*semantic + 0.3*structural + 0.2*metadata
+
+CBT SCIENCE
+  Framework:      Diagnosis-of-Thought (DoT) prompting - 3 stages
+                  1. Subjectivity assessment (fact vs interpretation)
+                  2. Distortion scoring (15 CBT categories, confidence 0-1)
+                  3. Schema analysis (link to core beliefs)
+  Distortions:    15 types (catastrophizing, all-or-nothing, personalization, etc)
+  Detection:      Claude streaming for real-time analysis
+  Validation:     Clinical advisor review gate
+
+RISK DETECTION (Multi-Layer)
+  Layer 1:        Keyword detection (baseline)
+  Layer 2:        Negation analysis ("don't want to" → lower score)
+  Layer 3:        Temporal analysis (past tense → lower weight)
+  Layer 4:        Context analysis (surrounding sentiment, support mentions)
+  Result:         Final score = baseline adjusted by context
+  Example:        "I want to hurt myself" (0.8) vs 
+                  "I don't want to hurt myself" (0.2 after negation adjustment)
+
+SYNTHETIC DATA
+  Conservative:   Generate only within constraints
+  Methods:        Conditional (expand real participants), 
+                  Interpolated (fill embedding space gaps), 
+                  Symptom variants (outcome trajectories)
+  Quality gates:  >0.75 clinical validity, marked synthetic, human review
+  Scaling:        Phase 1 (100 moments, 100% review) → 
+                  Phase 2 (500 moments, 20% review) → 
+                  Phase 3 (1000+ moments, continuous monitoring)
+
+SAFETY GUARDRAILS
+  Hallucination:  All claims grounded in direct quotes
+  Confidence:     Capped at 95% maximum (forces humility)
+  Diagnosis:      AI detects patterns; only therapists diagnose
+  Risk:           Context-aware (understands negation, temporal, surrounding context)
+  Clinical:       Clear boundaries - AI ≠ clinician; AI = decision support
+
+DATA MODEL SUMMARY
+===================
+
+9 PostgreSQL Tables (all with pgvector support):
+
+1. participants (40 real + up to 9,960 synthetic)
+   - Demographics, themes, summary
+   - embedding_participant_level (1536-dim aggregate)
+
+2. moments (768 real moments + variants)
+   - Verbatim quote, phenomenological classification
+   - embedding_moment_level (1536-dim)
+   - cognitive_distortions (CBT analysis results)
+   - structures_present/absent (10 structures)
+
+3. phenomenological_structures (10 dimensions per moment)
+   - body, prereflective, emotion, behaviour, social, cognitive, reflective, narrative, ecological, normative
+   - Each: presence (bool) + intensity (0-1)
+   - structure_profile (10-dim vector for similarity search)
+
+4. therapy_sessions (uploaded by therapists)
+   - Raw transcript, processed JSON
+   - moments_extracted, structures_detected, risk_flags
+   - matched_experiences (top 10 matches with outcomes)
+
+5. matching_results (cache of all comparisons)
+   - semantic_similarity, structural_alignment, metadata_relevance
+   - combined_score (weighted), confidence_percentile
+   - outcome_status (positive/mixed/neutral/insufficient)
+
+6. cbt_analysis_templates (pre-computed CBT analyses)
+   - distortions array with confidence
+   - automatic_thoughts array
+   - behavioral patterns, intervention suggestions
+
+7. synthetic_data_provenance (track all synthetic generations)
+   - generation_method (conditional/interpolated/symptom_variant)
+   - clinical_validity_score, diversity_score, realism_score
+   - human_review_status, reviewed_by, review_notes
+
+8. risk_detection_log (audit trail for safety)
+   - flagged_text, raw_score, context_adjusted_score
+   - severity (low/medium/high/critical)
+   - clinician_reviewed, clinician_assessment
+
+9. audit_log (complete system audit trail)
+   - action, user_id, resource_type, timestamp
+   - classification, error handling, performance metrics
+
+PERFORMANCE TARGETS
+====================
+
+  Moment embedding:               ~100ms (OpenAI API)
+  Semantic search (10K vectors):  <50ms (HNSW index)
+  Structural search:              <20ms (10-dim vectors)
+  CBT analysis:                   ~3-5s (Claude streaming)
+  Risk assessment:                ~500ms (local + context)
+  Full session processing:        30-60s (parallel processing)
+
+INFRASTRUCTURE
+===============
+
+Frontend:       Next.js 14 + TypeScript + React
+Backend:        Node.js + Express (or Next.js API routes)
+Database:       Supabase (PostgreSQL 14+ with pgvector)
+Vectors:        OpenAI text-embedding-3-small (1536-dim)
+LLM:            Claude 3.5 Sonnet (analysis) + Claude Haiku (lightweight)
+Queue:          Bull (Redis) for async embedding/processing jobs
+Monitoring:     OpenTelemetry + Sentry
+Search:         pgvector with HNSW indexing
+
+IMPLEMENTATION TIMELINE (16 Weeks)
+===================================
+
+Sprint 1 (Weeks 1-2):  Schema + Data Loading
+  - PostgreSQL schema setup (9 tables)
+  - CSV data ingestion (40 participants, 768 moments)
+  - HNSW index creation
+  - Basic CRUD operations
+
+Sprint 2 (Weeks 3-4):  Embeddings Infrastructure
+  - Moment-level embeddings (OpenAI text-embedding-3-small)
+  - Participant-level embeddings (weighted aggregate)
+  - Structure profile vectors (10-dim)
+  - Batch embedding jobs
+
+Sprint 3 (Weeks 5-6):  Matching Engine
+  - Semantic search (embedding cosine distance)
+  - Structural search (10-dim vectors)
+  - Multi-level matching (50% semantic, 30% structural, 20% metadata)
+  - Confidence scoring
+
+Sprint 4 (Weeks 7-8):  CBT Integration
+  - Cognitive distortion detection (DoT prompting)
+  - Automatic thought identification
+  - Behavioral pattern recognition
+  - Claude streaming integration
+
+Sprint 5 (Weeks 9-10): Risk Detection & Safety
+  - Multi-layer risk assessment (keyword → negation → temporal → context)
+  - Risk escalation workflows
+  - Hallucination prevention checks
+  - Clinical boundary enforcement
+
+Sprint 6 (Weeks 11-12): Synthetic Data
+  - Conditional generation (expand real participants)
+  - Interpolation (fill embedding gaps)
+  - Quality assessment rubrics
+  - Human review workflow
+  - Phase 1 data generation (100 moments)
+
+Sprint 7 (Weeks 13-14): Session Processing
+  - Transcript parsing & moment extraction
+  - Integrated analysis pipeline
+  - Session result aggregation
+  - API endpoints
+
+Sprint 8 (Weeks 15-16): Polish, Testing, Deployment
+  - Comprehensive error handling
+  - Performance optimization
+  - Security audit
+  - Testing (unit + integration + load)
+  - Production deployment
+
+WHAT THIS SOLVES
+=================
+
+FROM:
+  - Keyword matching only (no semantic understanding)
+  - 100% hardcoded fake case data (no real learning)
+  - No CBT framework (no evidence-based science)
+  - Simple keyword risk detection (misses context)
+  - Single-level matching (no structural intelligence)
+
+TO:
+  - Vector semantics (1536-dim embeddings capture meaning)
+  - Real lived experiences (40 real + 9,960 synthetic with quality gates)
+  - Rigorous CBT (DoT prompting, 15 distortions, schema analysis)
+  - Context-aware risk (negation, temporal, surrounding context)
+  - Multi-dimensional matching (semantic + structural + metadata)
+  - Clinically-grounded AI (pattern detection, not diagnosis)
+  - Responsible synthetic scaling (quality > quantity)
+
+CRITICAL SUCCESS FACTORS
+=========================
+
+1. Vector Indexing: HNSW indexing must be properly configured (lists=100 for 10K)
+2. CBT Accuracy: Clinical advisor must validate distortion detection on 50+ samples
+3. Risk Detection: Multi-layer context analysis MUST handle negation correctly
+4. Confidence Calibration: Max 95% confidence enforced in code
+5. Clinical Boundaries: Clear separation between AI analysis and therapist decisions
+6. Data Quality: Synthetic data must pass clinical validity gate (>0.75)
+7. Performance: Semantic search <50ms, full session <60s
+
+DOCUMENTS FOR DIFFERENT ROLES
+================================
+
+Architects/Project Leads:
+  → Read SESSIONLENS_V3_SCIENCE_ARCHITECTURE.md (Parts 1-4)
+
+Backend Engineers:
+  → Start with DATABASE_SCHEMA_REFERENCE.sql
+  → Then IMPLEMENTATION_GUIDE.md sections 1-7
+  → Reference SESSIONLENS_V3_SCIENCE_ARCHITECTURE.md Parts 1-4 as needed
+
+ML Engineers:
+  → SESSIONLENS_V3_SCIENCE_ARCHITECTURE.md Part 2 (embeddings)
+  → SESSIONLENS_V3_SCIENCE_ARCHITECTURE.md Part 3 (CBT)
+  → IMPLEMENTATION_GUIDE.md sections 2, 4
+
+Clinical Advisors:
+  → SESSIONLENS_V3_SCIENCE_ARCHITECTURE.md Part 3 (CBT framework)
+  → SESSIONLENS_V3_SCIENCE_ARCHITECTURE.md Part 6 (safety guardrails)
+  → Validate CBT analysis on sample moments (required gate)
+
+DevOps/Infrastructure:
+  → IMPLEMENTATION_GUIDE.md sections 8-11
+  → DATABASE_SCHEMA_REFERENCE.sql (indexing, maintenance)
+
+DELIVERABLES CHECKLIST
+======================
+
+[X] PostgreSQL schema (9 tables, fully specified)
+[X] Embedding strategy (multi-level, model selection, similarity metrics)
+[X] CBT framework (DoT prompting, 15 distortions, schema analysis)
+[X] Matching engine (semantic + structural + metadata)
+[X] Risk detection (multi-layer context analysis)
+[X] Synthetic data strategy (conservative, quality-gated)
+[X] Safety guardrails (hallucination prevention, clinical boundaries)
+[X] Implementation guide (code examples, API designs)
+[X] Database schema reference (copy-paste ready)
+[X] Testing strategy (unit + integration)
+[X] Performance benchmarks
+[X] Deployment checklist
+[X] Privacy & compliance framework
+
+STATUS: READY FOR ENGINEERING PHASE
+
+Next action: Hand to engineering team with:
+  1. SESSIONLENS_V3_SCIENCE_ARCHITECTURE.md (read first)
+  2. DATABASE_SCHEMA_REFERENCE.sql (start here)
+  3. IMPLEMENTATION_GUIDE.md (day-1 reference)
+  4. This summary (overview)
+
+================================================================================
+Generated: April 10, 2026
+Total specification: 3,900+ lines of production-ready design
+Ready for implementation

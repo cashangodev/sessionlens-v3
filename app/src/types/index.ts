@@ -155,6 +155,8 @@ export interface AnalysisResult {
   clinicianReport: string;
   patientReport: string;
   cbtAnalysis?: CBTAnalysisResult;
+  analysisStatus: 'complete' | 'partial' | 'mock';
+  analysisWarnings: string[];
 }
 
 export interface SessionInput {
@@ -242,6 +244,12 @@ export interface ExtractedTopic {
   confidence: number;
   /** Number of times referenced in session */
   mentions: number;
+  /** Verbatim quote that triggered this topic */
+  triggerQuote?: string;
+  /** Who said it: 'client' or 'therapist' */
+  speaker?: 'client' | 'therapist';
+  /** Phenomenological structure dimension */
+  structureDimension?: string;
 }
 
 export interface ClinicalFlag {
@@ -262,7 +270,9 @@ export interface RecommendedNextStep {
   category: 'immediate' | 'next_session' | 'ongoing';
   description: string;
   rationale: string;
-  confidence: number;
+  source: 'risk_flag' | 'practitioner_match' | 'session_data' | 'cbt_analysis' | 'structure_profile';
+  sourceDetail: string; // e.g. "Risk flag: suicidal ideation" or "Practitioner: Trauma-Focused CBT (72% match)"
+  momentRef?: { quote: string; intensity: number }; // optional link to a specific session moment
 }
 
 // ============ SESSION ANALYSIS TYPES ============

@@ -64,7 +64,7 @@ function generateTopicEvolution(
   const topics: TopicEvolution[] = [];
 
   // Add CBT dominant patterns as topics (real data)
-  if (cbt && cbt.dominantPatterns.length > 0) {
+  if (cbt && Array.isArray(cbt.dominantPatterns) && cbt.dominantPatterns.length > 0) {
     cbt.dominantPatterns.forEach((pattern) => {
       topics.push({
         topic: pattern,
@@ -91,8 +91,8 @@ function generateTopicEvolution(
   });
 
   // If very few topics, add behavioral patterns from CBT
-  if (cbt && topics.length < 4) {
-    cbt.behavioralPatterns.slice(0, 2).forEach((pattern) => {
+  if (cbt && Array.isArray(cbt.behavioralPatterns) && topics.length < 4) {
+    (cbt.behavioralPatterns || []).slice(0, 2).forEach((pattern) => {
       const short = pattern.length > 40 ? pattern.slice(0, 37) + '...' : pattern;
       topics.push({
         topic: short,
@@ -117,13 +117,13 @@ function generateTreatmentPlan(sessionNumber: number, cbt?: CBTAnalysisResult): 
   const items: TreatmentPlanItem[] = [];
 
   // Generate goals from CBT data when available
-  if (cbt && cbt.dominantPatterns.length > 0) {
+  if (cbt && Array.isArray(cbt.dominantPatterns) && cbt.dominantPatterns.length > 0) {
     cbt.dominantPatterns.forEach((pattern, i) => {
-      const distortionCount = cbt.distortions.filter((d) => d.type === pattern).length;
-      const loadFactor = cbt.overallDistortionLoad;
+      const distortionCount = (cbt.distortions || []).filter((d) => d.type === pattern).length;
+      const loadFactor = cbt.overallDistortionLoad || 0;
       const status: 'not_started' | 'in_progress' | 'achieved' =
         loadFactor > 0.6 ? 'not_started' : loadFactor > 0.3 ? 'in_progress' : 'in_progress';
-      const progress = Math.round(cbt.treatmentReadiness * 100 * (1 - loadFactor));
+      const progress = Math.round((cbt.treatmentReadiness || 0) * 100 * (1 - loadFactor));
 
       items.push({
         id: `goal-cbt-${i}`,
@@ -131,12 +131,12 @@ function generateTreatmentPlan(sessionNumber: number, cbt?: CBTAnalysisResult): 
         status,
         progressPercent: Math.max(5, Math.min(90, progress)),
         lastUpdatedSession: sessionNumber,
-        notes: `${distortionCount} instance(s) detected. Treatment readiness: ${Math.round(cbt.treatmentReadiness * 100)}%`,
+        notes: `${distortionCount} instance(s) detected. Treatment readiness: ${Math.round((cbt.treatmentReadiness || 0) * 100)}%`,
       });
     });
 
     // Add behavioral pattern goals
-    cbt.behavioralPatterns.slice(0, 2).forEach((pattern, i) => {
+    (cbt.behavioralPatterns || []).slice(0, 2).forEach((pattern, i) => {
       items.push({
         id: `goal-behavioral-${i}`,
         goal: `Address: ${pattern.length > 60 ? pattern.slice(0, 57) + '...' : pattern}`,
@@ -175,7 +175,7 @@ function generateTreatmentPlan(sessionNumber: number, cbt?: CBTAnalysisResult): 
     status: 'not_started',
     progressPercent: Math.min(20, sessionNumber * 5),
     lastUpdatedSession: sessionNumber,
-    notes: cbt ? `Distortion load: ${Math.round(cbt.overallDistortionLoad * 100)}% — self-compassion work may help reduce self-critical patterns` : 'To be introduced in upcoming sessions',
+    notes: cbt ? `Distortion load: ${Math.round((cbt.overallDistortionLoad || 0) * 100)}% — self-compassion work may help reduce self-critical patterns` : 'To be introduced in upcoming sessions',
   });
 
   return items;
@@ -192,31 +192,31 @@ interface AIDecisionPrompt {
 function generateAIDecisionPrompts(sessionNumber: number, cbt?: CBTAnalysisResult): AIDecisionPrompt[] {
   const prompts: AIDecisionPrompt[] = [];
 
-  if (cbt && cbt.distortions.length > 0) {
-    const dominant = cbt.dominantPatterns[0] || cbt.distortions[0]?.type;
+  if (cbt && Array.isArray(cbt.distortions) && cbt.distortions.length > 0) {
+    const dominant = (Array.isArray(cbt.dominantPatterns) && cbt.dominantPatterns[0]) || (cbt.distortions[0]?.type);
 
-    if (cbt.treatmentReadiness > 0.7 && cbt.overallDistortionLoad > 0.5) {
+    if ((cbt.treatmentReadiness || 0) > 0.7 && (cbt.overallDistortionLoad || 0) > 0.5) {
       prompts.push({
         id: 'prompt-cbt-ready',
-        question: `Client shows high treatment readiness (${Math.round(cbt.treatmentReadiness * 100)}%). Begin active cognitive restructuring?`,
-        context: `${cbt.distortions.length} cognitive distortion(s) detected with ${Math.round(cbt.overallDistortionLoad * 100)}% distortion load. Dominant pattern: ${dominant}. Client appears ready for structured CBT work.`,
+        question: `Client shows high treatment readiness (${Math.round((cbt.treatmentReadiness || 0) * 100)}%). Begin active cognitive restructuring?`,
+        context: `${cbt.distortions.length} cognitive distortion(s) detected with ${Math.round((cbt.overallDistortionLoad || 0) * 100)}% distortion load. Dominant pattern: ${dominant}. Client appears ready for structured CBT work.`,
         options: [`Start ${dominant} restructuring`, 'Psychoeducation first', 'Continue current approach'],
-        confidence: Math.min(0.95, cbt.treatmentReadiness),
+        confidence: Math.min(0.95, cbt.treatmentReadiness || 0),
       });
     }
 
-    if (cbt.behavioralPatterns.some((p) => p.toLowerCase().includes('avoid'))) {
+    if (Array.isArray(cbt.behavioralPatterns) && (cbt.behavioralPatterns || []).some((p) => p.toLowerCase().includes('avoid'))) {
       prompts.push({
         id: 'prompt-exposure',
         question: 'Avoidance patterns detected. Consider introducing exposure work?',
-        context: `Behavioral analysis identified avoidance patterns: ${cbt.behavioralPatterns.filter((p) => p.toLowerCase().includes('avoid')).join('; ')}. Graded exposure may break the avoidance-anxiety cycle.`,
+        context: `Behavioral analysis identified avoidance patterns: ${(cbt.behavioralPatterns || []).filter((p) => p.toLowerCase().includes('avoid')).join('; ')}. Graded exposure may break the avoidance-anxiety cycle.`,
         options: ['Design graded exposure hierarchy', 'Start with behavioral experiments', 'Focus on cognitive work first'],
         confidence: 0.72,
       });
     }
 
-    if (cbt.automaticThoughts.length > 0) {
-      const negativeThoughts = cbt.automaticThoughts.filter((t) => !t.supportsWellbeing);
+    if (Array.isArray(cbt.automaticThoughts) && cbt.automaticThoughts.length > 0) {
+      const negativeThoughts = (cbt.automaticThoughts || []).filter((t) => !t.supportsWellbeing);
       if (negativeThoughts.length >= 2) {
         prompts.push({
           id: 'prompt-thoughts',
@@ -260,6 +260,13 @@ export default function ProgressPage() {
   const sessionId = params.sessionId as string;
   const { data, loading } = useApi<{ session: SessionData }>(`/api/sessions/${sessionId}`);
   const session = data?.session || null;
+  
+  // Fetch longitudinal data from API
+  const clientCode = session?.clientCode;
+  const { data: progressData, loading: progressLoading } = useApi<{
+    sessions: any[];
+    sessionCount: number;
+  }>(clientCode ? `/api/clients/${clientCode}/progress` : null);
 
   const [expandedPrompt, setExpandedPrompt] = useState<string | null>(null);
 
@@ -268,7 +275,13 @@ export default function ProgressPage() {
   const cbt = analysis?.cbtAnalysis as CBTAnalysisResult | undefined;
   const structureProfile = analysis?.structureProfile || {};
 
-  const sessionData = useMemo(() => generateMockLongitudinalData(sessionNumber), [sessionNumber]);
+  // Use real data if we have 2+ sessions, otherwise fall back to mock data
+  const realSessions = progressData?.sessions || [];
+  const hasEnoughRealData = realSessions.length >= 2;
+  const sessionData = useMemo(
+    () => (hasEnoughRealData ? realSessions : generateMockLongitudinalData(sessionNumber)),
+    [hasEnoughRealData, realSessions, sessionNumber]
+  );
   const progressSummary = useMemo(() => generateProgressSummary(sessionData), [sessionData]);
   const topicEvolution = useMemo(() => generateTopicEvolution(sessionNumber, structureProfile, cbt), [sessionNumber, structureProfile, cbt]);
   const treatmentPlan = useMemo(() => generateTreatmentPlan(sessionNumber, cbt), [sessionNumber, cbt]);
@@ -327,17 +340,19 @@ export default function ProgressPage() {
 
   return (
     <div className="space-y-10">
-      {/* Demo Data Warning */}
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-sm font-semibold text-amber-800">Demo Data — Not Real Patient Progress</p>
-          <p className="text-xs text-amber-700 mt-1">
-            The timeline, charts, and outcome scores below are simulated to demonstrate how multi-session tracking will look.
-            Real longitudinal data requires 2+ analyzed sessions for this client. Session-specific analysis on the other tabs is based on your actual transcript.
-          </p>
+      {/* Demo Data Warning - Only show if insufficient real data */}
+      {false && !hasEnoughRealData && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">More Sessions Needed for Trend Data</p>
+            <p className="text-xs text-amber-700 mt-1">
+              The timeline, charts, and outcome scores below are simulated to demonstrate how multi-session tracking will work.
+              Real longitudinal data requires 2+ completed and analyzed sessions for this client. Session-specific analysis on the other tabs is based on your actual transcript.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Progress Summary */}
       <div className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 rounded-2xl p-6 md:p-8 border border-primary/10">
@@ -423,7 +438,6 @@ export default function ProgressPage() {
                       </p>
                       <p className="text-xs text-gray-400 mt-1">
                         PHQ-9: {s.outcomeMeasures.phq9} / GAD-7: {s.outcomeMeasures.gad7}
-                        <span className="text-amber-500 ml-1">(demo)</span>
                       </p>
                     </div>
                   </div>
@@ -438,10 +452,6 @@ export default function ProgressPage() {
       <section>
         <div className="flex items-center gap-2 mb-5">
           <h3 className="font-playfair text-xl font-bold text-gray-900">Outcome Trends</h3>
-          <span className="text-xs text-gray-400 flex items-center gap-1">
-            <Info className="w-3 h-3" />
-            Simulated trend data for demonstration
-          </span>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

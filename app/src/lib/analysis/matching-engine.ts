@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
-import type { Moment, SimilarCase, StructureName } from '@/types';
-import { embedMoment } from './embedding-pipeline';
+import type { Moment, SimilarCase, PractitionerMatch, StructureName } from '@/types';
+import { embedMoment, embedText } from './embedding-pipeline';
+import { MOCK_ANALYSIS } from '@/lib/mock-data';
 
 // ============ Constants ============
 
@@ -43,6 +44,17 @@ interface LivedExperience {
   key_themes: string[];
   categories: string[];
   tags: string[];
+}
+
+interface PractitionerSearchResult {
+  code: string;
+  name: string;
+  specialty: string;
+  methodology: string;
+  intervention_sequence: string[];
+  outcome_patterns: { metric: string; change: string; confidence: number }[];
+  target_structures: string[];
+  semantic_similarity: number;
 }
 
 // ============ Supabase Client ============
@@ -195,8 +207,11 @@ export async function matchSessionMoments(
   try {
     const supabase = getSupabaseClient();
     if (!supabase) {
-      console.warn('[matching-engine] Supabase not configured, returning empty results');
-      return [];
+      console.warn('[matching-engine] Supabase not configured, returning demo similar cases');
+      return MOCK_ANALYSIS.similarCases.map(c => ({
+        ...c,
+        outcomeDetail: `[Demo Data] ${c.outcomeDetail}`,
+      }));
     }
 
     if (moments.length === 0) {
@@ -218,9 +233,12 @@ export async function matchSessionMoments(
     })[] = [];
 
     for (const moment of keyMoments) {
+      console.log('[matching-engine] Embedding moment:', moment.quote.substring(0, 60));
       const embedding = await embedMoment(moment.quote, moment.context);
+      console.log('[matching-engine] Embedding result length:', embedding.length);
 
       if (embedding.length === 0) {
+        console.warn('[matching-engine] Empty embedding — skipping moment');
         continue;
       }
 
@@ -228,6 +246,8 @@ export async function matchSessionMoments(
         query_embedding: embedding,
         limit_count: SEMANTIC_SEARCH_LIMIT,
       });
+
+      console.log('[matching-engine] RPC returned', data?.length ?? 0, 'results, error:', error);
 
       if (error) {
         console.error('[matching-engine] Semantic search failed:', error);
@@ -356,6 +376,132 @@ export async function matchSessionMoments(
     return similarCases;
   } catch (error) {
     console.error('[matching-engine] Matching failed:', error);
+    return [];
+  }
+}
+
+// ============ Practitioner Matching Function ============
+
+/**
+ * Match a session's key themes against the practitioner methods archive
+ * using semantic vector search. Builds a rich query from the session's
+ * dominant structures, risk flags, and top moments, then finds the most
+ * relevant therapeutic approaches.
+ *
+ * Returns top 5 practitioner method matches with scores and reasoning.
+ */
+export async function matchPractitionerMethods(
+  moments: Moment[],
+  structureProfile: Record<StructureName, number>,
+  riskFlags: { severity: string; signal: string }[]
+): Promise<PractitionerMatch[]> {
+  try {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      console.warn('[matching-engine] Supabase not configured, returning demo practitioner matches');
+      return MOCK_ANALYSIS.practitionerMatches.map(m => ({
+        ...m,
+        matchReasoning: `[Demo Data] ${m.matchReasoning}`,
+      }));
+    }
+
+    if (moments.length === 0) {
+      return [];
+    }
+
+    // Build a rich query string that captures the session's clinical picture
+    const topStructures = Object.entries(structureProfile)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 4)
+      .map(([s]) => s.replace(/_/g, ' '));
+
+    const highRisks = riskFlags
+      .filter(r => r.severity === 'high' || r.severity === 'medium')
+      .map(r => r.signal)
+      .slice(0, 3);
+
+    const keyQuotes = [...moments]
+      .sort((a, b) => b.intensity - a.intensity)
+      .slice(0, 3)
+      .map(m => m.quote.substring(0, 150));
+
+    const queryText = [
+      `Client presenting with dominant structures: ${topStructures.join(', ')}.`,
+      highRisks.length > 0
+        ? `Risk signals present: ${highRisks.join(', ')}.`
+        : '',
+      `Key moments: ${keyQuotes.join(' | ')}`,
+      `Looking for therapeutic approaches that target these patterns.`
+    ].filter(Boolean).join(' ');
+
+    console.log('[matching-engine] Practitioner query:', queryText.substring(0, 120));
+
+    // Embed the query
+    const embedding = await embedText(queryText);
+    if (embedding.length === 0) {
+      console.warn('[matching-engine] Empty embedding for practitioner query');
+      return [];
+    }
+
+    // Search practitioners semantically
+    const { data, error } = await supabase.rpc('search_practitioners_semantic', {
+      query_embedding: embedding,
+      limit_count: 5,
+    });
+
+    if (error) {
+      console.error('[matching-engine] Practitioner search failed:', error);
+      return [];
+    }
+
+    const results = (data as PractitionerSearchResult[]) ?? [];
+    console.log('[matching-engine] Found', results.length, 'practitioner matches');
+
+    // Build PractitionerMatch objects with structural alignment boost
+    const matches: PractitionerMatch[] = results.map((result, index) => {
+      // Compute structural alignment between session profile and method's target structures
+      const methodStructureVector = STRUCTURE_ORDER.map(s =>
+        (result.target_structures ?? []).includes(s) ? 1 : 0
+      );
+      const sessionVector = profileToVector(structureProfile);
+      const structuralBoost = cosineSimilarity(sessionVector, methodStructureVector);
+
+      // Combined score: 60% semantic, 40% structural alignment
+      const combinedScore = result.semantic_similarity * 0.6 + structuralBoost * 0.4;
+
+      // Build match reasoning
+      const overlappingStructures = (result.target_structures ?? []).filter(
+        s => structureProfile[s as StructureName] > 0.1
+      );
+
+      const matchReasoning = [
+        `${result.name} is ${Math.round(combinedScore * 100)}% aligned with this session's clinical profile.`,
+        overlappingStructures.length > 0
+          ? `Targets ${overlappingStructures.join(', ')} structures which are prominent in this session.`
+          : '',
+        `Methodology: ${result.methodology.substring(0, 200)}`,
+      ].filter(Boolean).join(' ');
+
+      return {
+        id: index + 1,
+        code: result.code,
+        name: result.name,
+        specialty: result.specialty,
+        matchScore: Math.round(combinedScore * 100) / 100,
+        methodology: result.methodology,
+        interventionSequence: result.intervention_sequence ?? [],
+        outcomePatterns: result.outcome_patterns ?? [],
+        matchReasoning,
+        targetStructures: (result.target_structures ?? []) as StructureName[],
+      };
+    });
+
+    // Re-sort by combined score
+    matches.sort((a, b) => b.matchScore - a.matchScore);
+
+    return matches;
+  } catch (error) {
+    console.error('[matching-engine] Practitioner matching failed:', error);
     return [];
   }
 }

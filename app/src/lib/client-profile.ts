@@ -37,59 +37,6 @@ export interface ClientProfile {
   isConfirmed: boolean;
 }
 
-// ============ IN-MEMORY STORE ============
-
-const profileStore = new Map<string, ClientProfile>();
-
-export function getClientProfile(clientCode: string): ClientProfile | null {
-  return profileStore.get(clientCode.toLowerCase()) || null;
-}
-
-export function storeClientProfile(profile: ClientProfile): void {
-  profileStore.set(profile.clientCode.toLowerCase(), profile);
-}
-
-export function listClientProfiles(): ClientProfile[] {
-  return Array.from(profileStore.values());
-}
-
-/** Create a new blank client (no sessions yet). */
-export function createBlankClient(
-  clientCode: string,
-  gender: ClientGender = '',
-  ageRange: ClientAgeRange = '',
-  clinicalNotes: string = ''
-): ClientProfile {
-  const profile: ClientProfile = {
-    clientCode,
-    gender,
-    ageRange,
-    treatmentGoals: [],
-    presentingConcerns: [],
-    diagnosticConsiderations: [],
-    currentRiskLevel: 'low',
-    keyThemes: [],
-    dominantStructures: [],
-    preferredApproach: '',
-    clinicalNotes,
-    totalSessions: 0,
-    createdAt: new Date().toISOString(),
-    lastConfirmedAt: null,
-    isConfirmed: false,
-  };
-  storeClientProfile(profile);
-  return profile;
-}
-
-/** Generate a unique client code like CL-XXXX */
-export function generateClientCode(): string {
-  const num = Math.floor(Math.random() * 9000) + 1000;
-  const code = `CL-${num}`;
-  // If collision, try again
-  if (getClientProfile(code)) return generateClientCode();
-  return code;
-}
-
 // ============ PROFILE EXTRACTION FROM ANALYSIS ============
 
 /**
@@ -102,7 +49,6 @@ export function extractProfileFromAnalysis(
   analysisResult: AnalysisResult,
   manualTreatmentGoals?: string
 ): ClientProfile {
-  const existing = getClientProfile(clientCode);
   const allText = transcript.toLowerCase();
 
   // Extract presenting concerns from moments and risk flags
@@ -215,23 +161,6 @@ export function extractProfileFromAnalysis(
     preferredApproach = 'Interpersonal Therapy (IPT)';
   } else if (concerns.includes('Low self-worth')) {
     preferredApproach = 'Compassion-Focused Therapy (CFT)';
-  }
-
-  // Merge with existing profile if available
-  if (existing) {
-    return {
-      ...existing,
-      presentingConcerns: Array.from(new Set([...existing.presentingConcerns, ...concerns])),
-      keyThemes: Array.from(new Set([...existing.keyThemes, ...themes])),
-      dominantStructures: sortedStructures,
-      currentRiskLevel: analysisResult.quickInsight.riskLevel,
-      totalSessions: existing.totalSessions + 1,
-      // Don't overwrite confirmed goals
-      treatmentGoals: existing.isConfirmed ? existing.treatmentGoals : topGoals,
-      diagnosticConsiderations: existing.isConfirmed
-        ? existing.diagnosticConsiderations
-        : Array.from(new Set([...existing.diagnosticConsiderations, ...diagnosticConsiderations])),
-    };
   }
 
   return {

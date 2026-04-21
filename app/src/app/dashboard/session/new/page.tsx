@@ -4,7 +4,7 @@ import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { DEMO_TRANSCRIPT } from '@/lib/analysis/demo-transcript';
-import { mockTranscribeAudio, formatFileSize, estimateDuration, ACCEPTED_AUDIO_TYPES, MAX_FILE_SIZE_BYTES } from '@/lib/analysis/mock-transcription';
+import { transcribeAudio, formatFileSize, estimateDuration, ACCEPTED_AUDIO_TYPES, MAX_FILE_SIZE_BYTES } from '@/lib/analysis/mock-transcription';
 import { useApi } from '@/hooks/use-api';
 
 interface ClientInfo {
@@ -23,7 +23,7 @@ interface SessionSummary {
   date: string;
   time: string;
 }
-import { ShieldCheck, Loader2, ArrowLeft, Clock, ChevronRight, UserPlus, Upload, FileAudio, X, Music, FileText, Mic, Square, Pause, Play, RotateCcw, CheckCircle2, AlertTriangle, Volume2, Monitor, Headphones } from 'lucide-react';
+import { ShieldCheck, Loader2, ArrowLeft, Clock, ChevronRight, UserPlus, Upload, FileAudio, X, Music, FileText, Mic, Square, Pause, Play, RotateCcw, CheckCircle2, AlertTriangle, Volume2, Monitor, Headphones, Edit3, Save, Check } from 'lucide-react';
 
 // ─── Analysis stage labels ───
 const ANALYSIS_STAGES_AUDIO = [
@@ -31,7 +31,7 @@ const ANALYSIS_STAGES_AUDIO = [
   'Segmenting transcript...',
   'Coding phenomenological structures...',
   'Analyzing risk signals...',
-  'Matching against 10,847 cases...',
+  'Matching against research archive...',
   'Generating clinical insights...',
 ];
 
@@ -39,7 +39,7 @@ const ANALYSIS_STAGES_TEXT = [
   'Segmenting transcript...',
   'Coding phenomenological structures...',
   'Analyzing risk signals...',
-  'Matching against 10,847 cases...',
+  'Matching against research archive...',
   'Generating clinical insights...',
 ];
 
@@ -63,8 +63,8 @@ export default function NewSessionPage() {
 
   // Client selection
   const [clientCode, setClientCode] = useState(prefillClient);
-  const [isNewClient, setIsNewClient] = useState(false);
-  const [newClientCode, setNewClientCode] = useState('');
+  const isNewClient = false; // New client creation moved to Clients page
+  const [newClientCode] = useState('');
 
   // Session metadata
   const todayStr = new Date().toISOString().split('T')[0];
@@ -85,6 +85,7 @@ export default function NewSessionPage() {
   const [activeTab, setActiveTab] = useState(isLiveSession ? 'record' : 'upload');
   const [bulkTranscripts, setBulkTranscripts] = useState('');
   const [expandedBulk, setExpandedBulk] = useState(false);
+  const [consentGiven, setConsentGiven] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const bulkRef = useRef<HTMLTextAreaElement>(null);
 
@@ -97,6 +98,80 @@ export default function NewSessionPage() {
   // Bulk audio state
   const [bulkAudioFiles, setBulkAudioFiles] = useState<File[]>([]);
   const bulkAudioInputRef = useRef<HTMLInputElement>(null);
+
+  // Client profile for review step
+  interface ClientProfileData {
+    clientCode: string;
+    gender: string;
+    ageRange: string;
+    treatmentGoals: string[];
+    presentingConcerns: string[];
+    dominantStructures: string[];
+    preferredApproach: string;
+    clinicalNotes: string;
+    totalSessions: number;
+    currentRiskLevel: string;
+    isConfirmed: boolean;
+    outcomeTrackingEnabled: boolean;
+    outcomeScores: { date: string; phq9: number | null; gad7: number | null; note: string }[];
+  }
+  const [clientProfile, setClientProfile] = useState<ClientProfileData | null>(null);
+
+  // ─── Profile edit state (review step) ───
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editGender, setEditGender] = useState('');
+  const [editAgeRange, setEditAgeRange] = useState('');
+  const [editGoals, setEditGoals] = useState('');
+  const [editConcerns, setEditConcerns] = useState('');
+  const [editApproach, setEditApproach] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  const startEditingProfile = () => {
+    setEditGender(clientProfile?.gender || '');
+    setEditAgeRange(clientProfile?.ageRange || '');
+    setEditGoals(clientProfile?.treatmentGoals?.join(', ') || '');
+    setEditConcerns(clientProfile?.presentingConcerns?.join(', ') || '');
+    setEditApproach(clientProfile?.preferredApproach || '');
+    setEditNotes(clientProfile?.clinicalNotes || '');
+    setIsEditingProfile(true);
+  };
+
+  const handleSaveProfileInline = async () => {
+    if (!clientProfile) return;
+    setSavingProfile(true);
+    try {
+      const resp = await fetch(`/api/clients/${encodeURIComponent(clientProfile.clientCode)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gender: editGender,
+          ageRange: editAgeRange,
+          treatmentGoals: editGoals.split(',').map((s: string) => s.trim()).filter(Boolean),
+          presentingConcerns: editConcerns.split(',').map((s: string) => s.trim()).filter(Boolean),
+          preferredApproach: editApproach,
+          clinicalNotes: editNotes,
+        }),
+      });
+      if (resp.ok) {
+        const updated = await resp.json();
+        setClientProfile((prev) => prev ? {
+          ...prev,
+          gender: updated.gender || editGender,
+          ageRange: updated.ageRange || editAgeRange,
+          treatmentGoals: updated.treatmentGoals || editGoals.split(',').map((s: string) => s.trim()).filter(Boolean),
+          presentingConcerns: updated.presentingConcerns || editConcerns.split(',').map((s: string) => s.trim()).filter(Boolean),
+          preferredApproach: updated.preferredApproach || editApproach,
+          clinicalNotes: updated.clinicalNotes || editNotes,
+        } : prev);
+        setIsEditingProfile(false);
+      }
+    } catch {
+      // silently fail — user can retry
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   // ─── Recording state ───
   type RecordMode = 'mic' | 'system';
@@ -212,27 +287,29 @@ export default function NewSessionPage() {
       return;
     }
 
-    // Auto-populate treatment goals from confirmed profile
+    // Fetch full client profile
     try {
       const profileRes = await fetch(`/api/clients/${encodeURIComponent(code)}`);
       if (profileRes.ok) {
         const { profile } = await profileRes.json();
+        setClientProfile(profile || null);
         if (profile?.isConfirmed && profile.treatmentGoals?.length > 0 && !treatmentGoals) {
           setTreatmentGoals(profile.treatmentGoals.join(', '));
         }
+      } else {
+        setClientProfile(null);
       }
     } catch {
-      // Profile fetch is optional, continue without it
+      setClientProfile(null);
     }
 
     // Auto-set session number based on previous sessions
     if (previousSessions.length > 0) {
       const maxSession = Math.max(...previousSessions.map((s) => s.sessionNumber));
       setSessionNumber(maxSession + 1);
-      setStep('review');
-    } else {
-      setStep('input');
     }
+    // Always show review step — full client profile
+    setStep('review');
   };
 
   // ─── Recording handlers ───
@@ -538,7 +615,7 @@ export default function NewSessionPage() {
       const stages = ANALYSIS_STAGES_AUDIO;
       setCurrentStage(0);
       const file = new File([recordedBlob], `recording-${Date.now()}.webm`, { type: 'audio/webm' });
-      const transcribedText = await mockTranscribeAudio(file.name);
+      const transcribedText = await transcribeAudio(file);
 
       for (let i = 1; i < stages.length; i++) {
         setCurrentStage(i);
@@ -621,7 +698,7 @@ export default function NewSessionPage() {
     setIsAnalyzing(true);
     try {
       setCurrentStage(0);
-      const transcribedText = await mockTranscribeAudio(audioFile.name);
+      const transcribedText = await transcribeAudio(audioFile);
       for (let i = 1; i < ANALYSIS_STAGES_AUDIO.length; i++) {
         setCurrentStage(i);
         await new Promise((resolve) => setTimeout(resolve, 700));
@@ -788,7 +865,7 @@ export default function NewSessionPage() {
       try {
         const stages = ANALYSIS_STAGES_AUDIO;
         setBulkCurrentStage(0);
-        const transcribedText = await mockTranscribeAudio(audioFiles[i].name);
+        const transcribedText = await transcribeAudio(audioFiles[i]);
 
         for (let s = 1; s < stages.length; s++) {
           setBulkCurrentStage(s);
@@ -842,7 +919,7 @@ export default function NewSessionPage() {
       <div className="flex items-center gap-3 mb-10">
         <StepBadge number={1} label="Client" active={step === 'client'} completed={step !== 'client'} />
         <ChevronRight className="w-4 h-4 text-gray-300" />
-        <StepBadge number={2} label="Review" active={step === 'review'} completed={step === 'input'} skip={previousSessions.length === 0 && step === 'input'} />
+        <StepBadge number={2} label="Profile" active={step === 'review'} completed={step === 'input'} />
         <ChevronRight className="w-4 h-4 text-gray-300" />
         <StepBadge number={3} label="Session" active={step === 'input'} completed={false} />
       </div>
@@ -851,49 +928,24 @@ export default function NewSessionPage() {
       {step === 'client' && (
         <div className="max-w-2xl">
           <h2 className="font-playfair text-3xl font-bold text-gray-900 mb-2">Select Client</h2>
-          <p className="text-gray-600 mb-8">Choose an existing client or create a new profile.</p>
+          <p className="text-gray-600 mb-8">Choose an existing client to start a new session.</p>
 
-          <div className="flex gap-3 mb-8">
-            <button
-              onClick={() => setIsNewClient(false)}
-              className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${!isNewClient ? 'bg-primary text-white shadow-md' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'}`}
-            >Existing Client</button>
-            <button
-              onClick={() => setIsNewClient(true)}
-              className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${isNewClient ? 'bg-primary text-white shadow-md' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'}`}
-            ><UserPlus className="w-4 h-4" />New Client</button>
-          </div>
-
-          {!isNewClient ? (
-            <div className="mb-8">
-              <label className="block text-sm font-semibold text-gray-900 mb-3">Client Code</label>
-              {existingClients.length > 0 ? (
-                <select value={clientCode} onChange={(e) => setClientCode(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-white">
-                  <option value="">Select a client...</option>
-                  {existingClients.map((code) => <option key={code} value={code}>{code}</option>)}
-                </select>
-              ) : (
-                <div>
-                  <input type="text" value={clientCode} onChange={(e) => setClientCode(e.target.value)} placeholder="Enter client code (e.g. CL-0042)" className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
-                  <p className="text-gray-400 text-xs mt-2">No existing clients yet. Enter a code or create a new client.</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="mb-8 space-y-5">
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-3">New Client Code</label>
-                <div className="flex gap-2">
-                  <input type="text" value={newClientCode} onChange={(e) => setNewClientCode(e.target.value)} placeholder="e.g. CL-0042" className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
-                  <button type="button" onClick={() => { const num = String(Math.floor(Math.random() * 9000) + 1000); setNewClientCode(`CL-${num}`); }} className="px-4 py-3 bg-primary/10 text-primary rounded-xl text-sm font-semibold hover:bg-primary/20 transition-colors whitespace-nowrap">Generate</button>
-                </div>
-                <p className="flex items-center gap-2 text-xs mt-2 text-gray-500">
-                  <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span></span>
-                  This is the only identifier stored. No real names. You can always change it.
-                </p>
+          <div className="mb-8">
+            <label className="block text-sm font-semibold text-gray-900 mb-3">Client Code</label>
+            {existingClients.length > 0 ? (
+              <select value={clientCode} onChange={(e) => setClientCode(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-white">
+                <option value="">Select a client...</option>
+                {existingClients.map((code) => <option key={code} value={code}>{code}</option>)}
+              </select>
+            ) : (
+              <div className="p-6 bg-gray-50 rounded-xl border border-gray-200 text-center">
+                <p className="text-gray-600 text-sm mb-3">No clients yet. Create a client first to start a session.</p>
+                <Link href="/dashboard/clients" className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-all">
+                  <UserPlus className="w-4 h-4" />Go to Clients
+                </Link>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           <div className="grid grid-cols-2 gap-4 mb-8">
             <div>
@@ -907,35 +959,256 @@ export default function NewSessionPage() {
             </div>
           </div>
 
-          <button onClick={handleClientContinue} disabled={!activeClientCode.trim()} className="px-8 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">Continue</button>
+          <button onClick={handleClientContinue} disabled={!activeClientCode.trim()} className="px-8 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">Continue</button>
         </div>
       )}
 
-      {/* ============ STEP 2: REVIEW PREVIOUS SESSIONS ============ */}
+      {/* ============ STEP 2: CLIENT PROFILE & REVIEW ============ */}
       {step === 'review' && (
         <div className="max-w-2xl">
-          <h2 className="font-playfair text-3xl font-bold text-gray-900 mb-2">Previous Sessions</h2>
-          <p className="text-gray-600 mb-8">
-            Client <span className="font-mono font-semibold text-gray-900">{activeClientCode}</span> has{' '}
-            {previousSessions.length} previous session{previousSessions.length !== 1 ? 's' : ''}.
+          <h2 className="font-playfair text-3xl font-bold text-gray-900 mb-2">Client Profile</h2>
+          <p className="text-gray-600 mb-6">
+            Review <span className="font-mono font-semibold text-gray-900">{activeClientCode}</span> before starting a new session.
           </p>
-          <div className="space-y-3 mb-8">
-            {previousSessions.map((session) => (
-              <Link key={session.id} href={`/dashboard/session/${session.id}/summary`} className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-200 hover:border-primary/30 hover:shadow-sm transition-all group">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><span className="font-mono text-sm font-bold text-primary">#{session.sessionNumber}</span></div>
+
+          {/* Client Info Card */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6 space-y-4">
+            {/* Header row */}
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                <span className="font-mono text-lg font-bold text-primary">{activeClientCode.slice(0, 2).toUpperCase()}</span>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-lg font-bold text-gray-900">{activeClientCode}</span>
+                  {clientProfile?.gender && !isEditingProfile && (
+                    <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+                      {clientProfile.gender === 'male' ? 'Male' : clientProfile.gender === 'female' ? 'Female' : 'Other'}
+                    </span>
+                  )}
+                  {clientProfile?.ageRange && !isEditingProfile && (
+                    <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{clientProfile.ageRange}</span>
+                  )}
+                </div>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  {clientProfile?.totalSessions ?? previousSessions.length} session{(clientProfile?.totalSessions ?? previousSessions.length) !== 1 ? 's' : ''} total
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {clientProfile?.currentRiskLevel && !isEditingProfile && (
+                  <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                    clientProfile.currentRiskLevel === 'high' ? 'bg-red-100 text-red-700' :
+                    clientProfile.currentRiskLevel === 'moderate' ? 'bg-amber-100 text-amber-700' :
+                    'bg-green-100 text-green-700'
+                  }`}>
+                    {clientProfile.currentRiskLevel.charAt(0).toUpperCase() + clientProfile.currentRiskLevel.slice(1)} Risk
+                  </span>
+                )}
+                {/* Edit / Save buttons */}
+                {!isEditingProfile ? (
+                  <button
+                    onClick={startEditingProfile}
+                    className="p-2 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
+                    title="Edit profile"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={handleSaveProfileInline}
+                      disabled={savingProfile}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50"
+                    >
+                      {savingProfile ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setIsEditingProfile(false)}
+                      className="px-3 py-1.5 text-gray-500 text-xs font-medium rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ─── EDIT MODE ─── */}
+            {isEditingProfile ? (
+              <div className="space-y-4 pt-2">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="font-semibold text-gray-900 text-sm">Session #{session.sessionNumber}</p>
-                    <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5"><Clock className="w-3 h-3" />{session.date} at {session.time}</div>
+                    <label className="text-xs text-gray-500 font-medium mb-1 block">Gender</label>
+                    <select value={editGender} onChange={(e) => setEditGender(e.target.value)} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                      <option value="">Not specified</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium mb-1 block">Age Range</label>
+                    <select value={editAgeRange} onChange={(e) => setEditAgeRange(e.target.value)} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                      <option value="">Not specified</option>
+                      <option value="18-24">18-24</option>
+                      <option value="25-34">25-34</option>
+                      <option value="35-44">35-44</option>
+                      <option value="45-54">45-54</option>
+                      <option value="55-64">55-64</option>
+                      <option value="65+">65+</option>
+                    </select>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-primary transition-colors" />
-              </Link>
-            ))}
+                <div>
+                  <label className="text-xs text-gray-500 font-medium mb-1 block">Treatment Goals <span className="text-gray-400">(comma-separated)</span></label>
+                  <input type="text" value={editGoals} onChange={(e) => setEditGoals(e.target.value)} placeholder="e.g. Reduce anxiety, Improve sleep" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 font-medium mb-1 block">Presenting Concerns <span className="text-gray-400">(comma-separated)</span></label>
+                  <input type="text" value={editConcerns} onChange={(e) => setEditConcerns(e.target.value)} placeholder="e.g. Anxiety symptoms, Sleep disturbance" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 font-medium mb-1 block">Preferred Approach</label>
+                  <input type="text" value={editApproach} onChange={(e) => setEditApproach(e.target.value)} placeholder="e.g. CBT, Psychodynamic" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 font-medium mb-1 block">Clinical Notes</label>
+                  <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} placeholder="Any notes about this client..." rows={3} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none" />
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* ─── VIEW MODE ─── */}
+                {/* Treatment Goals */}
+                {clientProfile?.treatmentGoals && clientProfile.treatmentGoals.length > 0 && (
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium mb-1.5">Treatment Goals</p>
+                    <ul className="space-y-1">
+                      {clientProfile.treatmentGoals.map((goal, i) => (
+                        <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
+                          <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                          {goal}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Presenting Concerns */}
+                {clientProfile?.presentingConcerns && clientProfile.presentingConcerns.length > 0 && (
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium mb-1.5">Presenting Concerns</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {clientProfile.presentingConcerns.map((c, i) => (
+                        <span key={i} className="text-xs bg-amber-50 text-amber-800 px-2.5 py-1 rounded-full">{c}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Structures + Approach */}
+                <div className="flex flex-wrap gap-6">
+                  {clientProfile?.preferredApproach && (
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium mb-1">Approach</p>
+                      <p className="text-sm text-gray-700">{clientProfile.preferredApproach}</p>
+                    </div>
+                  )}
+                  {clientProfile?.dominantStructures && clientProfile.dominantStructures.length > 0 && (
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium mb-1">Dominant Structures</p>
+                      <div className="flex flex-wrap gap-1">
+                        {clientProfile.dominantStructures.map((s) => (
+                          <span key={s} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{s.replace(/_/g, ' ')}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Clinical Notes */}
+                {clientProfile?.clinicalNotes && (
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium mb-1">Clinical Notes</p>
+                    <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">{clientProfile.clinicalNotes}</p>
+                  </div>
+                )}
+
+                {/* Outcome Measures Summary */}
+                {clientProfile?.outcomeTrackingEnabled && clientProfile.outcomeScores && clientProfile.outcomeScores.length > 0 && (() => {
+                  const scores = clientProfile.outcomeScores;
+                  const latestPhq9 = [...scores].reverse().find((s) => s.phq9 !== null);
+                  const latestGad7 = [...scores].reverse().find((s) => s.gad7 !== null);
+                  return (
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium mb-1.5">Latest Outcome Scores</p>
+                      <div className="flex gap-4">
+                        {latestPhq9 && (
+                          <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                            <span className="text-xs text-gray-500">PHQ-9:</span>
+                            <span className="font-bold text-gray-900">{latestPhq9.phq9}</span>
+                            <span className="text-xs text-gray-400">/27</span>
+                          </div>
+                        )}
+                        {latestGad7 && (
+                          <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                            <span className="text-xs text-gray-500">GAD-7:</span>
+                            <span className="font-bold text-gray-900">{latestGad7.gad7}</span>
+                            <span className="text-xs text-gray-400">/21</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* No profile data — prompt to add */}
+                {clientProfile && !clientProfile.gender && !clientProfile.treatmentGoals?.length && !clientProfile.presentingConcerns?.length && (
+                  <button onClick={startEditingProfile} className="text-sm text-primary hover:text-primary-dark font-medium flex items-center gap-1.5 transition-colors">
+                    <Edit3 className="w-3.5 h-3.5" />
+                    Add client details (gender, age, goals...)
+                  </button>
+                )}
+
+                {/* No profile data at all */}
+                {!clientProfile && (
+                  <p className="text-sm text-gray-400 italic">No profile data available yet. Start analyzing sessions to build this client&apos;s profile.</p>
+                )}
+              </>
+            )}
           </div>
+
+          {/* Previous Sessions */}
+          {previousSessions.length > 0 && (
+            <div className="mb-6">
+              <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-gray-400" />
+                Session History ({previousSessions.length})
+              </p>
+              <div className="space-y-2">
+                {previousSessions.map((session) => (
+                  <Link key={session.id} href={`/dashboard/session/${session.id}/summary`} className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-200 hover:border-primary/30 hover:shadow-sm transition-all group">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center"><span className="font-mono text-xs font-bold text-primary">#{session.sessionNumber}</span></div>
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">Session #{session.sessionNumber}</p>
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5"><Clock className="w-3 h-3" />{session.date}</div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-primary transition-colors" />
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
           <div className="flex gap-4">
             <button onClick={() => setStep('client')} className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all">Back</button>
-            <button onClick={() => setStep('input')} className="flex-1 px-8 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-lg hover:shadow-xl transition-all duration-200">Start New Session</button>
+            <button onClick={() => setStep('input')} className="flex-1 px-8 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-sm hover:shadow-md transition-all duration-200">
+              Start Session #{sessionNumber}
+            </button>
           </div>
         </div>
       )}
@@ -1053,7 +1326,7 @@ export default function NewSessionPage() {
                         <div className="flex flex-col items-center gap-5">
                           <button
                             onClick={startMicTest}
-                            className={`w-24 h-24 rounded-full shadow-lg hover:shadow-xl hover:scale-105 flex items-center justify-center transition-all duration-200 group ${
+                            className={`w-24 h-24 rounded-full shadow-sm hover:shadow-md hover:scale-105 flex items-center justify-center transition-all duration-200 group ${
                               recordMode === 'system'
                                 ? 'bg-blue-600 hover:bg-blue-700'
                                 : 'bg-primary hover:bg-primary-dark'
@@ -1189,7 +1462,7 @@ export default function NewSessionPage() {
                             <button
                               onClick={startRecording}
                               disabled={!micTestPassed}
-                              className="flex items-center gap-2 px-8 py-3 bg-red-500 hover:bg-red-600 rounded-xl font-semibold text-sm text-white transition-colors shadow-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-500"
+                              className="flex items-center gap-2 px-8 py-3 bg-red-500 hover:bg-red-600 rounded-xl font-semibold text-sm text-white transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-500"
                             >
                               <Mic className="w-4 h-4" />
                               Start Recording
@@ -1204,7 +1477,7 @@ export default function NewSessionPage() {
 
                     {/* RECORDING STATE — calming breathing animation */}
                     {recordingState === 'recording' && (
-                      <div className="bg-gradient-to-b from-indigo-50/50 to-white border border-indigo-100 rounded-xl p-10 text-center">
+                      <div className="bg-gradient-to-b from-mint-50/50 to-white border border-mint-200/60 rounded-xl p-10 text-center">
                         <div className="flex flex-col items-center gap-8">
                           {/* Calming concentric circles */}
                           <div className="relative w-32 h-32 flex items-center justify-center">
@@ -1251,7 +1524,7 @@ export default function NewSessionPage() {
                             <button onClick={pauseRecording} className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl font-semibold text-sm text-gray-700 transition-colors shadow-sm">
                               <Pause className="w-4 h-4" />Pause
                             </button>
-                            <button onClick={stopRecording} className="flex items-center gap-2 px-6 py-3 bg-gray-900 hover:bg-gray-800 rounded-xl font-semibold text-sm text-white transition-colors shadow-lg">
+                            <button onClick={stopRecording} className="flex items-center gap-2 px-6 py-3 bg-gray-900 hover:bg-gray-800 rounded-xl font-semibold text-sm text-white transition-colors shadow-sm">
                               <Square className="w-4 h-4" />End Session
                             </button>
                           </div>
@@ -1272,7 +1545,7 @@ export default function NewSessionPage() {
                           </div>
                           <p className="text-xs text-gray-400">Recording is paused. No audio is being captured.</p>
                           <div className="flex items-center gap-4">
-                            <button onClick={resumeRecording} className="flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark rounded-xl font-semibold text-sm text-white transition-colors shadow-lg">
+                            <button onClick={resumeRecording} className="flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark rounded-xl font-semibold text-sm text-white transition-colors shadow-sm">
                               <Play className="w-4 h-4" />Resume
                             </button>
                             <button onClick={stopRecording} className="flex items-center gap-2 px-6 py-3 bg-gray-900 hover:bg-gray-800 rounded-xl font-semibold text-sm text-white transition-colors">
@@ -1354,7 +1627,7 @@ export default function NewSessionPage() {
                     <button
                       onClick={handleRecordingAnalyze}
                       disabled={isAnalyzing || !recordedBlob}
-                      className="w-full px-6 py-3.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="w-full px-6 py-3.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       {isAnalyzing ? <><Loader2 className="w-5 h-5 animate-spin" />Analyzing...</> : 'Analyze Session'}
                     </button>
@@ -1426,7 +1699,7 @@ export default function NewSessionPage() {
                     </div>
                   </div>
 
-                  <button onClick={handleAudioAnalyze} disabled={isAnalyzing || !audioFile} className="w-full px-6 py-3.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                  <button onClick={handleAudioAnalyze} disabled={isAnalyzing || !audioFile} className="w-full px-6 py-3.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                     {isAnalyzing ? <><Loader2 className="w-5 h-5 animate-spin" />Analyzing...</> : <><Upload className="w-5 h-5" />Upload & Analyze</>}
                   </button>
 
@@ -1484,7 +1757,7 @@ export default function NewSessionPage() {
                           <p className="text-sm text-amber-900">Each session will be analyzed separately and linked to <span className="font-mono font-semibold">{activeClientCode}</span>.</p>
                         </div>
 
-                        <button onClick={handleBulkAnalyze} disabled={isBulkAnalyzing || (bulkAudioFiles.length === 0 && !bulkTranscripts.trim())} className="w-full px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:shadow-none flex items-center justify-center gap-2">
+                        <button onClick={handleBulkAnalyze} disabled={isBulkAnalyzing || (bulkAudioFiles.length === 0 && !bulkTranscripts.trim())} className="w-full px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:shadow-none flex items-center justify-center gap-2">
                           {isBulkAnalyzing ? <><Loader2 className="w-5 h-5 animate-spin" />Analyzing...</> : 'Analyze All Sessions'}
                           {(bulkAudioFiles.length > 0 || bulkTranscripts.trim()) && (
                             <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full">
@@ -1520,9 +1793,24 @@ export default function NewSessionPage() {
                     </div>
                   </div>
 
+                  {/* Therapist Consent Confirmation */}
+                  <div className="mb-8 p-4 border-2 border-amber-200 bg-amber-50 rounded-xl">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={consentGiven}
+                        onChange={(e) => setConsentGiven(e.target.checked)}
+                        className="w-5 h-5 mt-0.5 border-2 border-amber-400 rounded focus:ring-2 focus:ring-primary focus:ring-offset-0 cursor-pointer"
+                      />
+                      <span className="text-sm text-gray-900">
+                        I confirm that the client has verbally consented to this session being recorded and analyzed. This consent was obtained at the beginning of the session.
+                      </span>
+                    </label>
+                  </div>
+
                   <div className="flex gap-4 mb-12">
                     <button onClick={handleLoadDemo} disabled={isAnalyzing} className="px-6 py-3 border-2 border-gray-300 text-gray-900 rounded-xl font-semibold hover:border-primary hover:bg-primary/5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">Load Demo Session</button>
-                    <button onClick={handleAnalyze} disabled={isAnalyzing || !transcript.trim()} className="flex-1 px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    <button onClick={handleAnalyze} disabled={isAnalyzing || !transcript.trim() || !consentGiven} className="flex-1 px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                       {isAnalyzing ? <><Loader2 className="w-5 h-5 animate-spin" />Analyzing...</> : 'Analyze Session'}
                     </button>
                   </div>
@@ -1690,7 +1978,7 @@ export default function NewSessionPage() {
               </button>
               <Link
                 href={`/dashboard/clients/${encodeURIComponent(activeClientCode)}`}
-                className="flex-1 px-5 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-lg transition-all text-sm text-center"
+                className="flex-1 px-5 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-sm transition-all text-sm text-center"
               >
                 View Client Profile →
               </Link>

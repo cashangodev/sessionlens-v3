@@ -42,10 +42,10 @@ export async function PATCH(
   const { sessionId } = await params;
   try {
     const body = await req.json();
-    const { outcomeMeasures } = body;
+    const { outcomeMeasures, editedAssessment } = body;
 
-    if (!outcomeMeasures) {
-      return NextResponse.json({ error: 'Missing outcomeMeasures' }, { status: 400 });
+    if (!outcomeMeasures && !editedAssessment) {
+      return NextResponse.json({ error: 'Missing outcomeMeasures or editedAssessment' }, { status: 400 });
     }
 
     // Get current session to merge with existing analysis
@@ -55,10 +55,17 @@ export async function PATCH(
     }
 
     const currentAnalysis = session.analysisResult as Record<string, unknown> || {};
-    const updatedAnalysis = {
+    const updatedAnalysis: Record<string, unknown> = {
       ...currentAnalysis,
-      outcomeMeasures: outcomeMeasures,
     };
+
+    if (outcomeMeasures) {
+      updatedAnalysis.outcomeMeasures = outcomeMeasures;
+    }
+
+    if (editedAssessment !== undefined) {
+      updatedAnalysis.editedAssessment = editedAssessment;
+    }
 
     const success = await dbUpdateSessionAnalysis(sessionId, updatedAnalysis);
     if (!success) {

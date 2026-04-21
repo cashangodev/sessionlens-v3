@@ -12,10 +12,10 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-bg-warm">
       {/* Top Navigation - minimal, clean, modern */}
-      <header className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between sticky top-0 z-40 backdrop-blur-sm bg-white/95">
+      <header className="bg-white/95 border-b border-gray-200/60 px-6 py-4 flex items-center justify-between sticky top-0 z-40 backdrop-blur-sm">
         <div className="flex items-center gap-6">
           <Link href="/dashboard" className="flex items-center gap-2 group">
-            <h1 className="font-sans text-2xl font-bold text-primary group-hover:text-primary-light transition-colors">SessionLens</h1>
+            <h1 className="font-playfair text-2xl font-bold text-primary-dark group-hover:text-primary transition-colors tracking-tight">SessionLens</h1>
           </Link>
           <nav className="hidden sm:flex items-center gap-1">
             <Link
@@ -35,9 +35,12 @@ export default async function DashboardLayout({
           >
             <Users className="w-4 h-4" />
           </Link>
-          {/* User avatar placeholder */}
-          <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-semibold text-primary">
-            U
+          {/* User avatar */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 hidden sm:inline">Dr. Sarah Mitchell</span>
+            <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">
+              SM
+            </div>
           </div>
         </div>
       </header>
