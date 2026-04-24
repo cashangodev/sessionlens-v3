@@ -98,6 +98,17 @@ export interface SimilarCase {
   outcome: string;
   outcomeDetail: string;
   representativeQuote: string;
+  matchExplanation?: string;
+}
+
+export interface VectorInsight {
+  id: number;
+  type: 'trajectory' | 'outcome_prediction' | 'method_alignment';
+  title: string;
+  description: string;
+  confidence: number;
+  supportingMetric?: string;
+  icon: 'trending' | 'target' | 'link';
 }
 
 export interface QuickInsight {
@@ -155,6 +166,11 @@ export interface AnalysisResult {
   clinicianReport: string;
   patientReport: string;
   cbtAnalysis?: CBTAnalysisResult;
+  vectorInsights?: VectorInsight[];
+  experientialField?: ExperientialField;
+  momentConfidence?: MomentConfidence[];
+  coOccurrenceNetwork?: CoOccurrenceNetwork;
+  narrativeArc?: NarrativeArc;
   analysisStatus: 'complete' | 'partial' | 'mock';
   analysisWarnings: string[];
 }
@@ -321,15 +337,102 @@ export interface TopicEvolution {
   topic: string;
   /** Session numbers where this topic appeared */
   sessions: number[];
-  /** Trend: is the topic increasing, decreasing, or stable */
-  trend: 'increasing' | 'decreasing' | 'stable';
 }
 
-export interface TreatmentPlanItem {
-  id: string;
-  goal: string;
-  status: 'not_started' | 'in_progress' | 'achieved';
-  progressPercent: number;
-  lastUpdatedSession: number;
-  notes: string;
+// ============ HYPERNOMIC EXPERIENTIAL FIELD ============
+
+export enum ExperientialStructure {
+  EMBODIED_SELF = 'embodied_self',         // Inner + Direct Experience
+  SENSORY_CONNECTION = 'sensory_connection', // Outer + Direct Experience
+  NARRATIVE_SELF = 'narrative_self',         // Inner + Interpretation
+  THOUGHT_MOVEMENTS = 'thought_movements',   // Outer + Interpretation
+  PHENOMENAL_DISTINCTIONS = 'phenomenal_distinctions' // Clarity/Differentiation
+}
+
+export interface ExperientialFieldScore {
+  structure: ExperientialStructure;
+  intensity: number;     // 0-1
+  clarity: number;       // 0-1: how clearly the person distinguished this
+  description: string;   // Brief clinical note
+}
+
+export interface ExperientialField {
+  scores: ExperientialFieldScore[];
+  fieldBalance: {
+    directExperience: number;  // 0-1 (average of embodied_self + sensory_connection)
+    interpretation: number;     // 0-1 (average of narrative_self + thought_movements)
+    innerWorld: number;         // 0-1 (average of embodied_self + narrative_self)
+    outerWorld: number;         // 0-1 (average of sensory_connection + thought_movements)
+  };
+  phenomenalClarity: number;  // 0-1: overall differentiation quality
+  dominantQuadrant: 'inner-direct' | 'outer-direct' | 'inner-interpretive' | 'outer-interpretive';
+}
+
+// ============ CONFIDENCE SCORING ============
+
+export interface MomentConfidence {
+  momentId: number;
+  spontaneity: number;        // 0-1: Did the client bring this up unprompted?
+  concreteDetail: number;     // 0-1: Specific examples vs. vague abstraction
+  contextualRichness: number; // 0-1: Setting, people, timeframe present?
+  narrativeCoherence: number; // 0-1: Fits with the rest of the story?
+  overallConfidence: number;  // 0-1: Weighted average
+  therapistInfluence: boolean; // Was this prompted by a leading question?
+  influenceNote?: string;     // e.g., "Therapist asked directly about sleep"
+}
+
+// ============ CO-OCCURRENCE NETWORK ============
+
+export interface CoOccurrenceEdge {
+  source: StructureName;
+  target: StructureName;
+  weight: number;          // 0-1: strength of co-occurrence
+  momentCount: number;     // How many moments these co-occurred in
+}
+
+export interface NetworkNode {
+  structure: StructureName;
+  centrality: number;      // 0-1: how connected this dimension is
+  frequency: number;       // How often it appears across moments
+  isBridge: boolean;       // Does it connect otherwise separate clusters?
+}
+
+export interface CoOccurrenceNetwork {
+  nodes: NetworkNode[];
+  edges: CoOccurrenceEdge[];
+  communities: {
+    id: number;
+    label: string;
+    members: StructureName[];
+    description: string;
+  }[];
+  mostCentral: StructureName;
+  bridgeDimension: StructureName | null;
+}
+
+// ============ NARRATIVE ARC / STORY MAPPING ============
+
+export interface NarrativeTurningPoint {
+  momentId: number;
+  type: 'onset' | 'escalation' | 'crisis' | 'insight' | 'shift' | 'resolution';
+  description: string;
+  structuresBefore: StructureName[];
+  structuresAfter: StructureName[];
+  emotionalShift: { from: string; to: string };
+}
+
+export interface NarrativePhase {
+  label: string;
+  startMomentId: number;
+  endMomentId: number;
+  dominantStructures: StructureName[];
+  dominantValence: EmotionalValence;
+  description: string;
+}
+
+export interface NarrativeArc {
+  phases: NarrativePhase[];
+  turningPoints: NarrativeTurningPoint[];
+  overallTrajectory: 'deteriorating' | 'stable' | 'improving' | 'oscillating' | 'emerging';
+  gestaltSummary: string;  // 1-2 sentence phenomenological summary of the whole arc
 }

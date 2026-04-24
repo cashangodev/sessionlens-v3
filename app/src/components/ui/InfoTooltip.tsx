@@ -33,8 +33,8 @@ export function InfoTooltip({ title, description, methodology, className = '' }:
   }, [isVisible]);
 
   const positionClasses = {
-    bottom: 'top-full right-0 mt-2',
-    top: 'bottom-full right-0 mb-2',
+    bottom: 'top-full left-0 mt-2',
+    top: 'bottom-full left-0 mb-2',
     left: 'top-0 right-full mr-2',
   };
 
@@ -57,12 +57,12 @@ export function InfoTooltip({ title, description, methodology, className = '' }:
       {isVisible && (
         <div
           ref={tooltipRef}
-          className={`absolute z-50 ${positionClasses[position]} w-80 bg-white rounded-xl border border-gray-200 shadow-lg p-4 animate-in fade-in duration-150`}
+          className={`absolute z-50 ${positionClasses[position]} w-72 sm:w-80 bg-white rounded-xl border border-gray-200 shadow-lg p-4 animate-in fade-in duration-150`}
           onMouseEnter={() => setIsVisible(true)}
           onMouseLeave={() => setIsVisible(false)}
         >
           {/* Arrow */}
-          <div className="absolute -top-1.5 right-4 w-3 h-3 bg-white border-l border-t border-gray-200 rotate-45"
+          <div className="absolute -top-1.5 left-4 w-3 h-3 bg-white border-l border-t border-gray-200 rotate-45"
                style={{ display: position === 'bottom' ? 'block' : 'none' }} />
 
           <div className="flex items-start gap-2.5 mb-2">

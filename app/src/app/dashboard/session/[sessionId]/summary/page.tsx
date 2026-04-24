@@ -5,7 +5,7 @@ import { generateSOAPNote, generateDAPNote, formatSOAPAsText, formatDAPAsText } 
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useApi } from '@/hooks/use-api';
-import type { AnalysisResult, CBTAnalysisResult } from '@/types';
+import type { AnalysisResult, CBTAnalysisResult, NarrativeArc, NarrativePhase, NarrativeTurningPoint, MomentConfidence } from '@/types';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { InfoTooltip } from '@/components/ui/InfoTooltip';
@@ -31,6 +31,10 @@ import {
   X,
   RotateCcw,
   Database,
+  ArrowRight,
+  GitBranch,
+  Target,
+  Eye,
 } from 'lucide-react';
 import {
   ExtractedTopic,
@@ -41,6 +45,7 @@ import {
   TherapistMoveDistribution,
   DiagnosticConsideration,
 } from '@/types';
+import { STRUCTURES, getStructure, getStructureColor } from '@/lib/structures';
 
 // ========== TYPES ==========
 
@@ -76,17 +81,17 @@ function CollapsibleSection({
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-2xl border border-gray-200">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-6 py-5 flex items-center justify-between hover:bg-gray-50 transition"
+        className="w-full px-6 py-5 flex items-center justify-between hover:bg-gray-50 transition rounded-t-2xl"
       >
         <div className="flex items-center gap-3">
           {icon}
           <h3 className="font-playfair text-lg font-bold text-gray-900">{title}</h3>
           {tooltip}
         </div>
-        <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
       <div className="px-6 pb-4 -mt-1">{teaser}</div>
       {isOpen && (
@@ -737,6 +742,174 @@ export default function SessionOverviewPage() {
         </p>
       </CollapsibleSection>
 
+      {/* 2b. Session Story Arc (Narrative Arc) */}
+      {analysis?.narrativeArc && (
+        <CollapsibleSection
+          title="Session Story Arc"
+          icon={<GitBranch className="w-5 h-5 text-teal-500" />}
+          tooltip={
+            <InfoTooltip
+              title="Narrative Arc Analysis"
+              description="Maps the session's narrative flow -- turning points, phases, and trajectory. Preserves the experiential Gestalt rather than fragmenting the story into disconnected data points."
+              methodology="Based on phenomenological story mapping (Henriksen et al., 2021/2022; Daly et al., 2024). Each moment is tracked for structural shifts, intensity changes, and valence transitions to identify meaningful turning points and phases."
+            />
+          }
+          teaser={
+            <div className="space-y-2">
+              {analysis.narrativeArc.gestaltSummary && (
+                <p className="text-sm text-gray-700 italic line-clamp-2">{analysis.narrativeArc.gestaltSummary}</p>
+              )}
+              {analysis.narrativeArc.overallTrajectory && (
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                  analysis.narrativeArc.overallTrajectory === 'improving' ? 'bg-green-100 text-green-700' :
+                  analysis.narrativeArc.overallTrajectory === 'deteriorating' ? 'bg-red-100 text-red-700' :
+                  analysis.narrativeArc.overallTrajectory === 'stable' ? 'bg-amber-100 text-amber-700' :
+                  analysis.narrativeArc.overallTrajectory === 'oscillating' ? 'bg-purple-100 text-purple-700' :
+                  'bg-teal-100 text-teal-700'
+                }`}>
+                  {analysis.narrativeArc.overallTrajectory.charAt(0).toUpperCase() + analysis.narrativeArc.overallTrajectory.slice(1)}
+                </span>
+              )}
+            </div>
+          }
+        >
+          {/* Gestalt Summary */}
+          {analysis.narrativeArc.gestaltSummary && (
+            <div className="mb-6">
+              <div className="border-l-4 border-teal-400 pl-4 py-2">
+                <p className="text-base text-gray-700 italic leading-relaxed">{analysis.narrativeArc.gestaltSummary}</p>
+              </div>
+              {analysis.narrativeArc.overallTrajectory && (
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="text-xs text-gray-500 font-medium">Overall trajectory:</span>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                    analysis.narrativeArc.overallTrajectory === 'improving' ? 'bg-green-100 text-green-700' :
+                    analysis.narrativeArc.overallTrajectory === 'deteriorating' ? 'bg-red-100 text-red-700' :
+                    analysis.narrativeArc.overallTrajectory === 'stable' ? 'bg-amber-100 text-amber-700' :
+                    analysis.narrativeArc.overallTrajectory === 'oscillating' ? 'bg-purple-100 text-purple-700' :
+                    'bg-teal-100 text-teal-700'
+                  }`}>
+                    {analysis.narrativeArc.overallTrajectory.charAt(0).toUpperCase() + analysis.narrativeArc.overallTrajectory.slice(1)}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Phases Timeline */}
+          {Array.isArray(analysis.narrativeArc.phases) && analysis.narrativeArc.phases.length > 0 && (
+            <div className="mb-6">
+              <p className="text-xs text-gray-500 font-medium mb-3">Session Phases</p>
+              <div className="flex items-stretch gap-1 overflow-x-auto pb-2">
+                {analysis.narrativeArc.phases.map((phase, i) => {
+                  const valenceColor =
+                    phase.dominantValence === 'positive' ? 'border-green-300 bg-green-50' :
+                    phase.dominantValence === 'negative' ? 'border-red-300 bg-red-50' :
+                    phase.dominantValence === 'mixed' ? 'border-purple-300 bg-purple-50' :
+                    'border-gray-300 bg-gray-50';
+                  return (
+                    <div
+                      key={i}
+                      className={`flex-1 min-w-[140px] rounded-xl border-2 p-3 ${valenceColor}`}
+                    >
+                      <p className="text-sm font-semibold text-gray-800 mb-1">{phase.label}</p>
+                      <p className="text-xs text-gray-600 leading-relaxed mb-2">{phase.description}</p>
+                      <div className="flex flex-wrap gap-1">
+                        {phase.dominantStructures?.map((s) => {
+                          const color = getStructureColor(s);
+                          const structure = getStructure(s);
+                          return (
+                            <span
+                              key={s}
+                              className="w-3 h-3 rounded-full inline-block"
+                              style={{ backgroundColor: color }}
+                              title={structure.label}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Turning Points */}
+          {Array.isArray(analysis.narrativeArc.turningPoints) && analysis.narrativeArc.turningPoints.length > 0 && (
+            <div>
+              <p className="text-xs text-gray-500 font-medium mb-3">Turning Points</p>
+              <div className="space-y-3">
+                {analysis.narrativeArc.turningPoints.map((tp, i) => {
+                  const typeColors: Record<string, string> = {
+                    onset: 'bg-blue-100 text-blue-700',
+                    escalation: 'bg-orange-100 text-orange-700',
+                    crisis: 'bg-red-100 text-red-700',
+                    insight: 'bg-green-100 text-green-700',
+                    shift: 'bg-purple-100 text-purple-700',
+                    resolution: 'bg-teal-100 text-teal-700',
+                  };
+                  const badgeClass = typeColors[tp.type] || 'bg-gray-100 text-gray-700';
+                  return (
+                    <div key={i} className="p-4 bg-white rounded-xl border border-gray-200">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Target className="w-4 h-4 text-gray-400" />
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badgeClass}`}>
+                            {tp.type.charAt(0).toUpperCase() + tp.type.slice(1)}
+                          </span>
+                          <span className="text-xs text-gray-400">Moment #{tp.momentId}</span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-700 mb-3 pl-6">{tp.description}</p>
+                      {tp.emotionalShift && (
+                        <div className="flex items-center gap-2 pl-6 mb-2">
+                          <span className="text-xs text-gray-500 font-medium">Emotional shift:</span>
+                          <span className="text-xs text-gray-700">{tp.emotionalShift.from}</span>
+                          <ArrowRight className="w-3 h-3 text-gray-400" />
+                          <span className="text-xs text-gray-700">{tp.emotionalShift.to}</span>
+                        </div>
+                      )}
+                      {((tp.structuresBefore && tp.structuresBefore.length > 0) || (tp.structuresAfter && tp.structuresAfter.length > 0)) && (
+                        <div className="flex items-center gap-2 pl-6">
+                          <span className="text-xs text-gray-500 font-medium">Structures:</span>
+                          <div className="flex gap-1">
+                            {tp.structuresBefore?.map((s) => (
+                              <span
+                                key={`before-${s}`}
+                                className="w-3 h-3 rounded-full inline-block"
+                                style={{ backgroundColor: getStructureColor(s) }}
+                                title={getStructure(s).label}
+                              />
+                            ))}
+                          </div>
+                          <ArrowRight className="w-3 h-3 text-gray-400" />
+                          <div className="flex gap-1">
+                            {tp.structuresAfter?.map((s) => (
+                              <span
+                                key={`after-${s}`}
+                                className="w-3 h-3 rounded-full inline-block"
+                                style={{ backgroundColor: getStructureColor(s) }}
+                                title={getStructure(s).label}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <p className="text-xs text-gray-400 mt-4 flex items-center gap-1">
+            <Sparkles className="w-3 h-3" />
+            Narrative arc mapped from phenomenological story analysis -- review with clinical context
+          </p>
+        </CollapsibleSection>
+      )}
+
       {/* 3. Session Topics & Key Moments */}
       <CollapsibleSection
         title="Session Topics & Key Moments"
@@ -1104,6 +1277,102 @@ export default function SessionOverviewPage() {
           <p className="text-xs text-gray-400 mt-4 flex items-center gap-1">
             <Info className="w-3 h-3" />
             Distribution of therapist interventions detected across the session transcript
+          </p>
+        </CollapsibleSection>
+      )}
+
+      {/* 7b. Moment Confidence */}
+      {Array.isArray(analysis?.momentConfidence) && analysis.momentConfidence.length > 0 && (
+        <CollapsibleSection
+          title="Moment Confidence"
+          icon={<Eye className="w-5 h-5 text-teal-500" />}
+          tooltip={
+            <InfoTooltip
+              title="Moment Confidence Scoring"
+              description="Each identified moment is scored across four dimensions of reliability: spontaneity, concrete detail, contextual richness, and narrative coherence. Moments prompted by therapist questions are flagged."
+              methodology="Multi-dimensional confidence assessment based on discourse analysis markers. Therapist influence detection uses turn-by-turn analysis of question-response patterns."
+            />
+          }
+          teaser={
+            <div className="flex items-center gap-4 text-sm">
+              {(() => {
+                const mc = analysis.momentConfidence!;
+                const avg = mc.reduce((sum, m) => sum + m.overallConfidence, 0) / mc.length;
+                const prompted = mc.filter((m) => m.therapistInfluence).length;
+                return (
+                  <>
+                    <span className="text-gray-600">
+                      Avg confidence: <span className={`font-bold ${avg > 0.7 ? 'text-green-600' : avg > 0.4 ? 'text-amber-600' : 'text-red-600'}`}>{Math.round(avg * 100)}%</span>
+                    </span>
+                    {prompted > 0 && (
+                      <span className="text-orange-500 text-xs font-medium">{prompted} prompted moment{prompted !== 1 ? 's' : ''}</span>
+                    )}
+                    <span className="text-gray-400 text-xs">{mc.length} moment{mc.length !== 1 ? 's' : ''} scored</span>
+                  </>
+                );
+              })()}
+            </div>
+          }
+        >
+          <div className="space-y-3">
+            {analysis.momentConfidence!.map((mc) => {
+              const moment = analysis.moments?.find((m) => m.id === mc.momentId);
+              const confColor = mc.overallConfidence > 0.7 ? 'bg-green-100 text-green-700' : mc.overallConfidence > 0.4 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700';
+              const barColor = (val: number) => val > 0.7 ? 'bg-green-400' : val > 0.4 ? 'bg-amber-400' : 'bg-red-400';
+
+              return (
+                <div key={mc.momentId} className="p-4 bg-white rounded-xl border border-gray-200">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="text-xs text-gray-400 flex-shrink-0">#{mc.momentId}</span>
+                      {moment?.quote && (
+                        <p className="text-sm text-gray-700 italic truncate">&ldquo;{moment.quote}&rdquo;</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${confColor}`}>
+                        {Math.round(mc.overallConfidence * 100)}%
+                      </span>
+                      {mc.therapistInfluence && (
+                        <span
+                          className="text-xs font-medium px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 cursor-help"
+                          title={mc.influenceNote || 'This moment was prompted by the therapist'}
+                        >
+                          Prompted
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Sub-score bars */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-3 pl-6">
+                    {([
+                      { label: 'Spontaneity', value: mc.spontaneity },
+                      { label: 'Concrete Detail', value: mc.concreteDetail },
+                      { label: 'Context Richness', value: mc.contextualRichness },
+                      { label: 'Narrative Coherence', value: mc.narrativeCoherence },
+                    ] as { label: string; value: number }[]).map((sub) => (
+                      <div key={sub.label} className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-500 w-28 flex-shrink-0">{sub.label}</span>
+                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full ${barColor(sub.value)}`} style={{ width: `${Math.round(sub.value * 100)}%` }} />
+                        </div>
+                        <span className="text-[10px] text-gray-400 w-8 text-right">{Math.round(sub.value * 100)}%</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {mc.therapistInfluence && mc.influenceNote && (
+                    <p className="text-xs text-orange-500 mt-2 pl-6 italic">{mc.influenceNote}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <p className="text-xs text-gray-400 mt-4 flex items-center gap-1">
+            <Sparkles className="w-3 h-3" />
+            Confidence scoring helps identify which moments carry strongest evidentiary weight
           </p>
         </CollapsibleSection>
       )}

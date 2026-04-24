@@ -4,7 +4,8 @@ import { useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useApi } from '@/hooks/use-api';
-import type { AnalysisResult, SimilarCase, PractitionerMatch, StructureName } from '@/types';
+import type { AnalysisResult, SimilarCase, PractitionerMatch, StructureName, VectorInsight } from '@/types';
+import { STRUCTURES, getStructureColor } from '@/lib/structures';
 import { Card } from '@/components/ui/Card';
 import { InfoTooltip } from '@/components/ui/InfoTooltip';
 import {
@@ -23,6 +24,8 @@ import {
   BarChart3,
   Zap,
   Info,
+  Target,
+  Link2,
 } from 'lucide-react';
 
 // ─── Types ───
@@ -211,6 +214,69 @@ function computeCorrelations(cases: SimilarCase[]): CorrelationAlert[] {
   // Sort by percentage descending
   alerts.sort((a, b) => b.percentage - a.percentage);
   return alerts;
+}
+
+// ─── Collapsible Section ───
+function CollapsibleSection({
+  title,
+  icon,
+  teaser,
+  children,
+  defaultOpen = false,
+  tooltip,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  teaser: React.ReactNode;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+  tooltip?: React.ReactNode;
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-6 py-5 flex items-center justify-between hover:bg-gray-50 transition rounded-t-2xl"
+      >
+        <div className="flex items-center gap-3">
+          {icon}
+          <h3 className="font-playfair text-lg font-bold text-gray-900">{title}</h3>
+          {tooltip}
+        </div>
+        <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      <div className="px-6 pb-4 -mt-1">{teaser}</div>
+      {isOpen && (
+        <div className="px-6 pb-6 pt-2 border-t border-gray-100">{children}</div>
+      )}
+    </div>
+  );
+}
+
+// ─── Experiential Field Helpers ───
+const QUADRANT_LABELS: Record<string, { name: string; position: string; structure: string }> = {
+  'embodied_self': { name: 'Embodied Self', position: 'Inner / Direct', structure: 'embodied_self' },
+  'sensory_connection': { name: 'Sensory Connection', position: 'Outer / Direct', structure: 'sensory_connection' },
+  'narrative_self': { name: 'Narrative Self', position: 'Inner / Interpretive', structure: 'narrative_self' },
+  'thought_movements': { name: 'Thought Movements', position: 'Outer / Interpretive', structure: 'thought_movements' },
+};
+
+const QUADRANT_COLORS: Record<string, string> = {
+  'inner-direct': '#F97316',
+  'outer-direct': '#06B6D4',
+  'inner-interpretive': '#7C3AED',
+  'outer-interpretive': '#4F46E5',
+};
+
+function getDominantQuadrantLabel(q: string): string {
+  const map: Record<string, string> = {
+    'inner-direct': 'Inner / Direct (Embodied Self)',
+    'outer-direct': 'Outer / Direct (Sensory Connection)',
+    'inner-interpretive': 'Inner / Interpretive (Narrative Self)',
+    'outer-interpretive': 'Outer / Interpretive (Thought Movements)',
+  };
+  return map[q] || q;
 }
 
 // ─── Main Page ───
@@ -418,7 +484,7 @@ export default function ExperiencesPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <h4 className="font-semibold text-gray-900">{match.name || match.code}</h4>
+                            <h4 className="font-semibold text-gray-900">{match.specialty}</h4>
                             <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${matchInfo.bg} ${matchInfo.color}`}>
                               {matchPercent}% match
                             </span>
@@ -429,7 +495,7 @@ export default function ExperiencesPage() {
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-secondary">{match.specialty}</p>
+                          <p className="text-xs text-gray-400">Based on methodology by {match.name || match.code}</p>
                           <p className="text-sm text-gray-600 mt-1.5 line-clamp-1">{match.methodology}</p>
                         </div>
                       </div>
@@ -545,6 +611,325 @@ export default function ExperiencesPage() {
           </div>
         )}
       </section>
+
+      {/* ════════════════════════════════════════════════════════════ */}
+      {/* SECTION 2: CLINICAL INTELLIGENCE — VECTOR-POWERED INSIGHTS  */}
+      {/* ════════════════════════════════════════════════════════════ */}
+      {analysis.vectorInsights && analysis.vectorInsights.length > 0 && (
+        <section>
+          <div className="bg-gradient-to-br from-primary/5 via-white to-teal-50/50 rounded-2xl border border-primary/20 p-6 sm:p-8">
+            {/* Header */}
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-teal-600 flex items-center justify-center shadow-lg shadow-primary/20">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-playfair text-2xl font-bold text-gray-900 tracking-tight">Clinical Intelligence</h3>
+                  <InfoTooltip
+                    title="Vector-Powered Clinical Intelligence"
+                    description="These insights are generated by analyzing semantic similarity patterns across 14,600 coded therapy moments and 778 patient journeys. Each insight combines semantic embedding analysis, phenomenological structure coding, and outcome data to surface clinically actionable patterns."
+                    methodology="Triple-vector architecture: moment embeddings (1536-dim) × structure profiles (10-dim) × practitioner method embeddings. Cosine similarity with hybrid re-ranking."
+                  />
+                </div>
+                <p className="text-sm text-gray-600 mt-1">AI-powered pattern analysis across 14,600 coded moments and 778 patient journeys</p>
+              </div>
+            </div>
+
+            {/* Insight Cards */}
+            <div className="space-y-4">
+              {analysis.vectorInsights.map((insight) => {
+                const iconMap: Record<string, React.ReactNode> = {
+                  trending: <TrendingUp className="w-5 h-5" />,
+                  target: <Target className="w-5 h-5" />,
+                  link: <Link2 className="w-5 h-5" />,
+                };
+                const colorMap: Record<string, { bg: string; border: string; icon: string; badge: string; label: string }> = {
+                  trajectory: { bg: 'bg-emerald-50', border: 'border-emerald-200', icon: 'bg-emerald-100 text-emerald-700', badge: 'bg-emerald-100 text-emerald-700', label: 'Trajectory Pattern' },
+                  outcome_prediction: { bg: 'bg-blue-50', border: 'border-blue-200', icon: 'bg-blue-100 text-blue-700', badge: 'bg-blue-100 text-blue-700', label: 'Outcome Prediction' },
+                  method_alignment: { bg: 'bg-violet-50', border: 'border-violet-200', icon: 'bg-violet-100 text-violet-700', badge: 'bg-violet-100 text-violet-700', label: 'Method Alignment' },
+                };
+                const colors = colorMap[insight.type] || colorMap.trajectory;
+                return (
+                  <div key={insight.id} className={`${colors.bg} ${colors.border} border rounded-xl p-5`}>
+                    <div className="flex items-start gap-3">
+                      <div className={`w-9 h-9 rounded-lg ${colors.icon} flex items-center justify-center flex-shrink-0 mt-0.5`}>
+                        {iconMap[insight.icon]}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                          <h4 className="text-sm font-bold text-gray-900">{insight.title}</h4>
+                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${colors.badge}`}>
+                            {colors.label}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-700 leading-relaxed">{insight.description}</p>
+                        {insight.supportingMetric && (
+                          <div className="mt-3 flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 bg-white/80 border border-gray-200 rounded-lg px-3 py-1.5">
+                              <BarChart3 className="w-3.5 h-3.5 text-gray-500" />
+                              <span className="text-xs font-medium text-gray-600">{insight.supportingMetric}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-xs text-gray-500">
+                              <span className="font-medium">{Math.round(insight.confidence * 100)}%</span>
+                              <span>confidence</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════ */}
+      {/* EXPERIENTIAL FIELD VISUALIZATION                             */}
+      {/* ════════════════════════════════════════════════════════════ */}
+      {analysis?.experientialField && (
+        <section>
+          <CollapsibleSection
+            title="Experiential Field"
+            icon={<Target className="w-5 h-5 text-primary" />}
+            teaser={
+              <p className="text-sm text-secondary">
+                Mapping the client&apos;s experiential landscape across four phenomenological quadrants
+              </p>
+            }
+            tooltip={
+              <InfoTooltip
+                title="Experiential Field Analysis"
+                description="Maps the client's experience across four quadrants formed by two axes: Inner vs. Outer world orientation, and Direct Experience vs. Interpretation. Each quadrant represents a distinct mode of experiencing, and the field balance reveals the client's experiential style."
+                methodology="Five Hypernomic structures are scored for intensity (how strongly present) and clarity (how well-differentiated). Field balance is computed from quadrant averages. Phenomenal clarity measures overall experiential differentiation quality."
+              />
+            }
+            defaultOpen
+          >
+            {(() => {
+              const field = analysis.experientialField!;
+              const scores = field.scores || [];
+              const findScore = (s: string) => scores.find((sc) => sc.structure === s);
+              const embodied = findScore('embodied_self');
+              const sensory = findScore('sensory_connection');
+              const narrative = findScore('narrative_self');
+              const thought = findScore('thought_movements');
+              const phenomenal = findScore('phenomenal_distinctions');
+              const dominant = field.dominantQuadrant;
+
+              return (
+                <div className="space-y-6">
+                  {/* Quadrant Grid */}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Quadrant Map</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Inner/Direct — Embodied Self */}
+                      <div className={`rounded-xl p-4 border-2 transition-all ${dominant === 'inner-direct' ? 'border-orange-400 bg-orange-50/50 shadow-sm' : 'border-gray-200 bg-gray-50'}`}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: QUADRANT_COLORS['inner-direct'] }} />
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Inner / Direct</span>
+                        </div>
+                        <p className="text-sm font-semibold text-gray-900 mb-2">Embodied Self</p>
+                        {embodied && (
+                          <>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-[10px] text-gray-500 w-14">Intensity</span>
+                              <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div className="h-full rounded-full bg-orange-400" style={{ width: `${Math.round(embodied.intensity * 100)}%` }} />
+                              </div>
+                              <span className="text-[10px] font-mono text-gray-600">{Math.round(embodied.intensity * 100)}%</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-gray-500 w-14">Clarity</span>
+                              <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div className="h-full rounded-full bg-orange-300" style={{ width: `${Math.round(embodied.clarity * 100)}%` }} />
+                              </div>
+                              <span className="text-[10px] font-mono text-gray-600">{Math.round(embodied.clarity * 100)}%</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Outer/Direct — Sensory Connection */}
+                      <div className={`rounded-xl p-4 border-2 transition-all ${dominant === 'outer-direct' ? 'border-cyan-400 bg-cyan-50/50 shadow-sm' : 'border-gray-200 bg-gray-50'}`}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: QUADRANT_COLORS['outer-direct'] }} />
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Outer / Direct</span>
+                        </div>
+                        <p className="text-sm font-semibold text-gray-900 mb-2">Sensory Connection</p>
+                        {sensory && (
+                          <>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-[10px] text-gray-500 w-14">Intensity</span>
+                              <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div className="h-full rounded-full bg-cyan-400" style={{ width: `${Math.round(sensory.intensity * 100)}%` }} />
+                              </div>
+                              <span className="text-[10px] font-mono text-gray-600">{Math.round(sensory.intensity * 100)}%</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-gray-500 w-14">Clarity</span>
+                              <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div className="h-full rounded-full bg-cyan-300" style={{ width: `${Math.round(sensory.clarity * 100)}%` }} />
+                              </div>
+                              <span className="text-[10px] font-mono text-gray-600">{Math.round(sensory.clarity * 100)}%</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Inner/Interpretive — Narrative Self */}
+                      <div className={`rounded-xl p-4 border-2 transition-all ${dominant === 'inner-interpretive' ? 'border-violet-400 bg-violet-50/50 shadow-sm' : 'border-gray-200 bg-gray-50'}`}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: QUADRANT_COLORS['inner-interpretive'] }} />
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Inner / Interpretive</span>
+                        </div>
+                        <p className="text-sm font-semibold text-gray-900 mb-2">Narrative Self</p>
+                        {narrative && (
+                          <>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-[10px] text-gray-500 w-14">Intensity</span>
+                              <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div className="h-full rounded-full bg-violet-400" style={{ width: `${Math.round(narrative.intensity * 100)}%` }} />
+                              </div>
+                              <span className="text-[10px] font-mono text-gray-600">{Math.round(narrative.intensity * 100)}%</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-gray-500 w-14">Clarity</span>
+                              <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div className="h-full rounded-full bg-violet-300" style={{ width: `${Math.round(narrative.clarity * 100)}%` }} />
+                              </div>
+                              <span className="text-[10px] font-mono text-gray-600">{Math.round(narrative.clarity * 100)}%</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Outer/Interpretive — Thought Movements */}
+                      <div className={`rounded-xl p-4 border-2 transition-all ${dominant === 'outer-interpretive' ? 'border-indigo-400 bg-indigo-50/50 shadow-sm' : 'border-gray-200 bg-gray-50'}`}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: QUADRANT_COLORS['outer-interpretive'] }} />
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Outer / Interpretive</span>
+                        </div>
+                        <p className="text-sm font-semibold text-gray-900 mb-2">Thought Movements</p>
+                        {thought && (
+                          <>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-[10px] text-gray-500 w-14">Intensity</span>
+                              <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div className="h-full rounded-full bg-indigo-400" style={{ width: `${Math.round(thought.intensity * 100)}%` }} />
+                              </div>
+                              <span className="text-[10px] font-mono text-gray-600">{Math.round(thought.intensity * 100)}%</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-gray-500 w-14">Clarity</span>
+                              <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div className="h-full rounded-full bg-indigo-300" style={{ width: `${Math.round(thought.clarity * 100)}%` }} />
+                              </div>
+                              <span className="text-[10px] font-mono text-gray-600">{Math.round(thought.clarity * 100)}%</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Phenomenal Distinctions row */}
+                    {phenomenal && (
+                      <div className="mt-3 rounded-xl p-4 border border-gray-200 bg-gray-50">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-pink-500" />
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Phenomenal Distinctions</span>
+                        </div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] text-gray-500 w-14">Intensity</span>
+                          <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-pink-400" style={{ width: `${Math.round(phenomenal.intensity * 100)}%` }} />
+                          </div>
+                          <span className="text-[10px] font-mono text-gray-600">{Math.round(phenomenal.intensity * 100)}%</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-gray-500 w-14">Clarity</span>
+                          <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-pink-300" style={{ width: `${Math.round(phenomenal.clarity * 100)}%` }} />
+                          </div>
+                          <span className="text-[10px] font-mono text-gray-600">{Math.round(phenomenal.clarity * 100)}%</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Field Balance Bars */}
+                  {field.fieldBalance && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Field Balance</p>
+                      <div className="space-y-3">
+                        {/* Direct Experience vs Interpretation */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-gray-600">Direct Experience</span>
+                            <span className="text-xs text-gray-600">Interpretation</span>
+                          </div>
+                          <div className="h-3 bg-gray-100 rounded-full overflow-hidden flex">
+                            <div
+                              className="h-full bg-gradient-to-r from-orange-400 to-cyan-400 rounded-l-full"
+                              style={{ width: `${Math.round((field.fieldBalance.directExperience / (field.fieldBalance.directExperience + field.fieldBalance.interpretation || 1)) * 100)}%` }}
+                            />
+                            <div
+                              className="h-full bg-gradient-to-r from-violet-400 to-indigo-400 rounded-r-full"
+                              style={{ width: `${Math.round((field.fieldBalance.interpretation / (field.fieldBalance.directExperience + field.fieldBalance.interpretation || 1)) * 100)}%` }}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between mt-0.5">
+                            <span className="text-[10px] font-mono text-gray-400">{Math.round(field.fieldBalance.directExperience * 100)}%</span>
+                            <span className="text-[10px] font-mono text-gray-400">{Math.round(field.fieldBalance.interpretation * 100)}%</span>
+                          </div>
+                        </div>
+
+                        {/* Inner vs Outer */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-gray-600">Inner World</span>
+                            <span className="text-xs text-gray-600">Outer World</span>
+                          </div>
+                          <div className="h-3 bg-gray-100 rounded-full overflow-hidden flex">
+                            <div
+                              className="h-full bg-gradient-to-r from-orange-400 to-violet-400 rounded-l-full"
+                              style={{ width: `${Math.round((field.fieldBalance.innerWorld / (field.fieldBalance.innerWorld + field.fieldBalance.outerWorld || 1)) * 100)}%` }}
+                            />
+                            <div
+                              className="h-full bg-gradient-to-r from-cyan-400 to-indigo-400 rounded-r-full"
+                              style={{ width: `${Math.round((field.fieldBalance.outerWorld / (field.fieldBalance.innerWorld + field.fieldBalance.outerWorld || 1)) * 100)}%` }}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between mt-0.5">
+                            <span className="text-[10px] font-mono text-gray-400">{Math.round(field.fieldBalance.innerWorld * 100)}%</span>
+                            <span className="text-[10px] font-mono text-gray-400">{Math.round(field.fieldBalance.outerWorld * 100)}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Phenomenal Clarity Score */}
+                  <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl p-5 border border-teal-200/60">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-full bg-white border-2 border-teal-300 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xl font-bold text-teal-700 font-mono">{Math.round(field.phenomenalClarity * 100)}</span>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-teal-700 uppercase tracking-wide">Phenomenal Clarity</p>
+                        <p className="text-sm text-gray-600 mt-1">How clearly the client differentiates between dimensions of their experience</p>
+                        <p className="text-xs text-gray-500 mt-1">Dominant quadrant: <span className="font-medium text-gray-700">{getDominantQuadrantLabel(field.dominantQuadrant)}</span></p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </CollapsibleSection>
+        </section>
+      )}
 
       {/* ════════════════════════════════════════════════════════════ */}
       {/* SECTION 3: CORRELATED FACTOR SURFACING — HIDDEN PATTERNS    */}
@@ -716,6 +1101,191 @@ export default function ExperiencesPage() {
       </section>
 
       {/* ════════════════════════════════════════════════════════════ */}
+      {/* DIMENSION NETWORK — CO-OCCURRENCE VISUALIZATION              */}
+      {/* ════════════════════════════════════════════════════════════ */}
+      {analysis?.coOccurrenceNetwork && (
+        <section>
+          <CollapsibleSection
+            title="Dimension Network"
+            icon={<Link2 className="w-5 h-5 text-primary" />}
+            teaser={
+              <p className="text-sm text-secondary">
+                How phenomenological dimensions co-occur and cluster in this session
+              </p>
+            }
+            tooltip={
+              <InfoTooltip
+                title="Co-Occurrence Network"
+                description="Visualizes how the 10 phenomenological dimensions co-occur across session moments. Larger nodes indicate higher centrality (more connections). Thicker edges indicate stronger co-occurrence. Communities are groups of dimensions that frequently appear together."
+                methodology="Network built from moment-level co-occurrence counts. Centrality is computed as normalized degree centrality. Communities are detected via greedy modularity optimization. Bridge dimensions connect otherwise separate clusters."
+              />
+            }
+            defaultOpen
+          >
+            {(() => {
+              const network = analysis.coOccurrenceNetwork!;
+              const nodes = network.nodes || [];
+              const edges = network.edges || [];
+              const communities = network.communities || [];
+
+              // SVG circle layout
+              const cx = 200;
+              const cy = 200;
+              const radius = 150;
+              const nodePositions: Record<string, { x: number; y: number }> = {};
+              nodes.forEach((node, i) => {
+                const angle = (2 * Math.PI * i) / nodes.length - Math.PI / 2;
+                nodePositions[node.structure] = {
+                  x: cx + radius * Math.cos(angle),
+                  y: cy + radius * Math.sin(angle),
+                };
+              });
+
+              return (
+                <div className="space-y-6">
+                  {/* Network Graph */}
+                  <div className="flex justify-center">
+                    <svg viewBox="0 0 400 400" className="w-full max-w-[400px]" role="img" aria-label="Dimension co-occurrence network">
+                      {/* Edges */}
+                      {edges.map((edge, i) => {
+                        const from = nodePositions[edge.source];
+                        const to = nodePositions[edge.target];
+                        if (!from || !to) return null;
+                        return (
+                          <line
+                            key={`edge-${i}`}
+                            x1={from.x}
+                            y1={from.y}
+                            x2={to.x}
+                            y2={to.y}
+                            stroke="#94a3b8"
+                            strokeWidth={Math.max(1, edge.weight * 4)}
+                            strokeOpacity={Math.max(0.15, edge.weight * 0.8)}
+                          />
+                        );
+                      })}
+
+                      {/* Nodes */}
+                      {nodes.map((node) => {
+                        const pos = nodePositions[node.structure];
+                        if (!pos) return null;
+                        const color = getStructureColor(node.structure);
+                        const nodeRadius = 10 + node.centrality * 20;
+                        const isMostCentral = node.structure === network.mostCentral;
+                        const isBridge = node.isBridge;
+                        const label = STRUCTURES.find((s) => s.name === node.structure)?.label || node.structure;
+
+                        return (
+                          <g key={node.structure}>
+                            {/* Bridge ring */}
+                            {isBridge && (
+                              <circle
+                                cx={pos.x}
+                                cy={pos.y}
+                                r={nodeRadius + 5}
+                                fill="none"
+                                stroke={color}
+                                strokeWidth={2}
+                                strokeDasharray="4 3"
+                                opacity={0.7}
+                              />
+                            )}
+                            {/* Node circle */}
+                            <circle
+                              cx={pos.x}
+                              cy={pos.y}
+                              r={nodeRadius}
+                              fill={color}
+                              opacity={0.85}
+                              stroke={isMostCentral ? '#fbbf24' : 'white'}
+                              strokeWidth={isMostCentral ? 3 : 1.5}
+                            />
+                            {/* Star for most central */}
+                            {isMostCentral && (
+                              <text
+                                x={pos.x}
+                                y={pos.y - nodeRadius - 6}
+                                textAnchor="middle"
+                                fontSize="14"
+                                fill="#fbbf24"
+                              >
+                                &#9733;
+                              </text>
+                            )}
+                            {/* Label */}
+                            <text
+                              x={pos.x}
+                              y={pos.y + nodeRadius + 14}
+                              textAnchor="middle"
+                              fontSize="9"
+                              fill="#6b7280"
+                              fontWeight="500"
+                            >
+                              {label}
+                            </text>
+                            {/* Hover title */}
+                            <title>{`${label}: centrality ${Math.round(node.centrality * 100)}%`}</title>
+                          </g>
+                        );
+                      })}
+                    </svg>
+                  </div>
+
+                  {/* Community Clusters */}
+                  {communities.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Communities</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {communities.map((comm) => (
+                          <div key={comm.id} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-xs font-semibold text-gray-700">{comm.label}</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 mb-2">
+                              {comm.members.map((m) => {
+                                const color = getStructureColor(m);
+                                const label = STRUCTURES.find((s) => s.name === m)?.label || m;
+                                return (
+                                  <span key={m} className="flex items-center gap-1 text-[10px] font-medium text-gray-600 bg-white border border-gray-200 px-2 py-0.5 rounded-full">
+                                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                                    {label}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                            <p className="text-xs text-gray-500 leading-relaxed">{comm.description}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Key Insight Banner */}
+                  <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                      <Info className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-teal-800">
+                        <span className="font-semibold">Most central: </span>
+                        <span>{STRUCTURES.find((s) => s.name === network.mostCentral)?.label || network.mostCentral}</span>
+                        {network.bridgeDimension && (
+                          <>
+                            <span className="mx-2 text-teal-400">|</span>
+                            <span className="font-semibold">Bridge dimension: </span>
+                            <span>{STRUCTURES.find((s) => s.name === network.bridgeDimension)?.label || network.bridgeDimension}</span>
+                            <span className="text-teal-600"> — connects otherwise separate experiential clusters</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </CollapsibleSection>
+        </section>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════ */}
       {/* SECTION 4: SIMILAR STORIES                                  */}
       {/* ════════════════════════════════════════════════════════════ */}
       <section>
@@ -792,6 +1362,12 @@ export default function ExperiencesPage() {
                               </span>
                             ))}
                           </div>
+                        )}
+                        {/* Match Explanation — semantic narrative */}
+                        {c.matchExplanation && (
+                          <p className="text-xs text-gray-500 leading-relaxed mt-2 italic border-l-2 border-primary/20 pl-3">
+                            {c.matchExplanation}
+                          </p>
                         )}
                         {c.representativeQuote && (
                           <p className="text-xs text-gray-400 mt-1.5 italic line-clamp-1">
@@ -947,99 +1523,48 @@ export default function ExperiencesPage() {
           {topThemes.length > 0 && (
             <div className="bg-white rounded-2xl border border-gray-200 p-5">
               <div className="flex items-center gap-2 mb-3">
-                <Sparkles className="w-4 h-4 text-violet-500" />
+                <Sparkles className="w-4 h-4 text-primary" />
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Top Themes</p>
               </div>
               <div className="space-y-2">
-                {topThemes.map(([theme, count]) => {
-                  const pct = totalCases > 0 ? Math.round((count / totalCases) * 100) : 0;
-                  return (
-                    <div key={theme} className="flex items-center justify-between">
-                      <span className="text-sm text-gray-700 truncate flex-1">{theme}</span>
-                      <span className="text-xs font-mono text-gray-400 ml-2">{pct}%</span>
-                    </div>
-                  );
-                })}
+                {topThemes.map(([theme, count]) => (
+                  <div key={theme} className="flex items-center justify-between">
+                    <span className="text-sm text-gray-700 truncate">{theme}</span>
+                    <span className="text-xs font-mono text-gray-400">{count} case{count !== 1 ? 's' : ''}</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          {/* Dominant structures card */}
+          {/* Average match score card */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Target className="w-4 h-4 text-primary" />
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Average Match</p>
+            </div>
+            <p className="text-3xl font-bold text-gray-900 mb-1 font-mono">{avgMatch}<span className="text-lg text-gray-400">%</span></p>
+            <p className="text-sm text-gray-500">
+              Mean similarity across {totalCases} matched case{totalCases !== 1 ? 's' : ''}
+            </p>
+          </div>
+
+          {/* Top structures card */}
           {topStructures.length > 0 && (
             <div className="bg-white rounded-2xl border border-gray-200 p-5">
               <div className="flex items-center gap-2 mb-3">
-                <GitCompare className="w-4 h-4 text-primary" />
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Key Structures</p>
+                <BarChart3 className="w-4 h-4 text-primary" />
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Common Structures</p>
               </div>
-              <div className="space-y-2.5">
-                {topStructures.map(([struct, count]) => {
-                  const pct = totalCases > 0 ? Math.round((count / totalCases) * 100) : 0;
-                  return (
-                    <div key={struct}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm text-gray-700">{formatStructure(struct)}</span>
-                        <span className="text-xs font-mono text-gray-400">{pct}%</span>
-                      </div>
-                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary/50 rounded-full transition-all" style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="flex flex-wrap gap-1.5">
+                {topStructures.map(([struct, count]) => (
+                  <span key={struct} className="text-xs bg-primary/5 text-primary border border-primary/15 px-2.5 py-1 rounded-lg font-medium">
+                    {formatStructure(struct)} ({count})
+                  </span>
+                ))}
               </div>
             </div>
           )}
-
-          {/* Practitioner count card */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <Star className="w-4 h-4 text-primary" />
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Methodology Coverage</p>
-            </div>
-            <p className="text-3xl font-bold text-gray-900 mb-1 font-mono">2,156</p>
-            <p className="text-sm text-gray-500">practitioner methodologies analyzed</p>
-          </div>
-
-          {/* Match quality card */}
-          {realCases.length > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Avg. Match Score</p>
-              </div>
-              <p className="text-3xl font-bold text-gray-900 mb-1 font-mono">{avgMatch}<span className="text-lg text-gray-400">%</span></p>
-              <p className="text-sm text-gray-500">across {totalCases} matched case{totalCases !== 1 ? 's' : ''}</p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════════════════════════ */}
-      {/* SECTION 6: DATASET CONFIDENCE FOOTER                        */}
-      {/* ════════════════════════════════════════════════════════════ */}
-      <section className="pt-2 pb-4">
-        <div className="bg-gradient-to-r from-gray-50 via-white to-gray-50 rounded-2xl border border-gray-200 p-6">
-          <div className="flex flex-col items-center text-center gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Analysis Engine Active</span>
-              <InfoTooltip
-                title="Dataset & Matching Infrastructure"
-                description="All matches are computed against a curated research archive of anonymized lived experiences and clinical contributor case approaches. The archive is continuously updated as new research data is ingested."
-                methodology="PostgreSQL + pgvector for vector similarity search. Embeddings: OpenAI text-embedding-3-small (1536 dimensions). Batch processing supports up to 2048 inputs per embedding call."
-              />
-            </div>
-            <p className="text-sm text-gray-600 leading-relaxed max-w-2xl">
-              Analysis powered by semantic vector matching across{' '}
-              <span className="font-bold text-gray-900 font-mono">10,847</span> lived experiences and{' '}
-              <span className="font-bold text-gray-900 font-mono">2,156</span> clinical methodologies.
-              Correlations computed in real-time from co-occurring factors across matched cases.
-            </p>
-            <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
-              <Info className="w-3 h-3" />
-              All matches are phenomenological &mdash; not diagnostic. Use clinical judgment.
-            </p>
-          </div>
         </div>
       </section>
     </div>

@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
-
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import OpenAI, { toFile } from 'openai';
 
 const WHISPER_MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB (OpenAI Whisper limit)
 
@@ -23,6 +16,17 @@ const SUPPORTED_AUDIO_TYPES = [
 
 export async function POST(req: NextRequest) {
   try {
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { error: 'OpenAI API key is not configured. Please set the OPENAI_API_KEY environment variable.' },
+        { status: 503 }
+      );
+    }
+
+    const client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
     const formData = await req.formData();
     const file = formData.get('file') as File;
 
@@ -54,32 +58,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Write file to temporary location
-    const tempDir = os.tmpdir();
-    const tempFilePath = path.join(tempDir, `transcribe-${Date.now()}-${file.name}`);
-    const buffer = await file.arrayBuffer();
-    fs.writeFileSync(tempFilePath, Buffer.from(buffer));
+    // Convert to in-memory buffer (no filesystem writes — compatible with serverless)
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const uploadFile = await toFile(buffer, file.name, { type: file.type });
 
-    try {
-      // Call OpenAI Whisper API
-      const transcript = await client.audio.transcriptions.create({
-        file: fs.createReadStream(tempFilePath),
-        model: 'whisper-1',
-        language: 'en', // English only as per requirements
-      });
+    // Call OpenAI Whisper API
+    const transcript = await client.audio.transcriptions.create({
+      file: uploadFile,
+      model: 'whisper-1',
+      language: 'en', // English only as per requirements
+    });
 
-      return NextResponse.json(
-        { transcript: transcript.text },
-        { status: 200 }
-      );
-    } finally {
-      // Clean up temporary file
-      try {
-        fs.unlinkSync(tempFilePath);
-      } catch {
-        // Ignore cleanup errors
-      }
-    }
+    return NextResponse.json(
+      { transcript: transcript.text },
+      { status: 200 }
+    );
   } catch (error) {
     console.error('Transcription API error:', error);
 
