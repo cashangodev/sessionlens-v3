@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { InfoTooltip } from '@/components/ui/InfoTooltip';
 import { useApi } from '@/hooks/use-api';
 import type { AnalysisResult, CBTAnalysisResult } from '@/types';
 import {
@@ -402,7 +403,14 @@ export default function ProgressPage() {
 
       {/* Session Timeline */}
       <section>
-        <h3 className="font-playfair text-xl font-bold text-gray-900 mb-5">Session Timeline</h3>
+        <div className="flex items-center gap-2 mb-5">
+          <h3 className="font-playfair text-xl font-bold text-gray-900">Session Timeline</h3>
+          <InfoTooltip
+            title="Session Timeline"
+            description="Chronological view of all sessions for this client, showing risk level changes, key topics discussed, and clinical insights extracted from each session's analysis."
+            methodology="Each session is independently analyzed through the full SessionLens pipeline. Timeline entries are auto-generated from quick insights and dominant topics."
+          />
+        </div>
         <div className="relative">
           {/* Vertical line */}
           <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200" />
@@ -452,6 +460,11 @@ export default function ProgressPage() {
       <section>
         <div className="flex items-center gap-2 mb-5">
           <h3 className="font-playfair text-xl font-bold text-gray-900">Outcome Trends</h3>
+          <InfoTooltip
+            title="Outcome Tracking"
+            description="Standardized clinical outcome measures tracked across sessions. PHQ-9 measures depression severity (0-27 scale), GAD-7 measures anxiety severity (0-21 scale). Scores are clinician-entered at each session."
+            methodology="PHQ-9: Kroenke et al., 2001. GAD-7: Spitzer et al., 2006. Severity thresholds: minimal (0-4), mild (5-9), moderate (10-14), moderately severe (15-19), severe (20+)."
+          />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -476,7 +489,14 @@ export default function ProgressPage() {
 
           {/* Therapeutic Metrics */}
           <Card className="p-6">
-            <h4 className="text-sm font-semibold text-gray-700 mb-4">Therapeutic Metrics</h4>
+            <div className="flex items-center gap-2 mb-4">
+              <h4 className="text-sm font-semibold text-gray-700">Therapeutic Metrics</h4>
+              <InfoTooltip
+                title="Therapeutic Trajectory"
+                description="Composite metrics tracking emotional intensity, reflective capacity, emotional regulation, and therapeutic alliance across sessions. These are derived from the phenomenological structure profile of each session."
+                methodology="Structure profile analysis: emotional intensity from emotion + body structures, reflective capacity from reflective + cognitive, regulation from behavioral patterns, alliance from social + therapist move reciprocity."
+              />
+            </div>
             <div className="w-full h-64" suppressHydrationWarning>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={metricChartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
@@ -498,7 +518,14 @@ export default function ProgressPage() {
 
       {/* Topic Evolution */}
       <section>
-        <h3 className="font-playfair text-xl font-bold text-gray-900 mb-5">Topic Evolution</h3>
+        <div className="flex items-center gap-2 mb-5">
+          <h3 className="font-playfair text-xl font-bold text-gray-900">Topic Evolution</h3>
+          <InfoTooltip
+            title="Topic Evolution Analysis"
+            description="Tracks how presenting topics change in frequency and emphasis across sessions. An 'increasing' trend means the topic appeared in more recent sessions; 'decreasing' means it's being discussed less, which may indicate resolution."
+            methodology="NLP topic extraction per session, then cross-session frequency analysis with linear trend fitting."
+          />
+        </div>
         <Card className="p-6">
           <div className="space-y-3">
             {topicEvolution.map((topic) => (
@@ -540,7 +567,14 @@ export default function ProgressPage() {
 
       {/* Treatment Plan Progress */}
       <section>
-        <h3 className="font-playfair text-xl font-bold text-gray-900 mb-5">Treatment Plan Progress</h3>
+        <div className="flex items-center gap-2 mb-5">
+          <h3 className="font-playfair text-xl font-bold text-gray-900">Treatment Plan Progress</h3>
+          <InfoTooltip
+            title="Treatment Goal Tracking"
+            description="Goals are set collaboratively between therapist and client. Progress percentages are estimated based on behavioral indicators, outcome measure changes, and therapist clinical notes across sessions."
+            methodology="Semi-automated: initial goals from intake, progress estimates from session-over-session comparison of structure profiles and outcome scores."
+          />
+        </div>
         <div className="space-y-3">
           {treatmentPlan.map((item) => (
             <Card key={item.id} className="p-5">
@@ -579,6 +613,11 @@ export default function ProgressPage() {
       <section>
         <div className="flex items-center gap-2 mb-5">
           <h3 className="font-playfair text-xl font-bold text-gray-900">AI Decision Prompts</h3>
+          <InfoTooltip
+            title="Risk Level Assessment"
+            description="Overall risk level for each session, determined by the highest-severity risk flag detected. Risk is reassessed every session — a decreasing trend indicates treatment effectiveness."
+            methodology="4-layer risk detection: keyword → negation → temporal → contextual analysis. 16 risk categories assessed per session."
+          />
           <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">AI-generated</span>
         </div>
 

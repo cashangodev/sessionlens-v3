@@ -24,7 +24,7 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
 
-  const { data: sessionsData } = useApi<{ sessions: SessionSummary[] }>('/api/sessions');
+  const { data: sessionsData, loading: sessionsLoading } = useApi<{ sessions: SessionSummary[] }>('/api/sessions');
   const { data: clientsData } = useApi<{ clients: { clientCode: string }[] }>('/api/clients');
 
   useEffect(() => {
@@ -98,7 +98,7 @@ export default function HomePage() {
       </div>
 
       {/* === NEW USER: Onboarding === */}
-      {!hasAnySessions && (
+      {!sessionsLoading && !hasAnySessions && (
         <div className="mb-12 bg-mint-50 rounded-2xl border border-mint-200/60 p-8 md:p-10">
           <div className="flex items-start gap-4 mb-8">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">

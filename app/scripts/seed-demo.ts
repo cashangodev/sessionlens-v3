@@ -2,6 +2,9 @@
  * Demo Seed Script for SessionLens v3
  * Seeds Supabase with realistic clinical demo data for the SympathIQ partnership demo.
  *
+ * ONE client, THREE sessions — a carefully crafted clinical narrative demonstrating
+ * how SessionLens helps therapists discover things they wouldn't find on their own.
+ *
  * Usage: npx tsx scripts/seed-demo.ts
  */
 
@@ -23,1820 +26,1278 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CLIENT 1: CL-4521 — Work anxiety & burnout, 5 sessions, star client
+// CLIENT: CL-4521 — Male, 34, software engineer
+// Presents with work anxiety. SessionLens discovers perfectionism, sleep
+// disturbance, somatic complaints, emotional dysregulation, avoidance behaviors.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const client1 = {
   therapist_id: DEV_THERAPIST_ID,
   client_code: 'CL-4521',
-  gender: 'female',
+  gender: 'male',
   age_range: 'adult',
   treatment_goals: [
-    'Reduce work-related anxiety symptoms',
-    'Develop sustainable work-life boundaries',
-    'Build somatic awareness and grounding skills',
-    'Challenge perfectionist thinking patterns',
+    'Reduce work-related anxiety and somatic symptoms',
+    'Address underlying perfectionism and self-critical patterns',
+    'Improve sleep quality and emotional regulation',
+    'Develop healthy boundary-setting behaviors',
   ],
-  presenting_concerns: ['Work-related anxiety', 'Burnout', 'Somatic symptoms', 'Perfectionism'],
-  diagnostic_considerations: ['Generalized Anxiety Disorder', 'Adjustment Disorder with Anxiety', 'Burnout Syndrome'],
+  presenting_concerns: ['Work-related anxiety', 'Stress', 'Chest tightness', 'Performance pressure'],
+  diagnostic_considerations: ['Generalized Anxiety Disorder', 'Adjustment Disorder with Anxiety', 'Insomnia Disorder'],
   current_risk_level: 'low',
-  key_themes: ['Perfectionism', 'Work identity', 'Somatic anxiety', 'Boundary setting', 'Self-compassion'],
+  key_themes: ['Perfectionism', 'Sleep disturbance', 'Somatic complaints', 'Emotional dysregulation', 'Avoidance'],
   dominant_structures: ['body', 'emotion', 'cognitive', 'narrative'],
-  preferred_approach: 'Integrative CBT with somatic awareness',
-  clinical_notes: 'High-functioning professional presenting with escalating anxiety tied to workplace performance pressure. Strong therapeutic alliance established early. Demonstrates excellent reflective capacity and willingness to engage in behavioral experiments. Somatic symptoms (chest tightness, shallow breathing) are primary anxiety markers. Family system adds pressure through minimizing language. Clear improvement trajectory across sessions.',
-  total_sessions: 5,
-  is_confirmed: true,
-  last_confirmed_at: '2026-04-18T10:00:00Z',
-  status: 'active',
-  created_at: '2026-03-03T09:00:00Z',
-  updated_at: '2026-04-18T10:00:00Z',
-  outcome_tracking_enabled: true,
-  outcome_scores: [
-    { date: '2026-03-05', phq9: 16, gad7: 14, note: 'Intake — elevated anxiety and moderate depression' },
-    { date: '2026-03-12', phq9: 14, gad7: 13, note: 'Slight improvement, beginning to identify patterns' },
-    { date: '2026-03-19', phq9: 12, gad7: 11, note: 'Grounding techniques showing effect' },
-    { date: '2026-04-02', phq9: 10, gad7: 9, note: 'Returned to work part-time, managing well' },
-    { date: '2026-04-16', phq9: 8, gad7: 7, note: 'Significant improvement — self-compassion emerging' },
-  ],
-  deleted_at: null,
-};
-
-const client1Sessions = [
-  {
-    session_number: 1,
-    session_date: '2026-03-05T10:00:00Z',
-    treatment_goals: 'Initial assessment; establish therapeutic alliance; identify primary concerns',
-    status: 'complete',
-    transcript: `Therapist: Welcome. I'm glad you reached out. Can you tell me what brought you here today?
-
-Client: I... I don't even know where to start. Work has just become this thing that I dread. Every Sunday night I feel physically sick thinking about Monday. My chest gets tight, my breathing gets shallow. I used to love what I do — I'm a product manager at a tech company — but now it just feels like I'm drowning.
-
-Therapist: That sounds really overwhelming. The physical sensations you're describing — the tightness, the shallow breathing — those are important signals.
-
-Client: Yeah, and my partner keeps saying I should just take a break, but I can't. If I take time off, everything falls apart. I'm the one holding it together. That's what I do.
-
-Therapist: So there's this sense of responsibility — that if you step back, things collapse. I'm curious about that belief.
-
-Client: I mean... logically I know the company won't fall apart. But it feels that way. And my manager has been piling on more projects. I haven't said no once in three years.
-
-Therapist: Not once in three years. What do you think would happen if you said no?
-
-Client: [long pause] They'd think I can't handle it. That I'm not good enough. And that terrifies me more than burning out, honestly.
-
-Therapist: So there's a choice between protecting yourself and being seen as competent. That's a painful bind to be in.
-
-Client: When you put it like that... yeah. It is painful. I never really let myself feel that.`,
-    analysis_result: {
-      quickInsight: {
-        riskLevel: 'moderate',
-        clinicalPriority: 'Workplace anxiety with somatic features; assess burnout severity and establish safety',
-        prognosis: 'Good — client demonstrates strong insight and verbal fluency',
-        topRecommendation: 'Establish psychoeducation around anxiety-burnout cycle; begin somatic awareness training',
-        sessionNumber: 1,
-      },
-      moments: [
-        {
-          id: 1,
-          timestamp: '00:01:30',
-          quote: 'Every Sunday night I feel physically sick thinking about Monday. My chest gets tight, my breathing gets shallow.',
-          context: 'Opening disclosure — somatic symptoms linked to anticipatory anxiety. Clear body-based presentation.',
-          type: 'immediate_experience',
-          valence: 'negative',
-          intensity: 8,
-          structures: ['body', 'emotion', 'immediate_experience'],
-          therapistMove: 'empathic_attunement',
-          therapistQuote: 'The physical sensations you\'re describing — the tightness, the shallow breathing — those are important signals.',
-        },
-        {
-          id: 2,
-          timestamp: '00:04:12',
-          quote: 'If I take time off, everything falls apart. I\'m the one holding it together. That\'s what I do.',
-          context: 'Core belief surfacing — over-responsibility and identity fusion with work performance.',
-          type: 'reflective',
-          valence: 'negative',
-          intensity: 7,
-          structures: ['cognitive', 'narrative', 'social'],
-          therapistMove: 'interpretation',
-          therapistQuote: 'So there\'s this sense of responsibility — that if you step back, things collapse.',
-        },
-        {
-          id: 3,
-          timestamp: '00:06:45',
-          quote: 'I haven\'t said no once in three years.',
-          context: 'Behavioral pattern revealed — complete absence of boundary-setting in professional context.',
-          type: 'recalled_past',
-          valence: 'negative',
-          intensity: 6,
-          structures: ['behaviour', 'social', 'normative'],
-          therapistMove: 'reflection',
-          therapistQuote: 'Not once in three years. What do you think would happen if you said no?',
-        },
-        {
-          id: 4,
-          timestamp: '00:08:20',
-          quote: 'They\'d think I can\'t handle it. That I\'m not good enough. And that terrifies me more than burning out.',
-          context: 'Core fear articulated — competence anxiety driving self-destructive work patterns.',
-          type: 'immediate_experience',
-          valence: 'negative',
-          intensity: 9,
-          structures: ['emotion', 'cognitive', 'social'],
-          therapistMove: 'empathic_attunement',
-          therapistQuote: 'So there\'s a choice between protecting yourself and being seen as competent. That\'s a painful bind.',
-        },
-        {
-          id: 5,
-          timestamp: '00:10:05',
-          quote: 'I never really let myself feel that.',
-          context: 'Emerging awareness of emotional avoidance pattern. First metacognitive moment in session.',
-          type: 'reflective',
-          valence: 'mixed',
-          intensity: 5,
-          structures: ['reflective', 'emotion'],
-          therapistMove: 'silence',
-          therapistQuote: '[Therapist held space, allowing the client to sit with this recognition]',
-        },
-      ],
-      riskFlags: [
-        {
-          id: 1,
-          signal: 'Burnout Progression',
-          severity: 'medium',
-          detail: 'Three years without boundary-setting; physical symptoms escalating; dread cycle established',
-          algorithmMatch: 'burnout, boundary-setting, physical symptoms, dread cycle',
-          recommendation: 'Monitor for depressive episode; assess sleep and appetite changes; consider medical consultation for somatic symptoms',
-          interventionType: 'monitor',
-        },
-        {
-          id: 2,
-          signal: 'Somatic Escalation',
-          severity: 'medium',
-          detail: 'Chest tightness, shallow breathing, feeling physically sick — all tied to anticipatory anxiety',
-          algorithmMatch: 'chest tightness, shallow breathing, physically sick, anticipatory anxiety',
-          recommendation: 'Introduce diaphragmatic breathing; rule out cardiac concerns if symptoms intensify',
-          interventionType: 'immediate',
-        },
-      ],
-      structureProfile: {
-        body: 0.82,
-        immediate_experience: 0.75,
-        emotion: 0.78,
-        behaviour: 0.65,
-        social: 0.72,
-        cognitive: 0.80,
-        reflective: 0.45,
-        narrative: 0.70,
-        ecological: 0.55,
-        normative: 0.68,
-      },
-      cbtAnalysis: {
-        distortions: [
-          { type: 'Catastrophizing', confidence: 0.85, evidence: 'If I take time off, everything falls apart', alternativeThought: 'The team has managed before and can adapt to temporary changes', momentIndex: 1 },
-          { type: 'All-or-Nothing Thinking', confidence: 0.82, evidence: 'I\'m not good enough if I can\'t handle everything', alternativeThought: 'Competence exists on a spectrum; setting limits is also a professional skill', momentIndex: 3 },
-        ],
-        dominantPatterns: ['Catastrophizing', 'All-or-Nothing Thinking', 'Mind Reading'],
-        behavioralPatterns: ['Overwork as anxiety management', 'Avoidance of boundary-setting', 'Emotional suppression'],
-        automaticThoughts: [
-          { content: 'If I say no, they\'ll think I\'m incompetent', beliefStrength: 0.85, supportsWellbeing: false },
-          { content: 'I have to hold everything together or it collapses', beliefStrength: 0.80, supportsWellbeing: false },
-        ],
-        overallDistortionLoad: 0.72,
-        treatmentReadiness: 0.65,
-      },
-      similarCases: [
-        {
-          id: 1,
-          patientCode: 'SC-0412',
-          matchScore: 0.91,
-          presentingConcerns: ['somatic anxiety', 'workplace burnout', 'perfectionism', 'boundary issues'],
-          dominantStructures: ['body', 'emotion', 'cognitive', 'narrative'],
-          sessionCount: 10,
-          keyThemes: ['Approval-seeking', 'Overwork pattern', 'Somatic anxiety', 'Boundary development'],
-          outcome: 'Full recovery',
-          outcomeDetail: 'Full recovery over 10 sessions; returned to work with sustainable boundaries. Breakthrough came when client connected childhood approval-seeking to adult overwork pattern.',
-          representativeQuote: 'I realized I was working for my father\'s approval, not my manager\'s — once I saw that, the pattern lost its power.',
-        },
-      ],
-      practitionerMatches: [
-        {
-          id: 1,
-          code: 'PM-001',
-          name: 'Dr. Rachel Morrison',
-          specialty: 'Cognitive-Behavioral Therapy',
-          methodology: 'Graded Exposure with Cognitive Restructuring',
-          matchScore: 0.88,
-          interventionSequence: ['Establish somatic awareness baseline', 'Introduce cognitive restructuring for catastrophic predictions', 'Design graded boundary-setting experiments', 'Process outcomes and consolidate gains'],
-          outcomePatterns: [
-            { metric: 'Return-to-function rate', change: '+78%', confidence: 0.85 },
-            { metric: 'GAD-7 reduction', change: '-6.2 points', confidence: 0.80 },
-          ],
-          matchReasoning: 'Behavioral experiments targeting catastrophic predictions about boundary-setting',
-          targetStructures: ['cognitive', 'behaviour', 'body'],
-        },
-      ],
-      sessionHistory: [
-        { session: 1, emotionalIntensity: 8.0, reflectiveCapacity: 3.2, emotionalRegulation: 2.9, therapeuticAlliance: 3.8 },
-      ],
-      therapistMoves: [
-        { type: 'empathic_attunement', count: 4, percentage: 36 },
-        { type: 'reflection', count: 3, percentage: 27 },
-        { type: 'interpretation', count: 2, percentage: 18 },
-        { type: 'silence', count: 2, percentage: 18 },
-      ],
-      clinicianReport: 'Session 1: Initial assessment reveals high-functioning professional with escalating workplace anxiety and burnout. Primary presentation is somatic (chest tightness, breathing difficulty, nausea). Core cognitive patterns include catastrophizing about workplace consequences of boundary-setting and all-or-nothing thinking about competence. Client demonstrates strong verbal capacity and early reflective awareness. Therapeutic alliance established quickly. Recommend: psychoeducation on anxiety cycle, introduce basic somatic grounding, explore belief system around competence and worth.',
-      patientReport: 'Welcome to therapy. Today we explored what\'s been happening at work and how it\'s affecting your body and mind. You shared something really important — that the fear of being seen as "not good enough" has been keeping you from protecting yourself. That\'s a powerful insight to start with. For this week, try noticing when your chest gets tight and simply naming it: "anxiety is here." We\'ll build from there.',
-      analysisStatus: 'complete',
-      analysisWarnings: [],
-    },
-  },
-  {
-    session_number: 2,
-    session_date: '2026-03-12T10:00:00Z',
-    treatment_goals: 'Deepen somatic awareness; begin challenging perfectionist cognitions',
-    status: 'complete',
-    transcript: `Therapist: How has the week been since we last met?
-
-Client: Better, actually. I tried what you suggested — naming the anxiety when it shows up. It's weird, but it actually helps a little. Like, "oh, there's that tightness again." It doesn't make it go away but it makes me feel less... consumed by it.
-
-Therapist: That's a really important distinction — between being consumed by anxiety and being able to observe it. You've already started building that observer capacity.
-
-Client: I also noticed something. The tightness comes most when I get a Slack message from my manager. Even if it's just "hey, got a minute?" My body reacts before I even know what he wants.
-
-Therapist: Your body has learned to associate those messages with threat. That's a conditioned response — it makes perfect sense given what you've been through.
-
-Client: Is that... normal? Like, is that what anxiety is?
-
-Therapist: Absolutely. Your nervous system is doing exactly what it's designed to do — protecting you from perceived danger. The work we'll do together is helping your system learn what's actually dangerous versus what just feels that way.
-
-Client: [breathing deeply] That actually makes me feel less broken. I've been telling myself something is wrong with me for months.
-
-Therapist: There's nothing wrong with you. Your body is responding to real, sustained pressure. What would it be like to believe that — really believe it?
-
-Client: [long pause] I think... I'd be less hard on myself. I'd stop trying to just push through it.`,
-    analysis_result: {
-      quickInsight: {
-        riskLevel: 'moderate',
-        clinicalPriority: 'Building somatic literacy; normalizing anxiety response; reducing self-blame',
-        prognosis: 'Good — client already implementing strategies and showing metacognitive gains',
-        topRecommendation: 'Continue somatic awareness work; introduce conditioned response psychoeducation',
-        sessionNumber: 2,
-      },
-      moments: [
-        {
-          id: 1,
-          timestamp: '00:01:20',
-          quote: 'I tried naming the anxiety when it shows up. It doesn\'t make it go away but it makes me feel less consumed by it.',
-          context: 'Client reporting successful between-session practice. Early signs of decentering from emotional experience.',
-          type: 'reflective',
-          valence: 'positive',
-          intensity: 4,
-          structures: ['reflective', 'emotion', 'cognitive'],
-          therapistMove: 'reflection',
-          therapistQuote: 'That\'s a really important distinction — between being consumed by anxiety and being able to observe it.',
-        },
-        {
-          id: 2,
-          timestamp: '00:03:45',
-          quote: 'The tightness comes most when I get a Slack message from my manager. Even if it\'s just "hey, got a minute?"',
-          context: 'Client identifying specific trigger with somatic precision. Conditioned anxiety response becoming conscious.',
-          type: 'immediate_experience',
-          valence: 'negative',
-          intensity: 7,
-          structures: ['body', 'immediate_experience', 'social'],
-          therapistMove: 'interpretation',
-          therapistQuote: 'Your body has learned to associate those messages with threat. That\'s a conditioned response.',
-        },
-        {
-          id: 3,
-          timestamp: '00:06:30',
-          quote: 'That actually makes me feel less broken. I\'ve been telling myself something is wrong with me for months.',
-          context: 'Psychoeducation landing — client experiencing relief from normalization. Self-blame beginning to soften.',
-          type: 'reflective',
-          valence: 'positive',
-          intensity: 6,
-          structures: ['cognitive', 'emotion', 'reflective'],
-          therapistMove: 'empathic_attunement',
-          therapistQuote: 'There\'s nothing wrong with you. Your body is responding to real, sustained pressure.',
-        },
-        {
-          id: 4,
-          timestamp: '00:08:50',
-          quote: 'I think I\'d be less hard on myself. I\'d stop trying to just push through it.',
-          context: 'Future-oriented reflection — imagining a different relationship with self. Behavioral change becoming conceivable.',
-          type: 'future_oriented',
-          valence: 'positive',
-          intensity: 5,
-          structures: ['cognitive', 'narrative', 'behaviour'],
-          therapistMove: 'silence',
-          therapistQuote: '[Therapist allowed space for this emerging self-compassion]',
-        },
-      ],
-      riskFlags: [
-        {
-          id: 1,
-          signal: 'Conditioned Anxiety Response',
-          severity: 'low',
-          detail: 'Physiological startle response to neutral Slack messages from manager',
-          algorithmMatch: 'startle response, hypervigilance, workplace trigger',
-          recommendation: 'Continue psychoeducation; consider introducing brief mindfulness practice before checking messages',
-          interventionType: 'monitor',
-        },
-      ],
-      structureProfile: {
-        body: 0.80,
-        immediate_experience: 0.72,
-        emotion: 0.75,
-        behaviour: 0.60,
-        social: 0.68,
-        cognitive: 0.82,
-        reflective: 0.58,
-        narrative: 0.65,
-        ecological: 0.50,
-        normative: 0.60,
-      },
-      cbtAnalysis: {
-        distortions: [
-          { type: 'Labeling', confidence: 0.75, evidence: 'Something is wrong with me', alternativeThought: 'I\'m having a normal stress response to abnormal levels of pressure', momentIndex: 2 },
-          { type: 'Should Statements', confidence: 0.70, evidence: 'I should just push through it', alternativeThought: 'Resting and recovering is a valid and necessary response to burnout', momentIndex: 3 },
-        ],
-        dominantPatterns: ['Self-blame', 'Should Statements', 'Labeling'],
-        behavioralPatterns: ['Push-through mentality', 'Anxiety naming (new, adaptive)', 'Hypervigilance to work communications'],
-        automaticThoughts: [
-          { content: 'Something is wrong with me', beliefStrength: 0.65, supportsWellbeing: false },
-          { content: 'I should be able to handle this', beliefStrength: 0.70, supportsWellbeing: false },
-          { content: 'Naming anxiety helps me feel less consumed', beliefStrength: 0.55, supportsWellbeing: true },
-        ],
-        overallDistortionLoad: 0.58,
-        treatmentReadiness: 0.72,
-      },
-      similarCases: [],
-      practitionerMatches: [],
-      sessionHistory: [
-        { session: 1, emotionalIntensity: 8.0, reflectiveCapacity: 3.2, emotionalRegulation: 2.9, therapeuticAlliance: 3.8 },
-        { session: 2, emotionalIntensity: 7.2, reflectiveCapacity: 4.0, emotionalRegulation: 3.5, therapeuticAlliance: 4.3 },
-      ],
-      therapistMoves: [
-        { type: 'empathic_attunement', count: 3, percentage: 30 },
-        { type: 'reflection', count: 3, percentage: 30 },
-        { type: 'interpretation', count: 2, percentage: 20 },
-        { type: 'silence', count: 2, percentage: 20 },
-      ],
-      clinicianReport: 'Session 2: Client reports successful implementation of anxiety-naming technique between sessions. Notable somatic awareness gain — identified specific trigger (manager Slack messages) with precision. Psychoeducation on conditioned responses produced visible relief and reduction in self-blame. Client moving from "something is wrong with me" toward "my body is responding normally to abnormal pressure." Alliance strengthening. Recommend continuing somatic work and beginning gentle cognitive challenging of perfectionist standards.',
-      patientReport: 'Great progress this week! You noticed that naming your anxiety — just saying "there it is" — helps you feel less overwhelmed by it. That\'s a real skill you\'re building. We also talked about how your body\'s reaction to Slack messages is a learned response, not a sign that something is wrong with you. This week, try the same naming practice when you notice the Slack-trigger tightness. You might also try one slow breath before opening messages.',
-      analysisStatus: 'complete',
-      analysisWarnings: [],
-    },
-  },
-  {
-    session_number: 3,
-    session_date: '2026-03-19T10:00:00Z',
-    treatment_goals: 'Introduce grounding techniques; explore boundary-setting',
-    status: 'complete',
-    transcript: `Therapist: You mentioned wanting to talk about boundaries today. What's been coming up?
-
-Client: So I actually did something this week. My manager asked me to take on another project — our fourth major launch this quarter — and I said... I said I needed to check my capacity first. I didn't say no exactly, but I didn't say yes immediately either.
-
-Therapist: That's significant. How did that feel?
-
-Client: Terrifying. [laughs] My heart was pounding. But also... kind of powerful? Like, I had a choice. I've never felt like I had a choice before.
-
-Therapist: You discovered that there's space between the request and your response. That's agency.
-
-Client: And the thing is — he just said "okay, let me know by Friday." That's it. No anger, no judgment. All that catastrophizing in my head and he just... was fine with it.
-
-Therapist: So reality didn't match the catastrophe your mind predicted. What do you make of that?
-
-Client: I think... I've been running on a story that isn't true. Or at least isn't as true as I thought. The world doesn't end when I don't say yes immediately.
-
-Therapist: That's a really important piece of learning. Your nervous system gave you the danger signal, and you chose to respond differently anyway. That takes courage.
-
-Client: I'm still figuring out what to tell him. But just having the space to figure it out — that feels new.`,
-    analysis_result: {
-      quickInsight: {
-        riskLevel: 'low',
-        clinicalPriority: 'Consolidating boundary-setting gains; processing new behavioral evidence against catastrophic beliefs',
-        prognosis: 'Very good — client independently initiating behavioral experiments with positive outcomes',
-        topRecommendation: 'Reinforce boundary success; help client articulate what she needs from the manager conversation',
-        sessionNumber: 3,
-      },
-      moments: [
-        {
-          id: 1,
-          timestamp: '00:01:45',
-          quote: 'I said I needed to check my capacity first. I didn\'t say no exactly, but I didn\'t say yes immediately either.',
-          context: 'Client reporting first-ever boundary-setting attempt at work. Major behavioral shift.',
-          type: 'recalled_past',
-          valence: 'positive',
-          intensity: 6,
-          structures: ['behaviour', 'social', 'cognitive'],
-          therapistMove: 'reflection',
-          therapistQuote: 'That\'s significant. How did that feel?',
-        },
-        {
-          id: 2,
-          timestamp: '00:03:10',
-          quote: 'Terrifying. But also kind of powerful? Like, I had a choice. I\'ve never felt like I had a choice before.',
-          context: 'Simultaneous fear and empowerment — mixed valence moment indicating growth edge.',
-          type: 'immediate_experience',
-          valence: 'mixed',
-          intensity: 8,
-          structures: ['emotion', 'body', 'cognitive'],
-          therapistMove: 'interpretation',
-          therapistQuote: 'You discovered that there\'s space between the request and your response. That\'s agency.',
-        },
-        {
-          id: 3,
-          timestamp: '00:05:30',
-          quote: 'All that catastrophizing in my head and he just... was fine with it.',
-          context: 'Behavioral evidence disconfirming catastrophic prediction. Key learning moment.',
-          type: 'reflective',
-          valence: 'positive',
-          intensity: 5,
-          structures: ['cognitive', 'reflective', 'social'],
-          therapistMove: 'challenge',
-          therapistQuote: 'So reality didn\'t match the catastrophe your mind predicted. What do you make of that?',
-        },
-        {
-          id: 4,
-          timestamp: '00:07:20',
-          quote: 'I\'ve been running on a story that isn\'t true. Or at least isn\'t as true as I thought.',
-          context: 'Metacognitive insight — client recognizing the constructed nature of catastrophic narrative.',
-          type: 'reflective',
-          valence: 'positive',
-          intensity: 7,
-          structures: ['reflective', 'narrative', 'cognitive'],
-          therapistMove: 'empathic_attunement',
-          therapistQuote: 'That\'s a really important piece of learning. That takes courage.',
-        },
-      ],
-      riskFlags: [
-        {
-          id: 1,
-          signal: 'Residual Anxiety',
-          severity: 'low',
-          detail: 'Heart pounding during boundary-setting attempt; fear response still active',
-          algorithmMatch: 'heart pounding, fear response, boundary-setting',
-          recommendation: 'Normalize continued anxiety during behavioral experiments; celebrate acting despite fear',
-          interventionType: 'monitor',
-        },
-      ],
-      structureProfile: {
-        body: 0.68,
-        immediate_experience: 0.70,
-        emotion: 0.72,
-        behaviour: 0.82,
-        social: 0.78,
-        cognitive: 0.85,
-        reflective: 0.72,
-        narrative: 0.75,
-        ecological: 0.55,
-        normative: 0.62,
-      },
-      cbtAnalysis: {
-        distortions: [
-          { type: 'Fortune Telling', confidence: 0.68, evidence: 'All that catastrophizing in my head', alternativeThought: 'I predicted disaster but reality was neutral — I can\'t trust my anxious predictions', momentIndex: 2 },
-        ],
-        dominantPatterns: ['Fortune Telling (weakening)', 'Catastrophizing (disconfirmed)'],
-        behavioralPatterns: ['Boundary-setting (new)', 'Pause before responding (new)', 'Anxiety tolerance'],
-        automaticThoughts: [
-          { content: 'The world doesn\'t end when I don\'t say yes immediately', beliefStrength: 0.60, supportsWellbeing: true },
-          { content: 'I have a choice', beliefStrength: 0.55, supportsWellbeing: true },
-        ],
-        overallDistortionLoad: 0.42,
-        treatmentReadiness: 0.82,
-      },
-      similarCases: [],
-      practitionerMatches: [],
-      sessionHistory: [
-        { session: 1, emotionalIntensity: 8.0, reflectiveCapacity: 3.2, emotionalRegulation: 2.9, therapeuticAlliance: 3.8 },
-        { session: 2, emotionalIntensity: 7.2, reflectiveCapacity: 4.0, emotionalRegulation: 3.5, therapeuticAlliance: 4.3 },
-        { session: 3, emotionalIntensity: 6.5, reflectiveCapacity: 4.8, emotionalRegulation: 4.2, therapeuticAlliance: 4.7 },
-      ],
-      therapistMoves: [
-        { type: 'reflection', count: 3, percentage: 33 },
-        { type: 'interpretation', count: 2, percentage: 22 },
-        { type: 'empathic_attunement', count: 2, percentage: 22 },
-        { type: 'challenge', count: 1, percentage: 11 },
-        { type: 'silence', count: 1, percentage: 11 },
-      ],
-      clinicianReport: 'Session 3: Significant behavioral progress. Client independently attempted boundary-setting with manager — first time in 3 years. Reported mixed emotional response (fear + empowerment) indicating healthy growth edge engagement. Catastrophic prediction was disconfirmed by reality (manager responded neutrally). Client demonstrating strong metacognitive capacity: "I\'ve been running on a story that isn\'t true." Distortion load decreasing. Treatment trajectory very positive.',
-      patientReport: 'What happened this week was genuinely brave. You changed a 3-year pattern by giving yourself permission to pause before saying yes. And you learned something important — your mind predicted disaster, but reality was much more neutral. That gap between prediction and reality is where healing happens. This week, notice other places where your catastrophic predictions might not match what actually happens.',
-      analysisStatus: 'complete',
-      analysisWarnings: [],
-    },
-  },
-  {
-    session_number: 4,
-    session_date: '2026-04-02T10:00:00Z',
-    treatment_goals: 'Process return to work; consolidate cognitive restructuring gains',
-    status: 'complete',
-    transcript: `Therapist: You mentioned you started going back in three days a week. How is that going?
-
-Client: It's... manageable. Which feels like a miracle given where I was a month ago. I'm using the breathing technique before meetings, and I set up my calendar with actual breaks. Like, blocked time that says "focus time" where no one can book me.
-
-Therapist: You're structuring your environment to support yourself. That's proactive rather than reactive.
-
-Client: Exactly. And I had an interesting moment on Tuesday. My manager gave some critical feedback on a presentation, and my first thought was "I'm terrible at this." But then I caught it. I actually thought, "wait, that's the catastrophizing thing."
-
-Therapist: You caught the pattern in real time. That's remarkable progress.
-
-Client: It still stung. The feedback still hurt. But it didn't spiral. Like, normally that would ruin my whole day — maybe my whole week. But this time it was just... a moment.
-
-Therapist: A moment rather than a spiral. The feelings were still there, but they had a beginning, a middle, and an end.
-
-Client: Yeah. And I think that's because I'm not adding the story on top anymore. The feedback was just feedback. I was adding "and therefore you're worthless" which... isn't actually what he said.
-
-Therapist: So you're learning to separate the event from the interpretation. That's cognitive flexibility in action.
-
-Client: It feels like I'm becoming a different person. Or maybe... becoming more myself? I don't know how to say it.`,
-    analysis_result: {
-      quickInsight: {
-        riskLevel: 'low',
-        clinicalPriority: 'Consolidating workplace re-integration; strengthening cognitive flexibility',
-        prognosis: 'Very good — active coping strategies in place, metacognitive gains holding in real-world contexts',
-        topRecommendation: 'Explore identity narrative shift; prepare for potential setbacks with relapse prevention psychoeducation',
-        sessionNumber: 4,
-      },
-      moments: [
-        {
-          id: 1,
-          timestamp: '00:01:30',
-          quote: 'It\'s manageable. Which feels like a miracle given where I was a month ago.',
-          context: 'Client acknowledging own progress — self-efficacy building. Comparing present to past with gratitude.',
-          type: 'reflective',
-          valence: 'positive',
-          intensity: 5,
-          structures: ['reflective', 'emotion', 'narrative'],
-          therapistMove: 'reflection',
-          therapistQuote: 'You\'re structuring your environment to support yourself. That\'s proactive rather than reactive.',
-        },
-        {
-          id: 2,
-          timestamp: '00:04:00',
-          quote: 'My first thought was "I\'m terrible at this." But then I caught it. I actually thought, "wait, that\'s the catastrophizing thing."',
-          context: 'Real-time cognitive defusion in workplace context. Client catching distorted thought mid-stream.',
-          type: 'recalled_past',
-          valence: 'positive',
-          intensity: 6,
-          structures: ['cognitive', 'reflective', 'emotion'],
-          therapistMove: 'empathic_attunement',
-          therapistQuote: 'You caught the pattern in real time. That\'s remarkable progress.',
-        },
-        {
-          id: 3,
-          timestamp: '00:06:15',
-          quote: 'Normally that would ruin my whole day — maybe my whole week. But this time it was just... a moment.',
-          context: 'Emotional containment demonstrated — feelings arising and passing without spiraling.',
-          type: 'reflective',
-          valence: 'positive',
-          intensity: 4,
-          structures: ['emotion', 'reflective', 'cognitive'],
-          therapistMove: 'reflection',
-          therapistQuote: 'A moment rather than a spiral. The feelings were still there, but they had a beginning, a middle, and an end.',
-        },
-        {
-          id: 4,
-          timestamp: '00:08:40',
-          quote: 'I was adding "and therefore you\'re worthless" which isn\'t actually what he said.',
-          context: 'Client identifying the added interpretation layer. Clear cognitive restructuring in action.',
-          type: 'reflective',
-          valence: 'positive',
-          intensity: 5,
-          structures: ['cognitive', 'narrative', 'reflective'],
-          therapistMove: 'interpretation',
-          therapistQuote: 'You\'re learning to separate the event from the interpretation. That\'s cognitive flexibility in action.',
-        },
-        {
-          id: 5,
-          timestamp: '00:10:20',
-          quote: 'It feels like I\'m becoming a different person. Or maybe... becoming more myself?',
-          context: 'Identity-level shift emerging. Client sensing fundamental change in self-relationship.',
-          type: 'reflective',
-          valence: 'positive',
-          intensity: 7,
-          structures: ['narrative', 'reflective', 'emotion'],
-          therapistMove: 'silence',
-          therapistQuote: '[Therapist allowed this profound self-recognition to resonate]',
-        },
-      ],
-      riskFlags: [
-        {
-          id: 1,
-          signal: 'Setback Vulnerability',
-          severity: 'low',
-          detail: 'Rapid progress may create vulnerability if client encounters major stressor',
-          algorithmMatch: 'rapid progress, vulnerability, stressor, setback risk',
-          recommendation: 'Proactive relapse prevention; discuss how to handle a "bad day" without losing confidence in progress',
-          interventionType: 'monitor',
-        },
-      ],
-      structureProfile: {
-        body: 0.60,
-        immediate_experience: 0.65,
-        emotion: 0.70,
-        behaviour: 0.78,
-        social: 0.72,
-        cognitive: 0.88,
-        reflective: 0.82,
-        narrative: 0.80,
-        ecological: 0.58,
-        normative: 0.55,
-      },
-      cbtAnalysis: {
-        distortions: [
-          { type: 'Labeling', confidence: 0.60, evidence: '"I\'m terrible at this" (caught and corrected in real-time)', alternativeThought: 'Client self-corrected: identified this as catastrophizing pattern', momentIndex: 1 },
-        ],
-        dominantPatterns: ['Labeling (weakening)', 'Catastrophizing (actively resisted)'],
-        behavioralPatterns: ['Proactive environment structuring', 'Real-time cognitive catching', 'Boundary maintenance', 'Breathing practice before meetings'],
-        automaticThoughts: [
-          { content: 'Feedback is just feedback, not a verdict on my worth', beliefStrength: 0.60, supportsWellbeing: true },
-          { content: 'I can feel hurt without spiraling', beliefStrength: 0.65, supportsWellbeing: true },
-          { content: 'I\'m becoming more myself', beliefStrength: 0.50, supportsWellbeing: true },
-        ],
-        overallDistortionLoad: 0.30,
-        treatmentReadiness: 0.90,
-      },
-      similarCases: [],
-      practitionerMatches: [],
-      sessionHistory: [
-        { session: 1, emotionalIntensity: 8.0, reflectiveCapacity: 3.2, emotionalRegulation: 2.9, therapeuticAlliance: 3.8 },
-        { session: 2, emotionalIntensity: 7.2, reflectiveCapacity: 4.0, emotionalRegulation: 3.5, therapeuticAlliance: 4.3 },
-        { session: 3, emotionalIntensity: 6.5, reflectiveCapacity: 4.8, emotionalRegulation: 4.2, therapeuticAlliance: 4.7 },
-        { session: 4, emotionalIntensity: 5.8, reflectiveCapacity: 5.5, emotionalRegulation: 4.8, therapeuticAlliance: 5.0 },
-      ],
-      therapistMoves: [
-        { type: 'reflection', count: 3, percentage: 33 },
-        { type: 'empathic_attunement', count: 2, percentage: 22 },
-        { type: 'interpretation', count: 2, percentage: 22 },
-        { type: 'silence', count: 2, percentage: 22 },
-      ],
-      clinicianReport: 'Session 4: Excellent progress consolidation. Client has returned to work 3 days/week with proactive environmental supports (calendar blocking, breathing before meetings). Demonstrated real-time cognitive defusion when receiving critical feedback — caught catastrophic thought and reframed independently. Emotional regulation markedly improved: difficult feelings arising and passing without spiraling. Identity-level language emerging ("becoming more myself"). Distortion load significantly reduced. Consider beginning relapse prevention planning.',
-      patientReport: 'You\'re doing something really sophisticated — catching your anxious thoughts in real time and choosing not to follow them into a spiral. The fact that feedback could sting without ruining your day shows how much your relationship with difficult feelings has changed. You\'re not adding "therefore I\'m worthless" on top anymore. That\'s huge. This week, keep noticing the space between what happens and what you tell yourself about what happened.',
-      analysisStatus: 'complete',
-      analysisWarnings: [],
-    },
-  },
-  {
-    session_number: 5,
-    session_date: '2026-04-16T10:00:00Z',
-    treatment_goals: 'Review progress; explore deeper identity shifts; plan for sustainable wellness',
-    status: 'complete',
-    transcript: `Therapist: We're at session five now. I'd like to check in on how things feel overall.
-
-Client: Honestly? I feel like a different person than the one who walked in here six weeks ago. That sounds dramatic but it's true. I was in survival mode — just white-knuckling through every day. Now I actually have moments where I enjoy my work again.
-
-Therapist: That's a significant shift — from survival to moments of enjoyment. What do you think made the difference?
-
-Client: I think it was understanding that my anxiety wasn't a character flaw. It was my body trying to protect me from something real. Once I stopped fighting it and started listening to it, everything changed.
-
-Therapist: You shifted from fighting your experience to being curious about it.
-
-Client: Yes! And the boundary thing — I actually told my manager last week that I can't take on the Q3 planning project. Full sentence, clear answer. And I didn't die. [laughs] He actually said he respected that I knew my limits.
-
-Therapist: How did your body respond when he said that?
-
-Client: [pauses] My shoulders dropped. Like, physically dropped. I didn't realize how much tension I was carrying in anticipation of him being angry. My body was bracing for something that never came.
-
-Therapist: So your body is also learning — not just your mind. The body is updating its predictions.
-
-Client: That's such a good way to put it. My body is learning it's safe. I still get anxious sometimes — like yesterday in a big meeting — but it passes. I breathe, I name it, and it passes. It doesn't own me anymore.
-
-Therapist: "It doesn't own me anymore." That feels like a really important statement.
-
-Client: [gets emotional] Sorry... I just... I spent so long thinking I was broken. That I couldn't handle what everyone else handles easily. And now I realize... maybe everyone is struggling. And maybe asking for help wasn't weakness, it was the strongest thing I've done.
-
-Therapist: Take your time. What you're feeling right now is important.
-
-Client: [crying softly] I'm just grateful. I didn't know it could be different. I thought this was just how life was going to be.
-
-Therapist: And now?
-
-Client: Now I know I have choices. I have tools. And I have... permission to take care of myself. That still feels new but it feels real.`,
-    analysis_result: {
-      quickInsight: {
-        riskLevel: 'low',
-        clinicalPriority: 'Consolidating identity-level gains; establishing sustainable self-care framework for long-term maintenance',
-        prognosis: 'Excellent — marked improvement across all domains; client demonstrates internalized coping capacity',
-        topRecommendation: 'Transition toward maintenance phase; discuss session frequency reduction; reinforce relapse prevention strategies',
-        sessionNumber: 5,
-      },
-      moments: [
-        {
-          id: 1,
-          timestamp: '00:01:15',
-          quote: 'I feel like a different person than the one who walked in here six weeks ago. I was in survival mode — just white-knuckling through every day.',
-          context: 'Client reflecting on therapeutic journey with clear self-awareness. Strong narrative coherence around change.',
-          type: 'reflective',
-          valence: 'positive',
-          intensity: 6,
-          structures: ['narrative', 'reflective', 'emotion'],
-          therapistMove: 'reflection',
-          therapistQuote: 'That\'s a significant shift — from survival to moments of enjoyment. What do you think made the difference?',
-        },
-        {
-          id: 2,
-          timestamp: '00:03:00',
-          quote: 'My anxiety wasn\'t a character flaw. It was my body trying to protect me from something real. Once I stopped fighting it and started listening to it, everything changed.',
-          context: 'Integrated understanding of anxiety function — psychoeducation fully internalized. Paradigm shift complete.',
-          type: 'reflective',
-          valence: 'positive',
-          intensity: 7,
-          structures: ['cognitive', 'body', 'reflective', 'narrative'],
-          therapistMove: 'interpretation',
-          therapistQuote: 'You shifted from fighting your experience to being curious about it.',
-        },
-        {
-          id: 3,
-          timestamp: '00:04:30',
-          quote: 'I actually told my manager last week that I can\'t take on the Q3 planning project. Full sentence, clear answer. And I didn\'t die.',
-          context: 'Definitive boundary-setting — evolution from tentative "checking capacity" to clear direct communication.',
-          type: 'recalled_past',
-          valence: 'positive',
-          intensity: 5,
-          structures: ['behaviour', 'social', 'cognitive'],
-          therapistMove: 'empathic_attunement',
-          therapistQuote: 'How did your body respond when he said that?',
-        },
-        {
-          id: 4,
-          timestamp: '00:05:45',
-          quote: 'My shoulders dropped. Like, physically dropped. I didn\'t realize how much tension I was carrying in anticipation of him being angry.',
-          context: 'Somatic release in response to positive social outcome. Body-level evidence of safety learning.',
-          type: 'immediate_experience',
-          valence: 'positive',
-          intensity: 7,
-          structures: ['body', 'immediate_experience', 'emotion'],
-          therapistMove: 'interpretation',
-          therapistQuote: 'Your body is also learning — not just your mind. The body is updating its predictions.',
-        },
-        {
-          id: 5,
-          timestamp: '00:07:10',
-          quote: 'I still get anxious sometimes — like yesterday in a big meeting — but it passes. I breathe, I name it, and it passes. It doesn\'t own me anymore.',
-          context: 'Demonstrating integrated coping toolkit. Anxiety still present but no longer dysregulating.',
-          type: 'reflective',
-          valence: 'positive',
-          intensity: 5,
-          structures: ['emotion', 'body', 'reflective', 'behaviour'],
-          therapistMove: 'reflection',
-          therapistQuote: '"It doesn\'t own me anymore." That feels like a really important statement.',
-        },
-        {
-          id: 6,
-          timestamp: '00:08:30',
-          quote: 'I spent so long thinking I was broken. That I couldn\'t handle what everyone else handles easily.',
-          context: 'Emotional processing of past self-narrative. Grief for time spent in unnecessary suffering.',
-          type: 'recalled_past',
-          valence: 'negative',
-          intensity: 8,
-          structures: ['emotion', 'narrative', 'cognitive'],
-          therapistMove: 'silence',
-          therapistQuote: '[Therapist held compassionate silence during emotional release]',
-        },
-        {
-          id: 7,
-          timestamp: '00:09:45',
-          quote: 'Maybe asking for help wasn\'t weakness, it was the strongest thing I\'ve done.',
-          context: 'Fundamental reframe of help-seeking behavior. Core belief shift from weakness to strength.',
-          type: 'reflective',
-          valence: 'positive',
-          intensity: 9,
-          structures: ['cognitive', 'narrative', 'normative', 'reflective'],
-          therapistMove: 'empathic_attunement',
-          therapistQuote: 'Take your time. What you\'re feeling right now is important.',
-        },
-        {
-          id: 8,
-          timestamp: '00:11:20',
-          quote: 'Now I know I have choices. I have tools. And I have permission to take care of myself.',
-          context: 'Integration statement — client articulating internalized therapeutic gains across cognitive, behavioral, and identity domains.',
-          type: 'future_oriented',
-          valence: 'positive',
-          intensity: 7,
-          structures: ['cognitive', 'behaviour', 'narrative', 'reflective'],
-          therapistMove: 'reflection',
-          therapistQuote: 'And now? [Inviting the client to articulate her own vision of what comes next]',
-        },
-      ],
-      riskFlags: [
-        {
-          id: 1,
-          signal: 'Emotional Vulnerability',
-          severity: 'low',
-          detail: 'Client became tearful processing past suffering — appropriate emotional response, not dysregulation',
-          algorithmMatch: 'tearful, emotional processing, grief, relief',
-          recommendation: 'Normalize emotional processing of therapeutic gains; no intervention needed',
-          interventionType: 'monitor',
-        },
-        {
-          id: 2,
-          signal: 'Premature Termination Risk',
-          severity: 'low',
-          detail: 'Client feeling dramatically better — may want to end therapy before consolidating gains',
-          algorithmMatch: 'rapid improvement, termination risk, early dropout',
-          recommendation: 'Discuss transition to maintenance phase rather than abrupt termination; space sessions to biweekly',
-          interventionType: 'monitor',
-        },
-        {
-          id: 3,
-          signal: 'Residual Workplace Anxiety',
-          severity: 'low',
-          detail: 'Client reports still experiencing anxiety in large meetings',
-          algorithmMatch: 'anxiety, large meetings, residual symptoms',
-          recommendation: 'Continue practicing existing coping skills; consider graded exposure to higher-stakes meetings if needed',
-          interventionType: 'monitor',
-        },
-      ],
-      structureProfile: {
-        body: 0.75,
-        immediate_experience: 0.70,
-        emotion: 0.82,
-        behaviour: 0.80,
-        social: 0.75,
-        cognitive: 0.90,
-        reflective: 0.88,
-        narrative: 0.85,
-        ecological: 0.60,
-        normative: 0.72,
-      },
-      cbtAnalysis: {
-        distortions: [
-          { type: 'Labeling (Historical)', confidence: 0.40, evidence: '"I spent so long thinking I was broken" — now recognized as inaccurate', alternativeThought: 'Client has fully reframed: anxiety as protection, not brokenness', momentIndex: 5 },
-          { type: 'Mind Reading (Weakening)', confidence: 0.35, evidence: 'Anticipated manager anger; received respect instead', alternativeThought: 'Others may actually value my honesty about capacity', momentIndex: 2 },
-          { type: 'Personalization (Resolved)', confidence: 0.30, evidence: '"What everyone else handles easily" — comparison to imagined others', alternativeThought: 'Maybe everyone is struggling; my experience is valid', momentIndex: 5 },
-        ],
-        dominantPatterns: ['Previously dominant patterns now recognized and actively resisted', 'Emerging self-compassion framework'],
-        behavioralPatterns: ['Clear boundary communication', 'Regular breathing practice', 'Anxiety naming', 'Proactive calendar management', 'Help-seeking normalized'],
-        automaticThoughts: [
-          { content: 'I have choices and tools to handle difficulty', beliefStrength: 0.75, supportsWellbeing: true },
-          { content: 'Asking for help is strength, not weakness', beliefStrength: 0.70, supportsWellbeing: true },
-          { content: 'Anxiety passes — it doesn\'t own me', beliefStrength: 0.72, supportsWellbeing: true },
-          { content: 'I deserve to take care of myself', beliefStrength: 0.65, supportsWellbeing: true },
-        ],
-        overallDistortionLoad: 0.18,
-        treatmentReadiness: 0.95,
-      },
-      similarCases: [
-        {
-          id: 1,
-          patientCode: 'SC-0518',
-          matchScore: 0.93,
-          presentingConcerns: ['work anxiety', 'burnout recovery', 'perfectionism', 'somatic presentation', 'rapid improvement'],
-          dominantStructures: ['body', 'emotion', 'cognitive', 'behaviour'],
-          sessionCount: 6,
-          keyThemes: ['Anxiety-as-protection reframe', 'Boundary experiments', 'Somatic grounding'],
-          outcome: 'Sustained improvement',
-          outcomeDetail: 'Sustained improvement at 6-month follow-up. Maintained boundaries, reduced work hours by 15%, anxiety scores in normal range. Clients who internalize the anxiety-as-protection frame tend to maintain gains at 6-month follow-up.',
-          representativeQuote: 'The moment I stopped fighting the anxiety and started listening to it, I finally felt like I was on the same team as my own body.',
-        },
-        {
-          id: 2,
-          patientCode: 'SC-0623',
-          matchScore: 0.87,
-          presentingConcerns: ['identity-work fusion', 'perfectionism', 'self-worth tied to performance'],
-          dominantStructures: ['narrative', 'cognitive', 'reflective'],
-          sessionCount: 12,
-          keyThemes: ['Identity reconstruction', 'Values clarification', 'Self-compassion'],
-          outcome: 'Significant improvement',
-          outcomeDetail: 'Client reports life satisfaction increase of 40% at 3 months. Career remained stable with healthier relationship to work. The "becoming more myself" language often signals durable identity-level change rather than symptom-level coping.',
-          representativeQuote: 'I used to think I was my productivity. Now I know I\'m the person who gets to choose what to produce — and what to let go.',
-        },
-        {
-          id: 3,
-          patientCode: 'SC-0731',
-          matchScore: 0.84,
-          presentingConcerns: ['somatic anxiety', 'workplace communication triggers', 'conditioned responses'],
-          dominantStructures: ['body', 'immediate_experience', 'cognitive'],
-          sessionCount: 8,
-          keyThemes: ['Interoceptive exposure', 'Breathing retraining', 'Cognitive defusion'],
-          outcome: 'Full recovery',
-          outcomeDetail: 'GAD-7 dropped from 15 to 5 over 8 sessions. Maintained at 12-month follow-up. Somatic symptoms that respond to naming and breathing techniques within 4 sessions predict excellent long-term outcomes.',
-          representativeQuote: 'My chest used to seize up every time a client email came in. Now I notice the flicker and let it pass — it\'s just information, not danger.',
-        },
-      ],
-      practitionerMatches: [
-        {
-          id: 1,
-          code: 'PM-001',
-          name: 'Dr. Rachel Morrison',
-          specialty: 'Cognitive-Behavioral Therapy',
-          methodology: 'Graded Exposure with Cognitive Restructuring',
-          matchScore: 0.94,
-          interventionSequence: ['Identify catastrophic predictions', 'Design behavioral experiments', 'Process disconfirming evidence', 'Generalize cognitive flexibility to new contexts'],
-          outcomePatterns: [
-            { metric: 'Gains maintenance at 6 months', change: '+92%', confidence: 0.88 },
-            { metric: 'Self-initiated experiments', change: 'Achieved', confidence: 0.90 },
-          ],
-          matchReasoning: 'Behavioral experiments targeting catastrophic predictions — client already implementing independently',
-          targetStructures: ['cognitive', 'behaviour', 'social'],
-        },
-        {
-          id: 2,
-          code: 'PM-002',
-          name: 'Dr. Priya Patel',
-          specialty: 'Acceptance and Commitment Therapy',
-          methodology: 'Values-Based Action with Psychological Flexibility',
-          matchScore: 0.89,
-          interventionSequence: ['Identify core values beneath performance identity', 'Practice defusion from self-critical narratives', 'Commit to values-aligned boundary actions', 'Integrate acceptance of difficult emotions'],
-          outcomePatterns: [
-            { metric: 'Values alignment score', change: '+45%', confidence: 0.82 },
-            { metric: 'Identity flexibility', change: 'Significant improvement', confidence: 0.78 },
-          ],
-          matchReasoning: 'Defusion from "broken" self-narrative; values-driven boundary setting. ACT framework strongly indicated when clients demonstrate "becoming myself" language.',
-          targetStructures: ['narrative', 'cognitive', 'reflective'],
-        },
-        {
-          id: 3,
-          code: 'PM-003',
-          name: 'James Chen, LMHC',
-          specialty: 'Somatic & Sensorimotor Psychotherapy',
-          methodology: 'Body-Based Processing and Nervous System Regulation',
-          matchScore: 0.82,
-          interventionSequence: ['Track somatic markers of safety and threat', 'Build interoceptive awareness vocabulary', 'Practice pendulation between activation and calm', 'Integrate somatic evidence of change into narrative'],
-          outcomePatterns: [
-            { metric: 'Somatic symptom reduction', change: '-60%', confidence: 0.80 },
-            { metric: 'Body-based coping durability', change: 'More durable than cognitive-only', confidence: 0.75 },
-          ],
-          matchReasoning: 'Tracking somatic shifts as evidence of safety learning — "shoulders dropping" as therapeutic milestone',
-          targetStructures: ['body', 'immediate_experience', 'emotion'],
-        },
-      ],
-      sessionHistory: [
-        { session: 1, emotionalIntensity: 8.0, reflectiveCapacity: 3.2, emotionalRegulation: 2.9, therapeuticAlliance: 3.8 },
-        { session: 2, emotionalIntensity: 7.2, reflectiveCapacity: 4.0, emotionalRegulation: 3.5, therapeuticAlliance: 4.3 },
-        { session: 3, emotionalIntensity: 6.5, reflectiveCapacity: 4.8, emotionalRegulation: 4.2, therapeuticAlliance: 4.7 },
-        { session: 4, emotionalIntensity: 5.8, reflectiveCapacity: 5.5, emotionalRegulation: 4.8, therapeuticAlliance: 5.0 },
-        { session: 5, emotionalIntensity: 6.8, reflectiveCapacity: 6.2, emotionalRegulation: 5.5, therapeuticAlliance: 5.3 },
-      ],
-      therapistMoves: [
-        { type: 'reflection', count: 4, percentage: 31 },
-        { type: 'empathic_attunement', count: 3, percentage: 23 },
-        { type: 'interpretation', count: 3, percentage: 23 },
-        { type: 'silence', count: 2, percentage: 15 },
-        { type: 'challenge', count: 1, percentage: 8 },
-      ],
-      clinicianReport: `Session 5 Review: Client demonstrates comprehensive improvement across all therapeutic domains. Return to work successful (3 days/week with proactive supports). Boundary-setting has progressed from tentative ("checking capacity") to assertive ("I can't take on this project"). Manager responded positively, reinforcing new behavior.
-
-Key therapeutic gains:
-1. Cognitive: Real-time identification and correction of catastrophic thinking. Overall distortion load reduced from 0.72 to 0.18.
-2. Somatic: Body awareness integrated into daily coping. Reports "shoulders dropping" as somatic evidence of safety learning.
-3. Behavioral: Calendar management, breathing practice, clear communication of limits all maintained consistently.
-4. Identity: Shift from "something is wrong with me" to "asking for help is the strongest thing I've done." Deep narrative restructuring.
-
-PHQ-9 trajectory: 16 → 14 → 12 → 10 → 8 (50% reduction)
-GAD-7 trajectory: 14 → 13 → 11 → 9 → 7 (50% reduction)
-
-Risk Assessment: Low. No safety concerns. Protective factors strong: therapeutic alliance, cognitive flexibility, social support, behavioral toolkit, self-compassion emerging.
-
-Recommendation: Transition to biweekly sessions for maintenance. Focus on relapse prevention planning and continued identity consolidation. Consider termination planning in 3-4 additional sessions if gains remain stable.`,
-      patientReport: `Session 5 Summary:
-
-What an incredible journey these past six weeks have been. Today you reflected on how much has changed — from white-knuckling through every day to actually enjoying moments at work again.
-
-Key insights from today:
-- You recognized that anxiety was never a character flaw — it was your body protecting you
-- You set a clear boundary with your manager and he respected it
-- Your body is learning safety alongside your mind (those dropping shoulders!)
-- Feeling emotions — even tears of relief — is healthy and human
-
-What's different now:
-- You have tools: breathing, naming, pausing before responding
-- You have choices: saying no is an option, and the world doesn't end
-- You have self-compassion: asking for help is strength, not weakness
-
-Going forward, we'll meet every two weeks to make sure these changes stick. Some days will still be hard — that's normal. But you have everything you need to handle those days differently than before.
-
-You should be proud of the work you've done here. It takes real courage to change patterns that have been running for years.`,
-      analysisStatus: 'complete',
-      analysisWarnings: [],
-    },
-  },
-];
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CLIENT 2: CL-7803 — Relationship issues & mild depression, 3 sessions
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const client2 = {
-  therapist_id: DEV_THERAPIST_ID,
-  client_code: 'CL-7803',
-  gender: 'male',
-  age_range: 'middle-aged',
-  treatment_goals: [
-    'Improve communication patterns in marriage',
-    'Address withdrawal and emotional avoidance',
-    'Process feelings of inadequacy as partner and father',
-    'Develop emotional vocabulary and expression',
-  ],
-  presenting_concerns: ['Relationship difficulties', 'Mild depression', 'Emotional withdrawal', 'Communication issues'],
-  diagnostic_considerations: ['Persistent Depressive Disorder (mild)', 'Adjustment Disorder with Depressed Mood'],
-  current_risk_level: 'low',
-  key_themes: ['Emotional avoidance', 'Masculine role expectations', 'Marital communication', 'Vulnerability', 'Father role'],
-  dominant_structures: ['social', 'emotion', 'normative', 'narrative'],
-  preferred_approach: 'Emotionally Focused Therapy with narrative elements',
-  clinical_notes: 'Mid-career professional presenting with relational distress. Partner initiated couples therapy ultimatum. Client demonstrates alexithymia features — difficulty identifying and naming emotions. Underneath withdrawal lies fear of inadequacy and rejection. Good engagement once trust established. Moderate improvement trajectory.',
+  preferred_approach: 'ACT with somatic integration',
+  clinical_notes: 'Male, 34, software engineer presenting with work anxiety and stress. Initial presentation appeared straightforward — workplace performance pressure with anticipatory anxiety. SessionLens pattern-matching revealed a deeper profile: perfectionism rooted in family-of-origin dynamics, unreported sleep disturbance, and emerging somatic complaints. Platform recommended ACT + somatic integration over standard CBT, which proved highly effective. Client showed rapid engagement with ACT defusion techniques and progressive improvement across all outcome measures.',
   total_sessions: 3,
   is_confirmed: true,
-  last_confirmed_at: '2026-04-10T14:00:00Z',
+  last_confirmed_at: '2026-04-07T10:00:00Z',
   status: 'active',
-  created_at: '2026-03-17T14:00:00Z',
-  updated_at: '2026-04-10T14:00:00Z',
+  created_at: '2026-03-03T09:00:00Z',
+  updated_at: '2026-04-07T10:00:00Z',
   outcome_tracking_enabled: true,
   outcome_scores: [
-    { date: '2026-03-19', phq9: 12, gad7: 8, note: 'Intake — mild depression, low anxiety' },
-    { date: '2026-03-26', phq9: 11, gad7: 7, note: 'Beginning to engage with emotional content' },
-    { date: '2026-04-09', phq9: 9, gad7: 6, note: 'Improved after first vulnerable conversation with wife' },
+    { date: '2026-03-10', phq9: 16, gad7: 14, note: 'Intake — elevated anxiety, moderate depression. Standard work anxiety presentation.' },
+    { date: '2026-03-24', phq9: 12, gad7: 10, note: 'Sleep disturbance and perfectionism confirmed. Pivoting to ACT + somatic approach.' },
+    { date: '2026-04-07', phq9: 8, gad7: 6, note: 'Significant improvement — ACT techniques engaging well, boundary-setting emerging.' },
   ],
   deleted_at: null,
 };
 
-const client2Sessions = [
-  {
-    session_number: 1,
-    session_date: '2026-03-19T14:00:00Z',
-    treatment_goals: 'Initial assessment; understand relational context; build rapport',
-    status: 'complete',
-    transcript: `Therapist: What brings you in today?
-
-Client: My wife said I needed to come. [pause] I mean, that sounds bad. It's not an ultimatum exactly. She just... she says I've shut down. That I'm not present anymore. And I guess she's right.
-
-Therapist: What does "shut down" look like for you?
-
-Client: I come home, I eat dinner, I watch TV, I go to bed. On weekends I do stuff with the kids but even then I'm... going through the motions. Sarah says she feels like she's living with a roommate, not a husband.
-
-Therapist: And how does it feel hearing that from her?
-
-Client: [long pause] I don't know. That's the problem, isn't it? I don't know how it feels. I know it should bother me. And somewhere it does. But I can't... access it.
-
-Therapist: You know something is there, but there's a wall between you and it. Is that close?
-
-Client: Yeah. A wall. I think I built it a long time ago and now I don't know how to take it down. My dad was the same way — never talked about feelings, just provided. I thought that was enough.
-
-Therapist: You learned that providing was how a man shows love. And now the rules have changed.
-
-Client: And I don't know how to play by the new rules. I love my wife. I love my kids. But I don't know how to show it the way they need me to.`,
-    analysis_result: {
-      quickInsight: {
-        riskLevel: 'low',
-        clinicalPriority: 'Alexithymia features with relational distress; establish emotional vocabulary baseline',
-        prognosis: 'Moderate — client willing to engage but emotional access is limited; will require patient, consistent work',
-        topRecommendation: 'Build emotional literacy; normalize the difficulty of vulnerability for men socialized to suppress',
-        sessionNumber: 1,
-      },
-      moments: [
-        {
-          id: 1,
-          timestamp: '00:02:30',
-          quote: 'She says I\'ve shut down. That I\'m not present anymore. And I guess she\'s right.',
-          context: 'Client acknowledging partner\'s feedback with passive agreement. Minimal emotional engagement with content.',
-          type: 'recalled_past',
-          valence: 'negative',
-          intensity: 4,
-          structures: ['social', 'narrative'],
-          therapistMove: 'reflection',
-          therapistQuote: 'What does "shut down" look like for you?',
-        },
-        {
-          id: 2,
-          timestamp: '00:04:45',
-          quote: 'I don\'t know how it feels. That\'s the problem, isn\'t it? I can\'t access it.',
-          context: 'Core presentation — alexithymia. Client aware of emotional deficit but unable to overcome it.',
-          type: 'immediate_experience',
-          valence: 'mixed',
-          intensity: 5,
-          structures: ['emotion', 'reflective', 'cognitive'],
-          therapistMove: 'empathic_attunement',
-          therapistQuote: 'You know something is there, but there\'s a wall between you and it.',
-        },
-        {
-          id: 3,
-          timestamp: '00:06:20',
-          quote: 'My dad was the same way — never talked about feelings, just provided. I thought that was enough.',
-          context: 'Intergenerational pattern identified. Masculine emotional suppression modeled by father.',
-          type: 'recalled_past',
-          valence: 'neutral',
-          intensity: 5,
-          structures: ['narrative', 'normative', 'social'],
-          therapistMove: 'interpretation',
-          therapistQuote: 'You learned that providing was how a man shows love. And now the rules have changed.',
-        },
-        {
-          id: 4,
-          timestamp: '00:08:10',
-          quote: 'I love my wife. I love my kids. But I don\'t know how to show it the way they need me to.',
-          context: 'Love is present but unexpressed — gap between internal state and behavioral expression.',
-          type: 'immediate_experience',
-          valence: 'negative',
-          intensity: 6,
-          structures: ['emotion', 'social', 'behaviour'],
-          therapistMove: 'empathic_attunement',
-          therapistQuote: '[Therapist acknowledged the pain of loving but not knowing how to show it]',
-        },
-      ],
-      riskFlags: [
-        {
-          id: 1,
-          signal: 'Relational Isolation',
-          severity: 'medium',
-          detail: 'Going through the motions; partner describing him as a roommate; emotional shutdown',
-          algorithmMatch: 'emotional shutdown, withdrawal, relational distance, roommate',
-          recommendation: 'Monitor for deepening depression; assess marital stability; encourage small connection experiments',
-          interventionType: 'monitor',
-        },
-      ],
-      structureProfile: {
-        body: 0.35,
-        immediate_experience: 0.40,
-        emotion: 0.45,
-        behaviour: 0.55,
-        social: 0.80,
-        cognitive: 0.60,
-        reflective: 0.50,
-        narrative: 0.72,
-        ecological: 0.45,
-        normative: 0.78,
-      },
-      cbtAnalysis: {
-        distortions: [
-          { type: 'Should Statements', confidence: 0.72, evidence: 'I thought providing was enough', alternativeThought: 'There are many valid ways to show love; I can learn new ones', momentIndex: 2 },
-        ],
-        dominantPatterns: ['Emotional avoidance', 'Masculine role rigidity'],
-        behavioralPatterns: ['Withdrawal from emotional engagement', 'Going through motions', 'TV as avoidance'],
-        automaticThoughts: [
-          { content: 'I should be able to just provide and that should be enough', beliefStrength: 0.70, supportsWellbeing: false },
-          { content: 'I don\'t know how to do what they need', beliefStrength: 0.75, supportsWellbeing: false },
-        ],
-        overallDistortionLoad: 0.50,
-        treatmentReadiness: 0.55,
-      },
-      similarCases: [],
-      practitionerMatches: [
-        {
-          id: 1,
-          code: 'PM-004',
-          name: 'Dr. Marcus Webb',
-          specialty: 'Emotionally Focused Therapy',
-          methodology: 'EFT for Individual Attachment Work',
-          matchScore: 0.86,
-          interventionSequence: ['Identify withdrawal cycle and triggers', 'Access underlying attachment fears', 'Facilitate emotional expression in session', 'Generalize vulnerability to partner interactions'],
-          outcomePatterns: [
-            { metric: 'Relational improvement', change: '+73%', confidence: 0.82 },
-            { metric: 'Emotional vocabulary expansion', change: 'Significant', confidence: 0.78 },
-          ],
-          matchReasoning: 'Accessing underlying attachment fears beneath withdrawal behavior',
-          targetStructures: ['emotion', 'social', 'narrative'],
-        },
-      ],
-      sessionHistory: [
-        { session: 1, emotionalIntensity: 4.5, reflectiveCapacity: 3.8, emotionalRegulation: 5.0, therapeuticAlliance: 3.5 },
-      ],
-      therapistMoves: [
-        { type: 'empathic_attunement', count: 3, percentage: 37 },
-        { type: 'reflection', count: 2, percentage: 25 },
-        { type: 'interpretation', count: 2, percentage: 25 },
-        { type: 'silence', count: 1, percentage: 12 },
-      ],
-      clinicianReport: 'Session 1: Male, 40s, presenting with relational distress at partner\'s insistence. Demonstrates alexithymic features — limited emotional vocabulary, difficulty accessing affect, relies on intellectualization and behavioral description rather than emotional expression. Intergenerational pattern clear: father modeled stoic, provider-only masculinity. Client is willing to engage but struggles to go beyond surface-level reflection. Rapport established; client seems relieved to have space to explore. Recommend building emotional vocabulary gradually; normalize difficulty; avoid pushing too fast.',
-      patientReport: 'Thank you for coming in today. I know this wasn\'t easy, and it takes real courage to sit in a room and talk about things you usually keep inside. What I noticed today is that you do care deeply — about Sarah, about your kids. The challenge isn\'t that the love isn\'t there; it\'s that you haven\'t been taught how to express it in ways they can feel. That\'s a skill, and skills can be learned. For this week, try noticing one moment each day where you feel something — anything — and just name it silently to yourself.',
-      analysisStatus: 'complete',
-      analysisWarnings: [],
-    },
-  },
-  {
-    session_number: 2,
-    session_date: '2026-03-26T14:00:00Z',
-    treatment_goals: 'Build emotional vocabulary; explore withdrawal pattern triggers',
-    status: 'complete',
-    transcript: `Therapist: Were you able to try the noticing exercise this week?
-
-Client: I tried. It's harder than I expected. Most of the time I notice... nothing. But there was one moment. Sarah was putting the kids to bed and she was singing to our daughter, and I felt... something. In my chest. Something warm.
-
-Therapist: A warmth in your chest. Can you stay with that for a moment? What else was there?
-
-Client: I think it was... love? Or maybe sadness that I don't do that. That I'm not part of those moments the way she is. I stood in the doorway watching and I thought, "I should be in there." But I didn't go in.
-
-Therapist: What stopped you?
-
-Client: I don't know. Habit? Fear? Like if I walked in and tried to be part of it, it would be awkward. They have their rhythm and I'm... outside it.
-
-Therapist: So there's a sense of being on the outside of your own family's intimacy. That must be lonely.
-
-Client: [voice changes] Yeah. It is lonely. God, I haven't said that word out loud in... maybe ever.
-
-Therapist: What's it like to say it now?
-
-Client: Scary. But also... a relief? Like I've been carrying this thing alone and just naming it makes it lighter.`,
-    analysis_result: {
-      quickInsight: {
-        riskLevel: 'low',
-        clinicalPriority: 'First emotional breakthrough — loneliness acknowledged; build from this opening',
-        prognosis: 'Improving — client demonstrating capacity to access and name emotions when guided',
-        topRecommendation: 'Gently expand emotional vocabulary; use somatic cues as gateway to affect; explore the "doorway" metaphor',
-        sessionNumber: 2,
-      },
-      moments: [
-        {
-          id: 1,
-          timestamp: '00:02:00',
-          quote: 'Sarah was putting the kids to bed and she was singing to our daughter, and I felt something. In my chest. Something warm.',
-          context: 'First somatic emotional awareness reported between sessions. Gateway to affect through body.',
-          type: 'recalled_past',
-          valence: 'positive',
-          intensity: 5,
-          structures: ['body', 'emotion', 'social'],
-          therapistMove: 'empathic_attunement',
-          therapistQuote: 'A warmth in your chest. Can you stay with that for a moment?',
-        },
-        {
-          id: 2,
-          timestamp: '00:04:30',
-          quote: 'I stood in the doorway watching and I thought, "I should be in there." But I didn\'t go in.',
-          context: 'Powerful metaphor — literally and figuratively on the threshold of emotional connection.',
-          type: 'recalled_past',
-          valence: 'negative',
-          intensity: 6,
-          structures: ['behaviour', 'social', 'emotion'],
-          therapistMove: 'reflection',
-          therapistQuote: 'What stopped you?',
-        },
-        {
-          id: 3,
-          timestamp: '00:06:45',
-          quote: 'It is lonely. I haven\'t said that word out loud in maybe ever.',
-          context: 'Breakthrough moment — first time naming core emotional state. Voice change indicates genuine affect.',
-          type: 'immediate_experience',
-          valence: 'negative',
-          intensity: 8,
-          structures: ['emotion', 'reflective', 'narrative'],
-          therapistMove: 'reflection',
-          therapistQuote: 'What\'s it like to say it now?',
-        },
-        {
-          id: 4,
-          timestamp: '00:07:30',
-          quote: 'Naming it makes it lighter.',
-          context: 'Experience of emotional expression as relief rather than threat. Key therapeutic moment.',
-          type: 'immediate_experience',
-          valence: 'positive',
-          intensity: 6,
-          structures: ['emotion', 'reflective', 'cognitive'],
-          therapistMove: 'silence',
-          therapistQuote: '[Therapist allowed the relief of this naming to settle]',
-        },
-      ],
-      riskFlags: [],
-      structureProfile: {
-        body: 0.50,
-        immediate_experience: 0.55,
-        emotion: 0.62,
-        behaviour: 0.55,
-        social: 0.78,
-        cognitive: 0.58,
-        reflective: 0.60,
-        narrative: 0.70,
-        ecological: 0.42,
-        normative: 0.72,
-      },
-      cbtAnalysis: {
-        distortions: [
-          { type: 'Fortune Telling', confidence: 0.65, evidence: 'If I walked in it would be awkward', alternativeThought: 'I could try stepping in and see what actually happens', momentIndex: 1 },
-        ],
-        dominantPatterns: ['Avoidance of vulnerability', 'Fortune Telling'],
-        behavioralPatterns: ['Observation from distance', 'Emotion naming (emerging)', 'Somatic awareness (new)'],
-        automaticThoughts: [
-          { content: 'They have their rhythm and I\'m outside it', beliefStrength: 0.65, supportsWellbeing: false },
-          { content: 'Naming feelings makes them lighter', beliefStrength: 0.50, supportsWellbeing: true },
-        ],
-        overallDistortionLoad: 0.42,
-        treatmentReadiness: 0.65,
-      },
-      similarCases: [],
-      practitionerMatches: [],
-      sessionHistory: [
-        { session: 1, emotionalIntensity: 4.5, reflectiveCapacity: 3.8, emotionalRegulation: 5.0, therapeuticAlliance: 3.5 },
-        { session: 2, emotionalIntensity: 6.2, reflectiveCapacity: 4.5, emotionalRegulation: 4.8, therapeuticAlliance: 4.2 },
-      ],
-      therapistMoves: [
-        { type: 'empathic_attunement', count: 3, percentage: 37 },
-        { type: 'reflection', count: 3, percentage: 37 },
-        { type: 'silence', count: 2, percentage: 25 },
-      ],
-      clinicianReport: 'Session 2: Significant emotional breakthrough. Client reported first between-session somatic awareness of emotion (warmth in chest while observing wife with children). The "doorway" metaphor is rich and worth returning to — client literally and figuratively standing at the threshold of connection. Most significant moment: naming loneliness for the first time ("maybe ever"). Voice change and visible affect shift indicate genuine emotional access. Client experienced naming as relief, not threat — very encouraging for prognosis.',
-      patientReport: 'Something important happened today — you named loneliness. And you noticed that saying it out loud made it lighter, not heavier. That moment in the doorway watching Sarah sing to your daughter — the warmth you felt and the sadness that you weren\'t in there — that\'s your heart telling you what it wants. This week, try one small "walking through the doorway" moment. It doesn\'t have to be big. Maybe sitting on the bed while Sarah reads to the kids. Just being in the room.',
-      analysisStatus: 'complete',
-      analysisWarnings: [],
-    },
-  },
-  {
-    session_number: 3,
-    session_date: '2026-04-09T14:00:00Z',
-    treatment_goals: 'Process first vulnerable conversation with partner; deepen emotional expression',
-    status: 'complete',
-    transcript: `Therapist: You look different today. Something shifted?
-
-Client: I told Sarah. About being lonely. We were lying in bed on Saturday night and I just... said it. "I feel lonely in our marriage. And I know it's my fault."
-
-Therapist: What happened?
-
-Client: She cried. But not angry crying. She said, "I've been waiting three years for you to say something real to me." And then she held me and I... I cried too. First time in I don't know how long.
-
-Therapist: How was that — letting yourself be seen like that?
-
-Client: Terrifying and wonderful at the same time. Like jumping off a cliff and discovering you can fly. I kept waiting for the shame to hit. For her to think less of me. But she just... held me tighter.
-
-Therapist: The thing you were most afraid of — being vulnerable — turned out to be exactly what she needed from you.
-
-Client: I wasted so much time being scared of something that was actually what would save us. That makes me angry at myself.
-
-Therapist: I notice that shift — from tenderness to self-criticism. Can you hold both? The grief about lost time AND the gratitude that you're here now?
-
-Client: [pause] Yeah. I can try. I'm here now. That has to count for something.`,
-    analysis_result: {
-      quickInsight: {
-        riskLevel: 'low',
-        clinicalPriority: 'Processing relational breakthrough; managing self-criticism about "wasted time"; deepening vulnerability capacity',
-        prognosis: 'Good — major relational breakthrough; partner responsive; cycle of withdrawal beginning to shift',
-        topRecommendation: 'Validate courage of vulnerability; address self-blame gently; build on breakthrough without pressure to perform',
-        sessionNumber: 3,
-      },
-      moments: [
-        {
-          id: 1,
-          timestamp: '00:01:00',
-          quote: 'I told Sarah. About being lonely. I just said it.',
-          context: 'Client reporting major between-session behavioral experiment — direct emotional communication with partner.',
-          type: 'recalled_past',
-          valence: 'positive',
-          intensity: 7,
-          structures: ['social', 'emotion', 'behaviour'],
-          therapistMove: 'reflection',
-          therapistQuote: 'What happened?',
-        },
-        {
-          id: 2,
-          timestamp: '00:02:45',
-          quote: 'She said, "I\'ve been waiting three years for you to say something real to me." And then she held me and I cried too.',
-          context: 'Partner\'s response — validation and connection. Client allowing tears for first time in years.',
-          type: 'recalled_past',
-          valence: 'positive',
-          intensity: 9,
-          structures: ['emotion', 'social', 'body', 'immediate_experience'],
-          therapistMove: 'empathic_attunement',
-          therapistQuote: 'How was that — letting yourself be seen like that?',
-        },
-        {
-          id: 3,
-          timestamp: '00:04:20',
-          quote: 'Like jumping off a cliff and discovering you can fly. I kept waiting for the shame to hit but she just held me tighter.',
-          context: 'Disconfirmation of shame prediction. Vulnerability met with closeness, not rejection.',
-          type: 'reflective',
-          valence: 'positive',
-          intensity: 8,
-          structures: ['emotion', 'cognitive', 'social', 'reflective'],
-          therapistMove: 'interpretation',
-          therapistQuote: 'The thing you were most afraid of turned out to be exactly what she needed from you.',
-        },
-        {
-          id: 4,
-          timestamp: '00:06:00',
-          quote: 'I wasted so much time being scared of something that was actually what would save us.',
-          context: 'Grief emerging alongside progress — common pattern when clients realize the cost of old strategies.',
-          type: 'reflective',
-          valence: 'mixed',
-          intensity: 7,
-          structures: ['narrative', 'emotion', 'cognitive'],
-          therapistMove: 'challenge',
-          therapistQuote: 'Can you hold both? The grief about lost time AND the gratitude that you\'re here now?',
-        },
-        {
-          id: 5,
-          timestamp: '00:07:30',
-          quote: 'I\'m here now. That has to count for something.',
-          context: 'Self-compassion emerging within self-criticism. Present-moment orientation developing.',
-          type: 'reflective',
-          valence: 'positive',
-          intensity: 5,
-          structures: ['reflective', 'cognitive', 'emotion'],
-          therapistMove: 'silence',
-          therapistQuote: '[Therapist allowed this landing to settle]',
-        },
-      ],
-      riskFlags: [
-        {
-          id: 1,
-          signal: 'Self-Criticism Risk',
-          severity: 'low',
-          detail: '"I wasted so much time" — shift from tenderness to anger at self',
-          algorithmMatch: 'wasted time, self-blame, self-criticism, anger at self',
-          recommendation: 'Monitor for excessive self-blame; redirect toward self-compassion; normalize grief as part of growth',
-          interventionType: 'monitor',
-        },
-      ],
-      structureProfile: {
-        body: 0.55,
-        immediate_experience: 0.62,
-        emotion: 0.78,
-        behaviour: 0.72,
-        social: 0.85,
-        cognitive: 0.68,
-        reflective: 0.72,
-        narrative: 0.75,
-        ecological: 0.48,
-        normative: 0.65,
-      },
-      cbtAnalysis: {
-        distortions: [
-          { type: 'All-or-Nothing (self-directed)', confidence: 0.55, evidence: 'I wasted so much time', alternativeThought: 'I\'m changing now and that matters', momentIndex: 3 },
-        ],
-        dominantPatterns: ['Self-criticism about past avoidance', 'All-or-Nothing (weakening)'],
-        behavioralPatterns: ['Direct emotional communication (new)', 'Allowing tears', 'Physical closeness with partner'],
-        automaticThoughts: [
-          { content: 'I\'m here now and that counts', beliefStrength: 0.55, supportsWellbeing: true },
-          { content: 'Vulnerability brings connection, not rejection', beliefStrength: 0.60, supportsWellbeing: true },
-        ],
-        overallDistortionLoad: 0.32,
-        treatmentReadiness: 0.78,
-      },
-      similarCases: [
-        {
-          id: 1,
-          patientCode: 'SC-0845',
-          matchScore: 0.88,
-          presentingConcerns: ['emotional avoidance', 'partner-prompted therapy', 'first vulnerability breakthrough'],
-          dominantStructures: ['social', 'emotion', 'normative', 'narrative'],
-          sessionCount: 10,
-          keyThemes: ['Emotional avoidance', 'Intergenerational stoicism', 'Vulnerability practice', 'Partner responsiveness'],
-          outcome: 'Significant improvement',
-          outcomeDetail: 'Couple reported 60% improvement in relational satisfaction at 3 months. Individual depressive symptoms resolved. Partners of emotionally avoidant men often respond with immediate warmth when vulnerability appears.',
-          representativeQuote: 'The night I told her I was scared of losing her, she held me like she\'d been waiting years for me to say it. She had.',
-        },
-      ],
-      practitionerMatches: [
-        {
-          id: 1,
-          code: 'PM-004',
-          name: 'Dr. Marcus Webb',
-          specialty: 'Emotionally Focused Therapy',
-          methodology: 'EFT for Attachment Repair',
-          matchScore: 0.91,
-          interventionSequence: ['Process breakthrough vulnerability experience', 'Use positive partner response as corrective emotional experience', 'Update internal attachment model', 'Generalize emotional expression to other relationships'],
-          outcomePatterns: [
-            { metric: 'Sustained relational improvement at 6 months', change: '+85%', confidence: 0.86 },
-            { metric: 'Depressive symptom resolution', change: 'Full resolution', confidence: 0.78 },
-          ],
-          matchReasoning: 'Using positive partner response as corrective emotional experience to update attachment model',
-          targetStructures: ['emotion', 'social', 'narrative', 'reflective'],
-        },
-      ],
-      sessionHistory: [
-        { session: 1, emotionalIntensity: 4.5, reflectiveCapacity: 3.8, emotionalRegulation: 5.0, therapeuticAlliance: 3.5 },
-        { session: 2, emotionalIntensity: 6.2, reflectiveCapacity: 4.5, emotionalRegulation: 4.8, therapeuticAlliance: 4.2 },
-        { session: 3, emotionalIntensity: 7.8, reflectiveCapacity: 5.2, emotionalRegulation: 4.5, therapeuticAlliance: 4.8 },
-      ],
-      therapistMoves: [
-        { type: 'empathic_attunement', count: 3, percentage: 30 },
-        { type: 'reflection', count: 3, percentage: 30 },
-        { type: 'interpretation', count: 2, percentage: 20 },
-        { type: 'challenge', count: 1, percentage: 10 },
-        { type: 'silence', count: 1, percentage: 10 },
-      ],
-      clinicianReport: 'Session 3: Major breakthrough. Client independently disclosed loneliness to partner — first direct emotional communication in years. Partner responded with immediate warmth and tears ("I\'ve been waiting three years"). Client allowed himself to cry, experienced connection rather than expected shame. This is a corrective emotional experience of high therapeutic value. Self-criticism emerging about "wasted time" — needs gentle addressing. PHQ-9 improved to 9 (from 12). Prognosis upgraded to good.',
-      patientReport: 'What you did this week took immense courage. Telling Sarah you feel lonely — and allowing yourself to cry with her — was the bravest thing you\'ve done in a long time. And notice: she didn\'t judge you or think less of you. She held you tighter. That\'s what vulnerability does — it invites connection. Be gentle with yourself about the time you feel was "wasted." You\'re here now, and that matters. This week, try one more small moment of honesty with Sarah. It doesn\'t have to be as big as Saturday — even "I liked spending time with you tonight" counts.',
-      analysisStatus: 'complete',
-      analysisWarnings: [],
-    },
-  },
-];
-
 // ═══════════════════════════════════════════════════════════════════════════════
-// CLIENT 3: CL-2156 — Social anxiety & identity exploration, 2 sessions
+// SESSION 1: "The Surface" — 2026-03-10
+// Standard work anxiety presentation. Client mentions passing out but dismisses
+// it. SessionLens flags sleep disturbance and perfectionism before the client
+// names them.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const client3 = {
-  therapist_id: DEV_THERAPIST_ID,
-  client_code: 'CL-2156',
-  gender: 'other',
-  age_range: 'young-adult',
-  treatment_goals: [
-    'Reduce social anxiety in professional settings',
-    'Explore gender identity with less self-judgment',
-    'Build authentic self-expression capacity',
-    'Develop distress tolerance for identity uncertainty',
-  ],
-  presenting_concerns: ['Social anxiety', 'Identity exploration', 'Self-expression difficulties', 'Workplace authenticity'],
-  diagnostic_considerations: ['Social Anxiety Disorder', 'Gender Dysphoria (exploratory)'],
-  current_risk_level: 'low',
-  key_themes: ['Authenticity', 'Social performance', 'Gender identity', 'Belonging', 'Vulnerability in groups'],
-  dominant_structures: ['social', 'normative', 'narrative', 'emotion'],
-  preferred_approach: 'Affirmative therapy with ACT elements',
-  clinical_notes: 'Young professional presenting with social anxiety intersecting with gender identity exploration. Highly articulate and self-aware but struggles to bring authentic self into social contexts. Uses intellectualization as defense. Good engagement from session one. Early stage but promising trajectory.',
-  total_sessions: 2,
-  is_confirmed: true,
-  last_confirmed_at: '2026-04-14T11:00:00Z',
-  status: 'active',
-  created_at: '2026-04-07T11:00:00Z',
-  updated_at: '2026-04-14T11:00:00Z',
-  outcome_tracking_enabled: true,
-  outcome_scores: [
-    { date: '2026-04-07', phq9: 8, gad7: 13, note: 'Intake — moderate anxiety, mild depression' },
-    { date: '2026-04-14', phq9: 7, gad7: 12, note: 'Slight improvement; feeling heard' },
-  ],
-  deleted_at: null,
+const session1 = {
+  session_number: 1,
+  session_date: '2026-03-10T10:00:00Z',
+  treatment_goals: 'Initial assessment; establish therapeutic alliance; identify primary anxiety triggers and somatic symptoms',
+  status: 'complete',
+  transcript: `Therapist: Thanks for coming in today. Tell me what's been going on for you.
+
+Client: Yeah, so... work has been really stressful. I'm a software engineer — senior level — and the deadlines have been insane lately. I've been having this chest tightness, especially on Sunday nights. Like, I can feel Monday coming. My whole body tenses up.
+
+Therapist: Your body is telling you something. Can you describe that chest tightness a bit more?
+
+Client: It's like a band around my ribs. Sometimes it gets so bad I feel like I can't breathe properly. Actually, I passed out at work about a month ago. I was in a sprint planning meeting and just... went down. They called an ambulance. ER said everything was fine, probably just stress. I went back to work the next day.
+
+Therapist: You passed out at work, went to the ER, and returned to work the next day. What was that like?
+
+Client: I mean, what else was I going to do? We had a release deadline. People were counting on me. I can't just... not show up. I've never missed a deadline in six years.
+
+Therapist: Never missed a deadline in six years. That's a long track record to maintain. What would it mean if you did miss one?
+
+Client: [pause] I don't know. I guess... people would realize I'm not actually that good at this. That I've been faking it. Like, the whole thing would unravel. They'd see I'm just... average.
+
+Therapist: So there's a version of yourself that you're working very hard to keep up. And the cost of that is showing up in your body.
+
+Client: Yeah. When you put it that way, it does sound kind of unsustainable. But I don't really know how to do it differently. This is just how I've always been. My dad used to say "good isn't good enough" — and I guess I just internalized that.
+
+Therapist: That phrase — "good isn't good enough." When you hear it now, what comes up for you?
+
+Client: Honestly? I barely notice it anymore. It's just... the background noise. It's how I operate. Get up, perform, don't complain. Weekends I'm usually so wiped I just zone out watching TV. I don't really do anything.`,
+  analysis_result: {
+    quickInsight: {
+      riskLevel: 'moderate' as const,
+      clinicalPriority: 'Workplace anxiety with somatic features and possible perfectionism-driven presentation; screen for sleep disturbance',
+      prognosis: 'Good — client demonstrates emerging insight and willingness to explore; somatic symptoms require monitoring',
+      topRecommendation: 'Consider ACT with somatic integration over standard CBT; pattern matching suggests superior outcomes for this profile',
+      sessionNumber: 1,
+    },
+    moments: [
+      {
+        id: 1,
+        timestamp: '00:01:45',
+        quote: 'I can feel Monday coming. My whole body tenses up.',
+        context: 'Somatic presentation of anticipatory anxiety — body-based symptoms dominating the initial disclosure. Classic anxiety somatization.',
+        type: 'immediate_experience' as const,
+        valence: 'negative' as const,
+        intensity: 7,
+        structures: ['body' as const, 'emotion' as const, 'immediate_experience' as const],
+        therapistMove: 'empathic_attunement' as const,
+        therapistQuote: 'Your body is telling you something. Can you describe that chest tightness a bit more?',
+      },
+      {
+        id: 2,
+        timestamp: '00:03:30',
+        quote: 'I passed out at work about a month ago. They called an ambulance. ER said everything was fine, probably just stress. I went back to work the next day.',
+        context: 'Critical disclosure delivered with striking minimization. Syncope event normalized and dismissed — significant somatic complaint treated as inconvenience.',
+        type: 'recalled_past' as const,
+        valence: 'negative' as const,
+        intensity: 8,
+        structures: ['body' as const, 'behaviour' as const, 'narrative' as const],
+        therapistMove: 'reflection' as const,
+        therapistQuote: 'You passed out at work, went to the ER, and returned to work the next day. What was that like?',
+      },
+      {
+        id: 3,
+        timestamp: '00:05:15',
+        quote: 'I\'ve never missed a deadline in six years.',
+        context: 'Perfectionist identity marker — six years of flawless performance used as evidence of competence and self-worth. Behavioral rigidity.',
+        type: 'reflective' as const,
+        valence: 'mixed' as const,
+        intensity: 6,
+        structures: ['cognitive' as const, 'narrative' as const, 'normative' as const],
+        therapistMove: 'interpretation' as const,
+        therapistQuote: 'Never missed a deadline in six years. That\'s a long track record to maintain.',
+      },
+      {
+        id: 4,
+        timestamp: '00:07:00',
+        quote: 'People would realize I\'m not actually that good at this. That I\'ve been faking it. Like, the whole thing would unravel.',
+        context: 'Impostor phenomenon articulated clearly. Core fear of exposure driving perfectionist compensatory behavior.',
+        type: 'immediate_experience' as const,
+        valence: 'negative' as const,
+        intensity: 9,
+        structures: ['emotion' as const, 'cognitive' as const, 'social' as const],
+        therapistMove: 'empathic_attunement' as const,
+        therapistQuote: 'So there\'s a version of yourself that you\'re working very hard to keep up. And the cost of that is showing up in your body.',
+      },
+      {
+        id: 5,
+        timestamp: '00:09:30',
+        quote: 'My dad used to say "good isn\'t good enough" — and I guess I just internalized that.',
+        context: 'Family-of-origin revelation. Perfectionism traced to paternal messaging. Stated with emotional flatness suggesting incomplete processing.',
+        type: 'recalled_past' as const,
+        valence: 'negative' as const,
+        intensity: 7,
+        structures: ['narrative' as const, 'cognitive' as const, 'social' as const],
+        therapistMove: 'challenge' as const,
+        therapistQuote: 'That phrase — "good isn\'t good enough." When you hear it now, what comes up for you?',
+      },
+      {
+        id: 6,
+        timestamp: '00:11:45',
+        quote: 'Weekends I\'m usually so wiped I just zone out watching TV. I don\'t really do anything.',
+        context: 'Avoidance and withdrawal pattern. Weekend collapse suggesting emotional and physical depletion. Possible anhedonia marker.',
+        type: 'reflective' as const,
+        valence: 'negative' as const,
+        intensity: 5,
+        structures: ['behaviour' as const, 'emotion' as const, 'ecological' as const],
+        therapistMove: 'silence' as const,
+        therapistQuote: '[Therapist allowed space for the client to sit with this observation]',
+      },
+    ],
+    riskFlags: [
+      {
+        id: 1,
+        severity: 'medium' as const,
+        signal: 'Syncope Event with Minimization',
+        detail: 'Client passed out at work, was taken to ER by ambulance, and returned to work the next day. Significant somatic event dismissed as routine — pattern of body-signal override.',
+        algorithmMatch: 'syncope, somatic escalation, minimization, ER visit, immediate return to stressor',
+        recommendation: 'Obtain medical clearance documentation; monitor for recurrence; establish somatic awareness baseline',
+        interventionType: 'immediate',
+      },
+      {
+        id: 2,
+        severity: 'medium' as const,
+        signal: 'Perfectionism-Driven Overfunction',
+        detail: 'Six years without missing a deadline despite escalating physical symptoms. Identity fused with performance. Impostor phenomenon driving compensatory overwork.',
+        algorithmMatch: 'perfectionism, impostor syndrome, overwork, identity fusion, performance anxiety',
+        recommendation: 'Assess burnout severity using validated measure; explore perfectionism schemas; begin values clarification',
+        interventionType: 'monitor',
+      },
+      {
+        id: 3,
+        severity: 'low' as const,
+        signal: 'Weekend Withdrawal Pattern',
+        detail: 'Complete collapse on weekends — "zone out watching TV, don\'t really do anything." Possible anhedonia or exhaustion-driven avoidance.',
+        algorithmMatch: 'withdrawal, anhedonia, avoidance, exhaustion, social isolation',
+        recommendation: 'Screen for depression severity; assess social connectedness; monitor for worsening withdrawal',
+        interventionType: 'monitor',
+      },
+    ],
+    practitionerMatches: [
+      {
+        id: 1,
+        code: 'PM-001',
+        name: 'Dr. Elena Vasquez',
+        specialty: 'Acceptance and Commitment Therapy with Somatic Integration',
+        methodology: 'ACT-Somatic Protocol — combines acceptance and defusion techniques with somatic experiencing and interoceptive awareness training. Targets the perfectionism-anxiety-somatization cycle by building psychological flexibility while simultaneously addressing body-held stress patterns.',
+        matchScore: 0.87,
+        interventionSequence: [
+          'Establish interoceptive awareness baseline — map body-held anxiety patterns and somatic signals',
+          'Introduce cognitive defusion for perfectionist self-talk using ACT metaphors (Passengers on the Bus, Hands as Thoughts)',
+          'Values clarification to distinguish authentic goals from fear-driven performance',
+          'Somatic processing of chest tightness and tension patterns with grounded exposure',
+          'Behavioral commitment experiments aligned with values rather than perfectionist standards',
+        ],
+        outcomePatterns: [
+          { metric: 'PHQ-9 reduction', change: '-8.2 points avg over 8 sessions', confidence: 0.88 },
+          { metric: 'GAD-7 improvement', change: '-7.8 points avg over 8 sessions', confidence: 0.85 },
+          { metric: 'Somatic symptom reduction', change: '-62% reported frequency', confidence: 0.82 },
+          { metric: 'Psychological flexibility (AAQ-II)', change: '+34% improvement', confidence: 0.86 },
+        ],
+        matchReasoning: 'Highest match. Client presents with fused perfectionist identity, body-based anxiety, and somatic symptoms that standard cognitive restructuring often fails to resolve. ACT\'s defusion approach directly targets the "good isn\'t good enough" schema without fighting it, while somatic integration addresses the chest tightness and syncope pattern. Across 10,847 cases in the dataset, this profile responds to ACT + somatic work 23% better than standard CBT.',
+        targetStructures: ['body' as const, 'emotion' as const, 'cognitive' as const, 'immediate_experience' as const],
+      },
+      {
+        id: 2,
+        code: 'PM-002',
+        name: 'Dr. James Whitfield',
+        specialty: 'Cognitive-Behavioral Therapy with Behavioral Experiments',
+        methodology: 'Modified Beckian CBT Protocol — structured cognitive restructuring targeting catastrophic predictions with systematic behavioral experiments. Emphasizes evidence-gathering against core beliefs through graded exposure to feared outcomes.',
+        matchScore: 0.79,
+        interventionSequence: [
+          'Map automatic thoughts and core beliefs around competence and performance',
+          'Introduce thought records targeting catastrophic predictions about deadlines and evaluation',
+          'Design behavioral experiments testing predictions (e.g., declining one low-priority task)',
+          'Process disconfirming evidence to update core beliefs about self-worth',
+          'Develop maintenance plan with ongoing cognitive monitoring and relapse prevention',
+        ],
+        outcomePatterns: [
+          { metric: 'PHQ-9 reduction', change: '-5.8 points avg over 10 sessions', confidence: 0.82 },
+          { metric: 'GAD-7 improvement', change: '-6.4 points avg over 10 sessions', confidence: 0.80 },
+          { metric: 'Return-to-function rate', change: '+72%', confidence: 0.78 },
+          { metric: 'Cognitive distortion frequency', change: '-48% reduction', confidence: 0.84 },
+        ],
+        matchReasoning: 'Strong match for the cognitive distortion profile — catastrophizing and impostor beliefs are well-targeted by behavioral experiments. However, this approach may underserve the somatic component. Cases with prominent body-based symptoms show 15% lower response rates with pure CBT vs. ACT + somatic protocols.',
+        targetStructures: ['cognitive' as const, 'behaviour' as const, 'social' as const],
+      },
+      {
+        id: 3,
+        code: 'PM-003',
+        name: 'Dr. Sarah Okonkwo',
+        specialty: 'Mindfulness-Based Stress Reduction',
+        methodology: 'MBSR Adapted for Performance Anxiety — 8-week mindfulness-based protocol adapted for high-performing professionals with anxiety somatization. Integrates body scan meditation, mindful movement, and stress physiology psychoeducation.',
+        matchScore: 0.72,
+        interventionSequence: [
+          'Psychoeducation on stress physiology and the anxiety-performance curve',
+          'Introduction to body scan meditation with focus on chest and jaw tension areas',
+          'Mindful awareness of perfectionist thought patterns without engagement',
+          'Develop daily formal and informal mindfulness practices',
+          'Integration into workplace routines — micro-mindfulness at desk, pre-meeting grounding',
+        ],
+        outcomePatterns: [
+          { metric: 'GAD-7 improvement', change: '-5.2 points avg over 8 weeks', confidence: 0.76 },
+          { metric: 'Somatic symptom reduction', change: '-45% reported frequency', confidence: 0.74 },
+          { metric: 'Perceived stress (PSS)', change: '-38% reduction', confidence: 0.78 },
+          { metric: 'Sleep quality improvement', change: '+32% on PSQI', confidence: 0.72 },
+        ],
+        matchReasoning: 'Good fit for the somatic component and stress physiology. MBSR can build body awareness that this client currently overrides. However, may be insufficient as standalone for the depth of perfectionism and impostor dynamics present. Best considered as adjunct to ACT or CBT.',
+        targetStructures: ['body' as const, 'immediate_experience' as const, 'ecological' as const],
+      },
+      {
+        id: 4,
+        code: 'PM-004',
+        name: 'Dr. Michael Petrov',
+        specialty: 'Compassion-Focused Therapy',
+        methodology: 'CFT for Self-Critical Perfectionism — targets the inner critic and shame-based self-evaluation through compassionate mind training. Develops the "compassionate self" as alternative to the perfectionist driver.',
+        matchScore: 0.65,
+        interventionSequence: [
+          'Assess threat, drive, and soothing system balance — identify drive system dominance',
+          'Psychoeducation on the three-circle model and evolved brain functions',
+          'Compassionate imagery and self-to-self relating exercises',
+          'Challenge the inner critic voice (father\'s message) with compassionate alternative',
+          'Develop compassionate behavioral responses to perceived failure scenarios',
+        ],
+        outcomePatterns: [
+          { metric: 'Self-compassion (SCS)', change: '+42% improvement', confidence: 0.78 },
+          { metric: 'PHQ-9 reduction', change: '-4.8 points avg', confidence: 0.72 },
+          { metric: 'Self-criticism frequency', change: '-55% reduction', confidence: 0.80 },
+          { metric: 'Perfectionism (FMPS)', change: '-28% reduction', confidence: 0.68 },
+        ],
+        matchReasoning: 'The father\'s "good isn\'t good enough" message and impostor phenomenon suggest a shame-based self-evaluative system that CFT directly addresses. However, client\'s current emotional access is limited — he describes the phrase as "background noise" — which may slow CFT engagement initially.',
+        targetStructures: ['emotion' as const, 'cognitive' as const, 'reflective' as const, 'narrative' as const],
+      },
+      {
+        id: 5,
+        code: 'PM-005',
+        name: 'Dr. Aisha Williams',
+        specialty: 'Interpersonal Process Therapy',
+        methodology: 'IPT for Workplace Relational Patterns — examines how interpersonal schemas (especially authority-subordinate dynamics) maintain anxiety through people-pleasing, conflict avoidance, and over-responsibility.',
+        matchScore: 0.58,
+        interventionSequence: [
+          'Map interpersonal patterns — identify people-pleasing and conflict avoidance in workplace relationships',
+          'Explore parallels between manager dynamics and father relationship',
+          'Practice assertive communication and boundary-setting in session through role-play',
+          'Generalize assertiveness to workplace interactions with graded difficulty',
+          'Consolidate relational gains and develop maintenance strategies for boundary-setting',
+        ],
+        outcomePatterns: [
+          { metric: 'Interpersonal distress', change: '-38% reduction', confidence: 0.70 },
+          { metric: 'Assertiveness (RAS)', change: '+45% improvement', confidence: 0.72 },
+          { metric: 'GAD-7 improvement', change: '-4.2 points avg', confidence: 0.68 },
+          { metric: 'Workplace satisfaction', change: '+35% improvement', confidence: 0.66 },
+        ],
+        matchReasoning: 'Client\'s inability to say no to his manager and the father-origin perfectionism suggest interpersonal schemas maintaining anxiety. IPT would address the relational driver but may not adequately target somatic symptoms or the broader perfectionist cognitive pattern.',
+        targetStructures: ['social' as const, 'narrative' as const, 'behaviour' as const],
+      },
+    ],
+    // 8 similar cases — carefully designed so correlations emerge:
+    // "Workplace Anxiety" + "Sleep Disturbance": 6/8 = 75%
+    // "Workplace Anxiety" + "Perfectionism": 5/8 = 63%
+    // "Somatic Complaints" + "Perfectionism": 4/8 = 50%
+    // "Emotional Dysregulation" + "Somatic Complaints": 4/8 = 50%
+    similarCases: [
+      {
+        id: 1,
+        patientCode: 'RX-2847',
+        matchScore: 0.92,
+        presentingConcerns: ['Workplace Anxiety', 'Sleep Disturbance', 'Perfectionism', 'Somatic Complaints'],
+        dominantStructures: ['body' as const, 'emotion' as const, 'cognitive' as const, 'narrative' as const],
+        sessionCount: 10,
+        keyThemes: ['perfectionism', 'insomnia', 'chest tightness', 'performance pressure'],
+        outcome: 'significant_improvement',
+        outcomeDetail: 'PHQ-9 dropped from 18 to 6 over 10 sessions using ACT + somatic protocol. Breakthrough came when client connected childhood achievement pressure to adult work patterns. Sleep normalized by session 6.',
+        representativeQuote: 'I realized I was running on my father\'s operating system. Once I saw the code, I could start rewriting it.',
+      },
+      {
+        id: 2,
+        patientCode: 'RX-3104',
+        matchScore: 0.88,
+        presentingConcerns: ['Workplace Anxiety', 'Sleep Disturbance', 'Perfectionism', 'Emotional Dysregulation'],
+        dominantStructures: ['emotion' as const, 'cognitive' as const, 'body' as const, 'reflective' as const],
+        sessionCount: 12,
+        keyThemes: ['impostor syndrome', 'rumination', 'anger suppression', 'sleep onset insomnia'],
+        outcome: 'significant_improvement',
+        outcomeDetail: 'GAD-7 improved from 16 to 5 over 12 sessions. Key turning point was learning to defuse from perfectionist thoughts rather than arguing with them. Emotional regulation improved dramatically once sleep was addressed.',
+        representativeQuote: 'I used to think my anxiety was the enemy. Now I see it as an alarm system that got stuck — I don\'t need to fight it, I need to recalibrate it.',
+      },
+      {
+        id: 3,
+        patientCode: 'RX-1956',
+        matchScore: 0.84,
+        presentingConcerns: ['Workplace Anxiety', 'Sleep Disturbance', 'Somatic Complaints', 'Emotional Dysregulation'],
+        dominantStructures: ['body' as const, 'emotion' as const, 'immediate_experience' as const, 'behaviour' as const],
+        sessionCount: 8,
+        keyThemes: ['tension headaches', 'jaw clenching', 'insomnia', 'irritability'],
+        outcome: 'significant_improvement',
+        outcomeDetail: 'Somatic symptoms (headaches, jaw clenching) reduced 70% over 8 sessions. Sleep improved from 4 hours to 7 hours average. Emotional dysregulation addressed through interoceptive awareness training.',
+        representativeQuote: 'My body was keeping score of every deadline I white-knuckled through. Learning to listen to it instead of override it changed everything.',
+      },
+      {
+        id: 4,
+        patientCode: 'RX-4213',
+        matchScore: 0.79,
+        presentingConcerns: ['Workplace Anxiety', 'Perfectionism', 'Somatic Complaints', 'Avoidance Behaviors'],
+        dominantStructures: ['cognitive' as const, 'body' as const, 'behaviour' as const, 'normative' as const],
+        sessionCount: 14,
+        keyThemes: ['perfectionism', 'GI distress', 'meeting avoidance', 'procrastination'],
+        outcome: 'moderate_improvement',
+        outcomeDetail: 'Longer treatment course due to entrenched avoidance patterns. PHQ-9 reduced from 15 to 9. Perfectionism softened but not fully resolved. GI symptoms reduced 40%. Client transferred to group ACT program for continued work.',
+        representativeQuote: 'I\'d rather redo a task five times in private than show someone an imperfect first draft. That\'s not excellence — that\'s fear wearing a disguise.',
+      },
+      {
+        id: 5,
+        patientCode: 'RX-0871',
+        matchScore: 0.75,
+        presentingConcerns: ['Workplace Anxiety', 'Sleep Disturbance', 'Avoidance Behaviors', 'Emotional Dysregulation'],
+        dominantStructures: ['behaviour' as const, 'emotion' as const, 'body' as const, 'ecological' as const],
+        sessionCount: 9,
+        keyThemes: ['social withdrawal', 'insomnia', 'emotional flooding', 'work avoidance'],
+        outcome: 'significant_improvement',
+        outcomeDetail: 'GAD-7 dropped from 17 to 7 over 9 sessions. Sleep disturbance was the primary maintenance factor — once addressed, emotional regulation and avoidance behaviors improved rapidly.',
+        representativeQuote: 'Turns out the insomnia wasn\'t a side effect — it was the main event. Fix the sleep, and half the anxiety fixes itself.',
+      },
+      {
+        id: 6,
+        patientCode: 'RX-5539',
+        matchScore: 0.71,
+        presentingConcerns: ['Workplace Anxiety', 'Sleep Disturbance', 'Perfectionism', 'Somatic Complaints', 'Emotional Dysregulation'],
+        dominantStructures: ['body' as const, 'cognitive' as const, 'emotion' as const, 'social' as const],
+        sessionCount: 11,
+        keyThemes: ['perfectionism', 'chest pain', 'insomnia', 'emotional suppression'],
+        outcome: 'significant_improvement',
+        outcomeDetail: 'Complex presentation with all five factors. ACT + somatic protocol produced significant improvement across all domains. PHQ-9 from 19 to 7. Key was addressing perfectionism and sleep simultaneously rather than sequentially.',
+        representativeQuote: 'I spent thirty years trying to be perfect and all I got was exhausted. Letting "good enough" be good enough was the hardest and best thing I\'ve ever done.',
+      },
+      {
+        id: 7,
+        patientCode: 'RX-6782',
+        matchScore: 0.66,
+        presentingConcerns: ['Somatic Complaints', 'Perfectionism', 'Emotional Dysregulation', 'Avoidance Behaviors'],
+        dominantStructures: ['body' as const, 'cognitive' as const, 'emotion' as const, 'reflective' as const],
+        sessionCount: 7,
+        keyThemes: ['tension headaches', 'self-criticism', 'emotional shutdown', 'social avoidance'],
+        outcome: 'moderate_improvement',
+        outcomeDetail: 'Somatic symptoms reduced 50%. Perfectionism awareness improved but behavioral change was slower. Emotional dysregulation remained a challenge — client benefited from adding DBT distress tolerance skills.',
+        representativeQuote: 'The headaches were my body\'s way of saying what my mouth couldn\'t: enough.',
+      },
+      {
+        id: 8,
+        patientCode: 'RX-8195',
+        matchScore: 0.61,
+        presentingConcerns: ['Perfectionism', 'Avoidance Behaviors', 'Somatic Complaints'],
+        dominantStructures: ['cognitive' as const, 'behaviour' as const, 'body' as const, 'narrative' as const],
+        sessionCount: 6,
+        keyThemes: ['impossibly high standards', 'procrastination', 'muscle tension', 'work paralysis'],
+        outcome: 'moderate_improvement',
+        outcomeDetail: 'Short treatment focused primarily on perfectionism and avoidance cycle. Somatic complaints (chronic muscle tension) reduced 35%. Client continued with self-directed ACT workbook after termination.',
+        representativeQuote: 'I always thought perfectionism was my superpower. It\'s actually my kryptonite — it doesn\'t make me better, it makes me stuck.',
+      },
+    ],
+    structureProfile: {
+      body: 0.82,
+      immediate_experience: 0.68,
+      emotion: 0.75,
+      behaviour: 0.58,
+      social: 0.62,
+      cognitive: 0.85,
+      reflective: 0.42,
+      narrative: 0.72,
+      ecological: 0.38,
+      normative: 0.65,
+    } as Record<string, number>,
+    sessionHistory: [
+      { session: 1, emotionalIntensity: 7.5, reflectiveCapacity: 4.8, emotionalRegulation: 4.2, therapeuticAlliance: 5.5 },
+    ],
+    therapistMoves: [
+      { type: 'empathic_attunement' as const, count: 2, percentage: 33 },
+      { type: 'reflection' as const, count: 1, percentage: 17 },
+      { type: 'interpretation' as const, count: 1, percentage: 17 },
+      { type: 'challenge' as const, count: 1, percentage: 17 },
+      { type: 'silence' as const, count: 1, percentage: 17 },
+    ],
+    clinicianReport: 'Session 1 assessment reveals a 34-year-old male software engineer presenting with workplace anxiety and prominent somatic features — chest tightness, anticipatory physical distress, and a recent syncope event that was markedly minimized. The client returned to work the day after an ER visit, reflecting a pattern of body-signal override that warrants clinical attention.\n\nBeneath the surface presentation, several deeper patterns are emerging. A six-year streak of never missing a deadline suggests rigid perfectionism fused with professional identity. The disclosure of his father\'s message — "good isn\'t good enough" — points to family-of-origin schemas driving current behavior. Weekend withdrawal and zoning out may indicate early anhedonia or exhaustion-driven avoidance. The client\'s emotional access is currently limited; he describes significant childhood messaging as "background noise."\n\nPattern matching across 10,847 cases flags sleep disturbance (75% co-occurrence) and perfectionism (63%) as likely additional factors not yet reported by the client. ACT with somatic integration is recommended over standard CBT based on outcome data from matched profiles. Recommend screening for sleep disturbance and expanding assessment of perfectionism schemas in the next session.',
+    patientReport: 'Thank you for being so open in our first session — it takes courage to sit with these feelings instead of pushing through them the way you usually do. What stood out to me is how hard your body has been working to get your attention: the chest tightness, the Sunday night tension, even the passing out. These aren\'t signs of weakness — they\'re signals that something needs to change.\n\nThe pattern you described — never missing a deadline, going back to work the day after an ER visit, your dad\'s voice saying "good isn\'t good enough" — these are all connected. We\'re going to explore that connection together. I\'d also like to check in about your sleep and how you\'re feeling on the weekends, because those pieces matter more than they might seem right now.\n\nFor this week, I\'d like you to just notice — without trying to change anything — when that chest tightness shows up. What\'s happening? What were you thinking about? You don\'t need to fix it yet. Just notice.',
+    cbtAnalysis: {
+      distortions: [
+        { type: 'Catastrophizing', confidence: 0.88, evidence: 'If I miss a deadline, people would realize I\'m not actually that good at this. The whole thing would unravel.', alternativeThought: 'Missing one deadline in six years would demonstrate humanity, not incompetence. Most colleagues have missed deadlines without career consequences.', momentIndex: 3 },
+        { type: 'All-or-Nothing Thinking', confidence: 0.85, evidence: 'I\'m either perfect or I\'m average. Good isn\'t good enough.', alternativeThought: 'Performance exists on a spectrum. Being very good without being perfect is still valuable and sustainable.', momentIndex: 4 },
+        { type: 'Mind Reading', confidence: 0.78, evidence: 'People would realize I\'m not actually that good at this. That I\'ve been faking it.', alternativeThought: 'I have no evidence that colleagues view me as faking. Six years of meeting every deadline suggests I am genuinely competent.', momentIndex: 3 },
+        { type: 'Minimization', confidence: 0.82, evidence: 'ER said everything was fine, probably just stress. I went back to work the next day.', alternativeThought: 'Passing out and requiring an ambulance is medically significant regardless of ER findings. Returning to work immediately denied my body recovery time.', momentIndex: 1 },
+      ],
+      overallDistortionLoad: 0.76,
+      treatmentReadiness: 0.62,
+      dominantPatterns: ['Catastrophizing', 'All-or-Nothing Thinking', 'Mind Reading', 'Minimization'],
+      automaticThoughts: [
+        { content: 'If I\'m not perfect, I\'m worthless', beliefStrength: 0.85, supportsWellbeing: false },
+        { content: 'Asking for help means I can\'t handle it', beliefStrength: 0.80, supportsWellbeing: false },
+        { content: 'My body is overreacting — I just need to push through', beliefStrength: 0.78, supportsWellbeing: false },
+      ],
+      behavioralPatterns: ['Overwork as anxiety management', 'Minimization of physical symptoms', 'Avoidance of vulnerability', 'Weekend withdrawal and collapse'],
+    },
+    analysisStatus: 'complete' as const,
+    analysisWarnings: [],
+  },
 };
 
-const client3Sessions = [
-  {
-    session_number: 1,
-    session_date: '2026-04-07T11:00:00Z',
-    treatment_goals: 'Initial assessment; understand social anxiety context; explore identity concerns',
-    status: 'complete',
-    transcript: `Therapist: Welcome. Tell me what's been going on for you.
+// ═══════════════════════════════════════════════════════════════════════════════
+// SESSION 2: "The Revelation" — 2026-03-24
+// Everything SessionLens predicted in Session 1 is confirmed by the client.
+// Sleep disturbance, perfectionism, somatic escalation, avoidance — all present.
+// New patterns emerge: family-of-origin depth, depressive risk if untreated.
+// ═══════════════════════════════════════════════════════════════════════════════
 
-Client: So I've been struggling with this thing where... I know who I am when I'm alone. Like, at home, in my journal, I feel clear. I'm non-binary, I use they/them, I'm creative, I'm thoughtful. But the second I walk into work or a social situation, all of that disappears and I become this... performance of normalcy.
+const session2 = {
+  session_number: 2,
+  session_date: '2026-03-24T10:00:00Z',
+  treatment_goals: 'Explore sleep disturbance and perfectionism patterns flagged by analysis; assess family-of-origin dynamics; begin ACT framework introduction',
+  status: 'complete',
+  transcript: `Therapist: Good to see you again. How has the past two weeks been?
 
-Therapist: A performance. Say more about what that performance looks like.
+Client: Honestly? Not great. I've been thinking a lot about what we talked about — the chest tightness, the pushing through. And I realized there's something I didn't mention last time. I haven't been sleeping. Like, at all. I'm up at 3am most nights, just... lying there, running through every possible thing that could go wrong at work the next day. Every scenario. Every conversation. It's been going on for months.
 
-Client: I code-switch. I use my deadname with colleagues because it's "easier." I laugh at jokes that actually hurt. I shrink myself to fit into spaces that weren't designed for me. And then I go home exhausted because maintaining that mask takes everything I have.
+Therapist: Months. So the sleep disturbance has been there for a while, underneath everything else.
 
-Therapist: So the exhaustion isn't just social anxiety — it's the energy cost of suppressing your authentic self.
+Client: Yeah. I didn't think it was connected. I thought the anxiety was about work and the sleep was just... a separate thing. But after last session, I started noticing — the nights I sleep worst are the nights I've been hardest on myself during the day.
 
-Client: Exactly. And I know, intellectually, that I could just... be myself. People probably wouldn't care that much. But there's this terror. Like if I show the real me and they reject it, there's nowhere left to hide.
+Therapist: That's a really important observation. The perfectionism and the sleep — they're feeding each other.
 
-Therapist: If the mask gets rejected, you can always put on a different one. But if the real you gets rejected...
+Client: And there's more. I've been getting these headaches. Like, tension headaches across my forehead and behind my eyes. And I noticed I clench my jaw — I think I do it in my sleep too, because I wake up with my jaw aching. My dentist actually mentioned it last year but I ignored it.
 
-Client: Then it's actually me they're rejecting. Not the character I'm playing. And I don't know if I could survive that.
+Therapist: Your body has been trying to tell you this for a while.
 
-Therapist: That's a really honest and vulnerable thing to name. The stakes feel existential — not just social discomfort but a threat to your core self.
+Client: [long pause] Yeah. Yeah, it has. And I've been ignoring it because... that's what I do. That's what my dad did. He worked sixty-hour weeks his whole life and never complained once. I remember being maybe eight or nine, and I got a 92 on a math test. I was so proud. And he looked at it and said, "Where did the other eight points go?" Just like that. No smile. No "good job." Just... where are the missing points.
 
-Client: Yeah. I think that's why I keep choosing the mask. It's lonely but it's safe.`,
-    analysis_result: {
-      quickInsight: {
-        riskLevel: 'low',
-        clinicalPriority: 'Social anxiety intertwined with identity suppression; authenticity vs. safety conflict central',
-        prognosis: 'Good — client is highly articulate, insightful, and motivated; strong capacity for therapeutic work',
-        topRecommendation: 'Validate the protective function of masking while gently exploring small experiments in authenticity',
-        sessionNumber: 1,
-      },
-      moments: [
-        {
-          id: 1,
-          timestamp: '00:01:45',
-          quote: 'I know who I am when I\'m alone. But the second I walk into work or a social situation, all of that disappears and I become this performance of normalcy.',
-          context: 'Core presentation articulated with clarity — authentic self exists but is suppressed in social contexts.',
-          type: 'reflective',
-          valence: 'negative',
-          intensity: 7,
-          structures: ['narrative', 'social', 'normative'],
-          therapistMove: 'reflection',
-          therapistQuote: 'A performance. Say more about what that performance looks like.',
-        },
-        {
-          id: 2,
-          timestamp: '00:03:30',
-          quote: 'I use my deadname with colleagues because it\'s "easier." I laugh at jokes that actually hurt. I shrink myself to fit into spaces that weren\'t designed for me.',
-          context: 'Specific examples of self-suppression — deadnaming self, tolerating microaggressions, literal shrinking.',
-          type: 'recalled_past',
-          valence: 'negative',
-          intensity: 7,
-          structures: ['behaviour', 'social', 'normative', 'emotion'],
-          therapistMove: 'interpretation',
-          therapistQuote: 'The exhaustion isn\'t just social anxiety — it\'s the energy cost of suppressing your authentic self.',
-        },
-        {
-          id: 3,
-          timestamp: '00:05:15',
-          quote: 'If I show the real me and they reject it, there\'s nowhere left to hide.',
-          context: 'Core fear articulated — vulnerability of authenticity. Existential stakes of being seen.',
-          type: 'immediate_experience',
-          valence: 'negative',
-          intensity: 8,
-          structures: ['emotion', 'cognitive', 'social'],
-          therapistMove: 'empathic_attunement',
-          therapistQuote: 'If the mask gets rejected, you can always put on a different one. But if the real you gets rejected...',
-        },
-        {
-          id: 4,
-          timestamp: '00:07:00',
-          quote: 'I keep choosing the mask. It\'s lonely but it\'s safe.',
-          context: 'Client naming the trade-off consciously — safety purchased at the cost of connection and authenticity.',
-          type: 'reflective',
-          valence: 'mixed',
-          intensity: 6,
-          structures: ['reflective', 'emotion', 'behaviour'],
-          therapistMove: 'silence',
-          therapistQuote: '[Therapist held space for this painful recognition]',
-        },
-      ],
-      riskFlags: [
-        {
-          id: 1,
-          signal: 'Identity-Related Distress',
-          severity: 'low',
-          detail: 'Self-deadnaming; describes suppression as exhausting; fear of existential rejection',
-          algorithmMatch: 'deadnaming, identity suppression, exhaustion, rejection fear, minority stress',
-          recommendation: 'Affirm identity; explore safe contexts for authenticity; monitor for minority stress escalation',
-          interventionType: 'monitor',
-        },
-      ],
-      structureProfile: {
-        body: 0.40,
-        immediate_experience: 0.60,
-        emotion: 0.72,
-        behaviour: 0.68,
-        social: 0.88,
-        cognitive: 0.75,
-        reflective: 0.78,
-        narrative: 0.82,
-        ecological: 0.55,
-        normative: 0.85,
-      },
-      cbtAnalysis: {
-        distortions: [
-          { type: 'Catastrophizing', confidence: 0.78, evidence: 'I don\'t know if I could survive that [rejection]', alternativeThought: 'Rejection would be painful but not annihilating; I have survived difficulty before', momentIndex: 2 },
-          { type: 'Fortune Telling', confidence: 0.72, evidence: 'Assumes rejection is the most likely outcome of authenticity', alternativeThought: 'Some people will affirm me; I don\'t know who until I try', momentIndex: 2 },
-        ],
-        dominantPatterns: ['Catastrophizing about social rejection', 'Fortune Telling', 'Safety behaviors (masking)'],
-        behavioralPatterns: ['Code-switching', 'Self-deadnaming', 'Masking authentic expression', 'Intellectual engagement as defense'],
-        automaticThoughts: [
-          { content: 'Being myself will lead to rejection', beliefStrength: 0.75, supportsWellbeing: false },
-          { content: 'The mask is lonely but safe', beliefStrength: 0.70, supportsWellbeing: false },
-        ],
-        overallDistortionLoad: 0.55,
-        treatmentReadiness: 0.72,
-      },
-      similarCases: [
-        {
-          id: 1,
-          patientCode: 'SC-0956',
-          matchScore: 0.86,
-          presentingConcerns: ['non-binary identity', 'workplace masking', 'social anxiety', 'authenticity conflict'],
-          dominantStructures: ['social', 'normative', 'narrative', 'emotion'],
-          sessionCount: 8,
-          keyThemes: ['Graded authenticity', 'Safe person identification', 'Minority stress processing', 'Values clarification'],
-          outcome: 'Significant improvement',
-          outcomeDetail: 'Anxiety reduced by 45% over 8 sessions. Came out at work to 3 colleagues. Reports feeling "actually present" for first time. Clients who start with one safe person tend to generalize more successfully.',
-          representativeQuote: 'The first time someone at work used my real name, I felt like I existed for the first time in that building.',
-        },
-      ],
-      practitionerMatches: [
-        {
-          id: 1,
-          code: 'PM-005',
-          name: 'Dr. Alex Rivera',
-          specialty: 'Gender-Affirmative Therapy',
-          methodology: 'ACT-based Affirmative Therapy',
-          matchScore: 0.90,
-          interventionSequence: ['Affirm identity and validate masking as protective', 'Clarify core values around authenticity', 'Design graded authenticity experiments starting with safest contexts', 'Process minority stress and build resilience toolkit'],
-          outcomePatterns: [
-            { metric: 'Clinically significant anxiety reduction', change: '-82%', confidence: 0.84 },
-            { metric: 'Authenticity in social contexts', change: 'Significant improvement', confidence: 0.80 },
-          ],
-          matchReasoning: 'Values-based behavioral experiments in authenticity — starting with lowest-stakes contexts',
-          targetStructures: ['social', 'normative', 'narrative', 'behaviour'],
-        },
-      ],
-      sessionHistory: [
-        { session: 1, emotionalIntensity: 7.0, reflectiveCapacity: 5.5, emotionalRegulation: 4.5, therapeuticAlliance: 4.2 },
-      ],
-      therapistMoves: [
-        { type: 'reflection', count: 2, percentage: 29 },
-        { type: 'empathic_attunement', count: 2, percentage: 29 },
-        { type: 'interpretation', count: 2, percentage: 29 },
-        { type: 'silence', count: 1, percentage: 14 },
-      ],
-      clinicianReport: 'Session 1: Non-binary client, 20s, presenting with social anxiety intertwined with identity suppression. Highly articulate and self-aware — demonstrates strong reflective capacity from session one. Core conflict: authenticity vs. safety. Masks identity at work (uses deadname, tolerates microaggressions) at significant psychological cost (exhaustion, loneliness). Fear is existential: "If the real me gets rejected, there\'s nowhere to hide." Intellectualization serves as defense but client readily accesses emotion when held. Recommend affirmative approach with gradual authenticity experiments.',
-      patientReport: 'Thank you for trusting me with something so personal today. What you shared about the gap between who you are at home and who you perform at work — that\'s not a small thing. The exhaustion you feel makes complete sense: maintaining a mask is incredibly draining work. I also want to name something you said that felt important: "It\'s lonely but it\'s safe." That trade-off is real, and you\'re allowed to question whether it\'s still worth the cost. For this week, notice one moment where you feel the mask go on. You don\'t have to change anything — just notice.',
-      analysisStatus: 'complete',
-      analysisWarnings: [],
+Therapist: What was that like for you? That moment?
+
+Client: [voice breaking] I don't think I've ever told anyone that story. I remember feeling like the floor dropped out. Like nothing I did would ever be enough. And I think... I think I've been chasing those eight points my entire life.
+
+Therapist: Chasing those eight points. That's a powerful way to put it.
+
+Client: And the crazy thing is, I've started avoiding things now. I turned down a dinner with friends last weekend because I was too exhausted. I skipped my brother's birthday video call. I told myself I was too tired, but really I think I was afraid they'd see how messed up I am. I don't want anyone to see me like this.
+
+Therapist: So the perfectionism says you have to be fine. And when you're not fine, you withdraw. You hide.
+
+Client: [pause] Yeah. That's exactly it. I'm either performing or I'm hiding. There's no in-between.`,
+  analysis_result: {
+    quickInsight: {
+      riskLevel: 'moderate' as const,
+      clinicalPriority: 'Confirmed sleep disturbance and perfectionism pattern; emerging avoidance and emotional dysregulation; family-of-origin schema activated',
+      prognosis: 'Good — client showing rapid insight development; emotional access improving; ACT + somatic approach validated by presentation',
+      topRecommendation: 'Begin ACT defusion work targeting perfectionist self-talk; add schema elements for family-of-origin pattern; address sleep hygiene as parallel intervention',
+      sessionNumber: 2,
     },
-  },
-  {
-    session_number: 2,
-    session_date: '2026-04-14T11:00:00Z',
-    treatment_goals: 'Explore safe contexts for authenticity; identify values around self-expression',
-    status: 'complete',
-    transcript: `Therapist: How has the noticing gone this week?
-
-Client: Constantly. [laughs] Once you start looking for the mask, you see it everywhere. But the interesting thing is — I noticed that there are degrees. Like, with my friend Jamie, I'm maybe 80% myself. With my team at work, maybe 30%. With my parents... [sighs] Maybe 10%.
-
-Therapist: So it's not binary — mask on or off. There's a spectrum of how much of yourself you let show, depending on who you're with.
-
-Client: Right. And that's actually helpful because it means I don't have to go from 0 to 100. I can just... nudge it. Like, what if I went from 30% to 40% at work? That feels less terrifying than "be your full authentic self in front of everyone."
-
-Therapist: You're finding your own pace. What would 40% look like?
-
-Client: Maybe... correcting someone when they use my deadname? I haven't told anyone at work my real name yet. But my closest colleague, Priya — I think she'd be cool with it. She uses they/them for another friend already.
-
-Therapist: You've already identified a safe person to try this with. That's significant.
-
-Client: It is? It just feels like such a small thing compared to where I want to end up.
-
-Therapist: Small experiments create real data. Right now your anxiety is running on predictions. Priya's actual response would be information — not imagination.
-
-Client: [smiles] Okay. Yeah. Maybe I'll talk to Priya this week. The real me is so tired of being a secret.`,
-    analysis_result: {
-      quickInsight: {
-        riskLevel: 'low',
-        clinicalPriority: 'Client self-generating graded exposure plan; support authentic self-disclosure experiment with identified safe person',
-        prognosis: 'Good — client showing agency, self-awareness, and willingness to take calibrated risks',
-        topRecommendation: 'Support Priya disclosure experiment; process outcome regardless of response; continue values exploration',
-        sessionNumber: 2,
+    moments: [
+      {
+        id: 1,
+        timestamp: '00:01:15',
+        quote: 'I haven\'t been sleeping. I\'m up at 3am most nights, just lying there, running through every possible thing that could go wrong at work the next day.',
+        context: 'Sleep disturbance confirmed — exactly as predicted by Session 1 pattern matching. Rumination-driven insomnia with catastrophic anticipatory processing.',
+        type: 'immediate_experience' as const,
+        valence: 'negative' as const,
+        intensity: 8,
+        structures: ['body' as const, 'cognitive' as const, 'immediate_experience' as const],
+        therapistMove: 'reflection' as const,
+        therapistQuote: 'Months. So the sleep disturbance has been there for a while, underneath everything else.',
       },
-      moments: [
-        {
-          id: 1,
-          timestamp: '00:01:30',
-          quote: 'Once you start looking for the mask, you see it everywhere. With my friend Jamie, I\'m maybe 80% myself. With my team, maybe 30%. With my parents, maybe 10%.',
-          context: 'Client developed nuanced awareness of authenticity spectrum. Moving beyond binary thinking about masking.',
-          type: 'reflective',
-          valence: 'mixed',
-          intensity: 5,
-          structures: ['reflective', 'social', 'cognitive'],
-          therapistMove: 'interpretation',
-          therapistQuote: 'It\'s not binary. There\'s a spectrum depending on who you\'re with.',
-        },
-        {
-          id: 2,
-          timestamp: '00:03:45',
-          quote: 'What if I went from 30% to 40% at work? That feels less terrifying than "be your full authentic self in front of everyone."',
-          context: 'Client self-generating graded approach. Therapeutic insight emerging independently.',
-          type: 'future_oriented',
-          valence: 'positive',
-          intensity: 5,
-          structures: ['cognitive', 'behaviour', 'social'],
-          therapistMove: 'reflection',
-          therapistQuote: 'You\'re finding your own pace. What would 40% look like?',
-        },
-        {
-          id: 3,
-          timestamp: '00:05:30',
-          quote: 'My closest colleague, Priya — I think she\'d be cool with it. She uses they/them for another friend already.',
-          context: 'Identified specific safe person for authenticity experiment. Grounding prediction in evidence.',
-          type: 'future_oriented',
-          valence: 'positive',
-          intensity: 5,
-          structures: ['social', 'behaviour', 'cognitive'],
-          therapistMove: 'empathic_attunement',
-          therapistQuote: 'You\'ve already identified a safe person to try this with. That\'s significant.',
-        },
-        {
-          id: 4,
-          timestamp: '00:07:45',
-          quote: 'The real me is so tired of being a secret.',
-          context: 'Emotional declaration of readiness for change. Internal motivation crystallizing.',
-          type: 'immediate_experience',
-          valence: 'mixed',
-          intensity: 7,
-          structures: ['emotion', 'narrative', 'reflective'],
-          therapistMove: 'silence',
-          therapistQuote: '[Therapist honored this statement with space]',
-        },
-      ],
-      riskFlags: [],
-      structureProfile: {
-        body: 0.38,
-        immediate_experience: 0.58,
-        emotion: 0.68,
-        behaviour: 0.72,
-        social: 0.85,
-        cognitive: 0.80,
-        reflective: 0.82,
-        narrative: 0.78,
-        ecological: 0.52,
-        normative: 0.80,
+      {
+        id: 2,
+        timestamp: '00:03:45',
+        quote: 'The nights I sleep worst are the nights I\'ve been hardest on myself during the day.',
+        context: 'Client independently identifies the perfectionism-sleep connection. Metacognitive awareness rapidly developing between sessions.',
+        type: 'reflective' as const,
+        valence: 'mixed' as const,
+        intensity: 6,
+        structures: ['reflective' as const, 'cognitive' as const, 'body' as const],
+        therapistMove: 'interpretation' as const,
+        therapistQuote: 'The perfectionism and the sleep — they\'re feeding each other.',
       },
-      cbtAnalysis: {
-        distortions: [
-          { type: 'Minimization', confidence: 0.55, evidence: 'It just feels like such a small thing', alternativeThought: 'Small experiments create real data and build toward bigger change', momentIndex: 1 },
+      {
+        id: 3,
+        timestamp: '00:05:30',
+        quote: 'I\'ve been getting these headaches. And I noticed I clench my jaw — I think I do it in my sleep too, because I wake up with my jaw aching.',
+        context: 'Somatic complaints expanding — tension headaches and bruxism joining chest tightness. Body holding stress the mind won\'t process.',
+        type: 'immediate_experience' as const,
+        valence: 'negative' as const,
+        intensity: 7,
+        structures: ['body' as const, 'immediate_experience' as const, 'emotion' as const],
+        therapistMove: 'empathic_attunement' as const,
+        therapistQuote: 'Your body has been trying to tell you this for a while.',
+      },
+      {
+        id: 4,
+        timestamp: '00:08:00',
+        quote: 'I got a 92 on a math test. I was so proud. And he looked at it and said, "Where did the other eight points go?" I think I\'ve been chasing those eight points my entire life.',
+        context: 'Core family-of-origin memory surfaced with full emotional charge. Schema crystallization moment — the perfectionism origin story. Voice breaking indicates emotional processing occurring in real time.',
+        type: 'recalled_past' as const,
+        valence: 'negative' as const,
+        intensity: 9,
+        structures: ['narrative' as const, 'emotion' as const, 'cognitive' as const, 'social' as const],
+        therapistMove: 'empathic_attunement' as const,
+        therapistQuote: 'What was that like for you? That moment?',
+      },
+      {
+        id: 5,
+        timestamp: '00:11:00',
+        quote: 'I turned down a dinner with friends last weekend. I skipped my brother\'s birthday video call. I don\'t want anyone to see me like this.',
+        context: 'Avoidance behavior confirmed — social withdrawal driven by perfectionist need to appear "fine." Isolation increasing.',
+        type: 'recalled_past' as const,
+        valence: 'negative' as const,
+        intensity: 7,
+        structures: ['behaviour' as const, 'social' as const, 'emotion' as const],
+        therapistMove: 'interpretation' as const,
+        therapistQuote: 'So the perfectionism says you have to be fine. And when you\'re not fine, you withdraw. You hide.',
+      },
+      {
+        id: 6,
+        timestamp: '00:13:00',
+        quote: 'I\'m either performing or I\'m hiding. There\'s no in-between.',
+        context: 'Client articulates the binary trap with striking clarity. All-or-nothing framework governing social engagement. High insight moment.',
+        type: 'reflective' as const,
+        valence: 'negative' as const,
+        intensity: 8,
+        structures: ['reflective' as const, 'cognitive' as const, 'behaviour' as const, 'narrative' as const],
+        therapistMove: 'silence' as const,
+        therapistQuote: '[Therapist held space, allowing the weight of this recognition to land]',
+      },
+    ],
+    riskFlags: [
+      {
+        id: 1,
+        severity: 'medium' as const,
+        signal: 'Chronic Sleep Disturbance',
+        detail: 'Months of 3am waking with catastrophic rumination. Sleep onset insomnia and bruxism. Sleep deprivation maintaining and amplifying anxiety, perfectionism, and emotional dysregulation.',
+        algorithmMatch: 'insomnia, rumination, sleep onset difficulty, bruxism, 3am waking, catastrophic anticipation',
+        recommendation: 'Introduce sleep hygiene protocol; consider sleep restriction therapy; assess for referral to sleep medicine if behavioral interventions insufficient',
+        interventionType: 'immediate',
+      },
+      {
+        id: 2,
+        severity: 'medium' as const,
+        signal: 'Social Withdrawal Escalation',
+        detail: 'Declining social invitations, skipping family events, isolating from support network. Perfectionism-driven hiding pattern increasing in scope.',
+        algorithmMatch: 'social withdrawal, avoidance, isolation, family avoidance, support network deterioration',
+        recommendation: 'Monitor for depressive episode development; gradually reintroduce social contact through values-based behavioral activation',
+        interventionType: 'monitor',
+      },
+      {
+        id: 3,
+        severity: 'low' as const,
+        signal: 'Somatic Symptom Expansion',
+        detail: 'Chest tightness now joined by tension headaches and bruxism. Body-held stress accumulating. Dentist flagged jaw clenching a year ago — pattern predates current presentation.',
+        algorithmMatch: 'tension headaches, bruxism, jaw clenching, chest tightness, somatic escalation',
+        recommendation: 'Continue somatic awareness training; coordinate with dentist regarding night guard; monitor for further somatic expansion',
+        interventionType: 'monitor',
+      },
+    ],
+    practitionerMatches: [
+      {
+        id: 1,
+        code: 'PM-001',
+        name: 'Dr. Elena Vasquez',
+        specialty: 'Acceptance and Commitment Therapy with Somatic Integration',
+        methodology: 'ACT-Somatic Protocol — validated by Session 1 predictions and Session 2 confirmation of sleep disturbance, perfectionism, and somatic expansion. Protocol now refined to include sleep-focused components and family-of-origin schema work.',
+        matchScore: 0.89,
+        interventionSequence: [
+          'Defusion from perfectionist self-talk — "Where did the other eight points go?" as target cognition',
+          'Somatic awareness and release work for jaw clenching, chest tightness, and tension headaches',
+          'Values clarification: What does a meaningful life look like without perfectionist performance?',
+          'Sleep-focused ACT intervention — defusion from 3am catastrophic rumination',
+          'Behavioral commitment experiments: one social reconnection, one boundary at work',
         ],
-        dominantPatterns: ['Minimization of progress', 'Fortune Telling (weakening)'],
-        behavioralPatterns: ['Awareness of masking degrees (new)', 'Self-generated graded exposure', 'Identifying safe people'],
-        automaticThoughts: [
-          { content: 'I can go from 30% to 40% — I don\'t have to be 100% all at once', beliefStrength: 0.60, supportsWellbeing: true },
-          { content: 'Priya would probably be safe to try with', beliefStrength: 0.65, supportsWellbeing: true },
-          { content: 'The real me is tired of being a secret', beliefStrength: 0.75, supportsWellbeing: true },
+        outcomePatterns: [
+          { metric: 'PHQ-9 reduction', change: '-8.2 points avg over 8 sessions', confidence: 0.89 },
+          { metric: 'GAD-7 improvement', change: '-7.8 points avg over 8 sessions', confidence: 0.86 },
+          { metric: 'Sleep quality (PSQI)', change: '+58% improvement', confidence: 0.84 },
+          { metric: 'Somatic symptom reduction', change: '-62% reported frequency', confidence: 0.83 },
         ],
-        overallDistortionLoad: 0.38,
-        treatmentReadiness: 0.80,
+        matchReasoning: 'Session 2 strongly validates ACT + somatic as primary approach. All predicted patterns confirmed. Client\'s emerging metaphorical language ("chasing those eight points") indicates natural affinity for ACT\'s metaphor-based defusion work. Somatic component critical given multi-site body symptoms.',
+        targetStructures: ['body' as const, 'emotion' as const, 'cognitive' as const, 'narrative' as const],
       },
-      similarCases: [],
-      practitionerMatches: [],
-      sessionHistory: [
-        { session: 1, emotionalIntensity: 7.0, reflectiveCapacity: 5.5, emotionalRegulation: 4.5, therapeuticAlliance: 4.2 },
-        { session: 2, emotionalIntensity: 5.8, reflectiveCapacity: 6.0, emotionalRegulation: 5.0, therapeuticAlliance: 4.8 },
+      {
+        id: 2,
+        code: 'PM-002',
+        name: 'Dr. James Whitfield',
+        specialty: 'Cognitive-Behavioral Therapy with Behavioral Experiments',
+        methodology: 'Modified Beckian CBT — still applicable for cognitive distortion patterns but increasingly secondary to ACT + somatic given confirmed somatic and sleep presentation.',
+        matchScore: 0.76,
+        interventionSequence: [
+          'Thought records targeting 3am catastrophic predictions',
+          'Behavioral experiments testing perfectionist predictions in work settings',
+          'Cognitive restructuring of "Where did the other eight points go?" schema',
+          'Graded exposure to imperfection through deliberate "good enough" experiments',
+          'Relapse prevention and cognitive maintenance plan',
+        ],
+        outcomePatterns: [
+          { metric: 'PHQ-9 reduction', change: '-5.8 points avg over 10 sessions', confidence: 0.80 },
+          { metric: 'GAD-7 improvement', change: '-6.4 points avg over 10 sessions', confidence: 0.78 },
+          { metric: 'Cognitive distortion frequency', change: '-48% reduction', confidence: 0.82 },
+          { metric: 'Sleep improvement', change: '+28% on PSQI', confidence: 0.68 },
+        ],
+        matchReasoning: 'CBT remains viable for cognitive components but sleep improvement rates are significantly lower than ACT + somatic protocols for this profile (28% vs 58%). The somatic multi-site presentation further favors body-integrative approaches.',
+        targetStructures: ['cognitive' as const, 'behaviour' as const, 'social' as const],
+      },
+      {
+        id: 3,
+        code: 'PM-006',
+        name: 'Dr. Thomas Brennan',
+        specialty: 'Schema Therapy',
+        methodology: 'Young Schema Therapy — targets early maladaptive schemas (Unrelenting Standards, Defectiveness) activated by family-of-origin dynamics. Uses limited reparenting and experiential techniques to process childhood schema origins.',
+        matchScore: 0.74,
+        interventionSequence: [
+          'Schema identification — map Unrelenting Standards and Defectiveness schemas to childhood origins',
+          'Limited reparenting: provide the validation the father\'s response denied',
+          'Chair work with the Demanding Parent mode vs. Healthy Adult mode',
+          'Experiential processing of the "92 on the math test" memory',
+          'Schema mode management for real-world situations — recognizing when the Demanding Parent activates',
+        ],
+        outcomePatterns: [
+          { metric: 'Schema severity (YSQ)', change: '-42% reduction over 12 sessions', confidence: 0.78 },
+          { metric: 'PHQ-9 reduction', change: '-5.5 points avg', confidence: 0.74 },
+          { metric: 'Self-criticism frequency', change: '-52% reduction', confidence: 0.80 },
+          { metric: 'Interpersonal functioning', change: '+38% improvement', confidence: 0.72 },
+        ],
+        matchReasoning: 'Schema Therapy rises in relevance after Session 2. The "92 on the math test" memory is a textbook schema origin moment. Unrelenting Standards schema clearly activated. Combining ACT + Schema elements produces 78% significant improvement rate in matched cases with family-of-origin perfectionism patterns.',
+        targetStructures: ['narrative' as const, 'emotion' as const, 'cognitive' as const, 'reflective' as const],
+      },
+      {
+        id: 4,
+        code: 'PM-003',
+        name: 'Dr. Sarah Okonkwo',
+        specialty: 'Mindfulness-Based Stress Reduction',
+        methodology: 'MBSR adapted for chronic stress with sleep component. Body scan meditation and mindful movement to address multi-site somatic symptoms.',
+        matchScore: 0.68,
+        interventionSequence: [
+          'Body scan meditation targeting jaw, chest, and forehead tension areas',
+          'Mindful awareness of perfectionist thought patterns during daily activities',
+          'Sleep-focused mindfulness — MBSR for insomnia adaptation',
+          'Develop daily formal and informal mindfulness practices',
+          'Integration of mindfulness into pre-sleep routine and workplace stress moments',
+        ],
+        outcomePatterns: [
+          { metric: 'GAD-7 improvement', change: '-5.2 points avg', confidence: 0.74 },
+          { metric: 'Somatic symptom reduction', change: '-45% reported frequency', confidence: 0.72 },
+          { metric: 'Sleep quality improvement', change: '+35% on PSQI', confidence: 0.70 },
+          { metric: 'Perceived stress (PSS)', change: '-38% reduction', confidence: 0.76 },
+        ],
+        matchReasoning: 'MBSR addresses somatic and sleep components well but insufficient as standalone for the depth of schema-level perfectionism now confirmed. Best as adjunct technique within ACT framework.',
+        targetStructures: ['body' as const, 'immediate_experience' as const, 'ecological' as const],
+      },
+      {
+        id: 5,
+        code: 'PM-004',
+        name: 'Dr. Michael Petrov',
+        specialty: 'Compassion-Focused Therapy',
+        methodology: 'CFT for self-critical perfectionism with family-of-origin reparenting elements. Developing the compassionate self as antidote to the paternal Demanding Parent voice.',
+        matchScore: 0.63,
+        interventionSequence: [
+          'Three-circle model psychoeducation — identify threat-drive dominance and depleted soothing system',
+          'Compassionate imagery work — developing the compassionate self who responds to the 9-year-old with the math test',
+          'Self-to-self compassionate letter writing',
+          'Compassionate behavioral responses when perfectionist urges arise',
+          'Building sustainable self-compassion practices for ongoing self-care',
+        ],
+        outcomePatterns: [
+          { metric: 'Self-compassion (SCS)', change: '+42% improvement', confidence: 0.76 },
+          { metric: 'PHQ-9 reduction', change: '-4.8 points avg', confidence: 0.70 },
+          { metric: 'Self-criticism frequency', change: '-55% reduction', confidence: 0.78 },
+          { metric: 'Perfectionism (FMPS)', change: '-28% reduction', confidence: 0.66 },
+        ],
+        matchReasoning: 'Client\'s emotional breakthrough in Session 2 (voice breaking during math test memory) suggests improved emotional access compared to Session 1. CFT now more viable as client can access vulnerability. However, ACT + Schema integration likely more efficient.',
+        targetStructures: ['emotion' as const, 'cognitive' as const, 'reflective' as const, 'narrative' as const],
+      },
+    ],
+    // Session 2 correlations:
+    // "Sleep Disturbance" + "Emotional Dysregulation": 6/8 = 75%
+    // "Perfectionism" + "Family-of-Origin Patterns": 5/8 = 63%
+    // "Avoidance Behaviors" + "Emotional Dysregulation": 5/8 = 63%
+    // "Untreated Anxiety" + "Depressive Symptoms": 4/8 = 50%
+    similarCases: [
+      {
+        id: 1,
+        patientCode: 'RX-3301',
+        matchScore: 0.93,
+        presentingConcerns: ['Sleep Disturbance', 'Emotional Dysregulation', 'Perfectionism', 'Family-of-Origin Patterns'],
+        dominantStructures: ['body' as const, 'emotion' as const, 'cognitive' as const, 'narrative' as const],
+        sessionCount: 10,
+        keyThemes: ['insomnia', 'emotional flooding', 'perfectionism', 'critical father', 'schema activation'],
+        outcome: 'significant_improvement',
+        outcomeDetail: 'PHQ-9 from 17 to 5 over 10 sessions. Father\'s critical voice identified as schema origin in session 3. ACT + schema integration produced rapid deactivation of Unrelenting Standards schema. Sleep normalized by session 7.',
+        representativeQuote: 'I heard my father in every email from my boss. Once I separated those two voices, the anxiety had nowhere to attach.',
+      },
+      {
+        id: 2,
+        patientCode: 'RX-4478',
+        matchScore: 0.89,
+        presentingConcerns: ['Sleep Disturbance', 'Emotional Dysregulation', 'Avoidance Behaviors', 'Family-of-Origin Patterns'],
+        dominantStructures: ['emotion' as const, 'behaviour' as const, 'narrative' as const, 'social' as const],
+        sessionCount: 12,
+        keyThemes: ['rumination-insomnia cycle', 'emotional shutdown', 'social avoidance', 'maternal enmeshment'],
+        outcome: 'significant_improvement',
+        outcomeDetail: 'GAD-7 from 15 to 4 over 12 sessions. Family-of-origin patterns (maternal anxiety modeling) driving avoidance and emotional dysregulation. Sleep improved 65% once avoidance cycle interrupted through values-based activation.',
+        representativeQuote: 'I was doing exactly what my mother did — retreating into the house when things got hard. Breaking that pattern meant breaking a family tradition.',
+      },
+      {
+        id: 3,
+        patientCode: 'RX-2156',
+        matchScore: 0.85,
+        presentingConcerns: ['Sleep Disturbance', 'Emotional Dysregulation', 'Perfectionism', 'Untreated Anxiety'],
+        dominantStructures: ['body' as const, 'cognitive' as const, 'emotion' as const, 'immediate_experience' as const],
+        sessionCount: 8,
+        keyThemes: ['chronic insomnia', 'emotional suppression', 'impossibly high standards', 'generalized anxiety'],
+        outcome: 'significant_improvement',
+        outcomeDetail: 'Untreated anxiety of 4+ years duration. PHQ-9 from 19 to 8 over 8 sessions. Emotional dysregulation was the maintenance factor — once client could tolerate distress without perfectionist compensation, both sleep and anxiety improved.',
+        representativeQuote: 'Four years of white-knuckling it. I thought that was strength. It was just a slow-motion crisis.',
+      },
+      {
+        id: 4,
+        patientCode: 'RX-5892',
+        matchScore: 0.81,
+        presentingConcerns: ['Avoidance Behaviors', 'Emotional Dysregulation', 'Family-of-Origin Patterns', 'Untreated Anxiety'],
+        dominantStructures: ['behaviour' as const, 'emotion' as const, 'narrative' as const, 'reflective' as const],
+        sessionCount: 14,
+        keyThemes: ['social withdrawal', 'anger suppression', 'paternal criticism', 'generalized anxiety', 'depression risk'],
+        outcome: 'moderate_improvement',
+        outcomeDetail: 'Longer treatment needed due to deep family-of-origin patterns. PHQ-9 from 16 to 10. Avoidance and emotional dysregulation improved but required ongoing schema work. Depressive symptoms emerged mid-treatment but stabilized with intervention.',
+        representativeQuote: 'My dad never said he was proud of me. I spent twenty years trying to earn those words. Therapy helped me stop waiting.',
+      },
+      {
+        id: 5,
+        patientCode: 'RX-6234',
+        matchScore: 0.77,
+        presentingConcerns: ['Sleep Disturbance', 'Avoidance Behaviors', 'Emotional Dysregulation', 'Perfectionism', 'Depressive Symptoms'],
+        dominantStructures: ['body' as const, 'emotion' as const, 'behaviour' as const, 'cognitive' as const],
+        sessionCount: 11,
+        keyThemes: ['insomnia', 'procrastination', 'emotional flooding', 'self-criticism', 'anhedonia'],
+        outcome: 'significant_improvement',
+        outcomeDetail: 'Depressive symptoms developed after 6 months of untreated anxiety and sleep deprivation. Early intervention with ACT + sleep protocol prevented full depressive episode. PHQ-9 from 18 to 7.',
+        representativeQuote: 'The depression crept in through the back door while I was busy fighting the anxiety at the front. Treating the sleep changed everything.',
+      },
+      {
+        id: 6,
+        patientCode: 'RX-7103',
+        matchScore: 0.73,
+        presentingConcerns: ['Perfectionism', 'Family-of-Origin Patterns', 'Sleep Disturbance', 'Emotional Dysregulation'],
+        dominantStructures: ['cognitive' as const, 'narrative' as const, 'body' as const, 'emotion' as const],
+        sessionCount: 9,
+        keyThemes: ['unrelenting standards', 'father\'s expectations', 'chronic insomnia', 'emotional constriction'],
+        outcome: 'significant_improvement',
+        outcomeDetail: 'Schema therapy + ACT combination. Unrelenting Standards schema from paternal origin reduced 60% on YSQ. Sleep improved from 3.5 to 7 hours. Emotional range expanded significantly.',
+        representativeQuote: 'My father gave me his work ethic. He also gave me his inability to rest. I can keep one and let go of the other.',
+      },
+      {
+        id: 7,
+        patientCode: 'RX-8467',
+        matchScore: 0.68,
+        presentingConcerns: ['Avoidance Behaviors', 'Emotional Dysregulation', 'Untreated Anxiety', 'Depressive Symptoms'],
+        dominantStructures: ['behaviour' as const, 'emotion' as const, 'body' as const, 'social' as const],
+        sessionCount: 16,
+        keyThemes: ['social isolation', 'emotional shutdown', 'chronic anxiety', 'emerging depression'],
+        outcome: 'moderate_improvement',
+        outcomeDetail: 'Untreated anxiety progressed to comorbid depression over 8 months. Longer treatment needed. PHQ-9 peaked at 22 before treatment, reduced to 12. Case illustrates risk of delayed intervention.',
+        representativeQuote: 'I waited so long that the anxiety invited depression over for dinner. They became roommates. I should have come sooner.',
+      },
+      {
+        id: 8,
+        patientCode: 'RX-9015',
+        matchScore: 0.63,
+        presentingConcerns: ['Family-of-Origin Patterns', 'Perfectionism', 'Untreated Anxiety', 'Depressive Symptoms'],
+        dominantStructures: ['narrative' as const, 'cognitive' as const, 'emotion' as const, 'reflective' as const],
+        sessionCount: 13,
+        keyThemes: ['maternal perfectionism', 'achievement orientation', 'chronic worry', 'dysthymia'],
+        outcome: 'moderate_improvement',
+        outcomeDetail: 'Deep family-of-origin perfectionism required extended schema work. Depressive symptoms preceded anxiety treatment by 2 years. PHQ-9 from 20 to 11. Perfectionism partially resolved — ongoing maintenance recommended.',
+        representativeQuote: 'My mother made sure I was always the best in class. She thought she was helping. She was building a prison.',
+      },
+    ],
+    structureProfile: {
+      body: 0.78,
+      immediate_experience: 0.72,
+      emotion: 0.82,
+      behaviour: 0.68,
+      social: 0.65,
+      cognitive: 0.80,
+      reflective: 0.58,
+      narrative: 0.85,
+      ecological: 0.35,
+      normative: 0.60,
+    } as Record<string, number>,
+    sessionHistory: [
+      { session: 1, emotionalIntensity: 7.5, reflectiveCapacity: 4.8, emotionalRegulation: 4.2, therapeuticAlliance: 5.5 },
+      { session: 2, emotionalIntensity: 8.5, reflectiveCapacity: 6.5, emotionalRegulation: 5.0, therapeuticAlliance: 7.2 },
+    ],
+    therapistMoves: [
+      { type: 'empathic_attunement' as const, count: 2, percentage: 33 },
+      { type: 'reflection' as const, count: 1, percentage: 17 },
+      { type: 'interpretation' as const, count: 2, percentage: 33 },
+      { type: 'silence' as const, count: 1, percentage: 17 },
+    ],
+    clinicianReport: 'Session 2 represents a significant deepening of the therapeutic work. Every pattern flagged by SessionLens after Session 1 has now been confirmed by the client: sleep disturbance (months of 3am waking with catastrophic rumination), perfectionism (traced to a formative childhood memory with his father), somatic symptom expansion (tension headaches and bruxism joining the chest tightness), and avoidance behaviors (declining social invitations, skipping family events).\n\nThe pivotal moment was the "92 on the math test" memory — a textbook schema origin for Unrelenting Standards. The client\'s voice broke as he shared it, indicating genuine emotional processing rather than intellectualized recall. His subsequent articulation — "I\'ve been chasing those eight points my entire life" — demonstrates rapidly developing metacognitive capacity and natural affinity for metaphorical thinking that will serve ACT work well.\n\nThe binary framework he described ("I\'m either performing or I\'m hiding — there\'s no in-between") reveals the all-or-nothing structure maintaining both the perfectionism and the avoidance. Treatment plan updated to ACT + somatic integration with schema therapy elements, as recommended. Sleep hygiene and defusion from 3am rumination will be prioritized alongside the broader perfectionism work. Risk of depressive episode development if current trajectory continues without intervention — similar cases show 50% progression to depressive symptoms when sleep disturbance and avoidance co-occur untreated.',
+    patientReport: 'What you shared today took real courage — especially the story about your dad and the math test. That memory has been quietly running your life for twenty-five years, and today you brought it into the light. That\'s not a small thing.\n\nThe connections you\'re making between sessions are impressive: noticing that the nights you sleep worst are the nights you\'ve been hardest on yourself, recognizing that the headaches and jaw clenching are part of the same pattern. Your body and mind are not separate systems — they\'re one system that\'s been working overtime to keep you "perfect."\n\nHere\'s what I want you to sit with this week: you said "I\'m either performing or I\'m hiding." What if there\'s a third option? Not performing, not hiding — just being. We\'re going to work on building that in-between space. For now, I\'d like you to try one thing: when you notice the perfectionist voice (your dad\'s voice, the "where are the other eight points" voice), just notice it. Don\'t argue with it. Don\'t obey it. Just notice it and say to yourself: "There\'s that voice again." That\'s all. We\'ll build from there.',
+    cbtAnalysis: {
+      distortions: [
+        { type: 'Catastrophizing', confidence: 0.90, evidence: 'Running through every possible thing that could go wrong at work the next day at 3am', alternativeThought: 'Most catastrophic predictions never materialize. The 3am mind amplifies threat signals — this is anxiety, not forecasting.', momentIndex: 0 },
+        { type: 'All-or-Nothing Thinking', confidence: 0.92, evidence: 'I\'m either performing or I\'m hiding. There\'s no in-between.', alternativeThought: 'Life exists on a spectrum. Being imperfect in public is neither performing nor hiding — it\'s being human.', momentIndex: 5 },
+        { type: 'Emotional Reasoning', confidence: 0.80, evidence: 'I was afraid they\'d see how messed up I am', alternativeThought: 'Feeling "messed up" is not the same as being messed up. Friends and family see someone they care about, not a performance review.', momentIndex: 4 },
+        { type: 'Should Statements', confidence: 0.85, evidence: 'Where did the other eight points go? (internalized as: I should always get 100%)', alternativeThought: 'The expectation of perfection is not a moral obligation. A 92 is an excellent score by any reasonable standard.', momentIndex: 3 },
       ],
-      therapistMoves: [
-        { type: 'reflection', count: 2, percentage: 33 },
-        { type: 'interpretation', count: 2, percentage: 33 },
-        { type: 'empathic_attunement', count: 1, percentage: 17 },
-        { type: 'silence', count: 1, percentage: 17 },
+      overallDistortionLoad: 0.78,
+      treatmentReadiness: 0.72,
+      dominantPatterns: ['All-or-Nothing Thinking', 'Catastrophizing', 'Should Statements', 'Emotional Reasoning'],
+      automaticThoughts: [
+        { content: 'I\'ve been chasing those eight points my entire life', beliefStrength: 0.88, supportsWellbeing: false },
+        { content: 'If they see I\'m not fine, they\'ll see how messed up I really am', beliefStrength: 0.82, supportsWellbeing: false },
+        { content: 'The only options are performing or hiding', beliefStrength: 0.80, supportsWellbeing: false },
+        { content: 'My body should just cooperate — I need to push through', beliefStrength: 0.75, supportsWellbeing: false },
       ],
-      clinicianReport: 'Session 2: Excellent engagement and self-directed progress. Client independently developed a nuanced "percentage" framework for authenticity across relationships — moving beyond binary masking/unmasking conceptualization. Self-generated a graded exposure plan (30% → 40% at work). Identified specific safe colleague (Priya) for name disclosure experiment. Shows strong agency, reflective capacity, and emerging readiness for behavioral change. The statement "the real me is tired of being a secret" indicates motivational tipping point.',
-      patientReport: 'The framework you developed — thinking of authenticity as percentages rather than all-or-nothing — is genuinely sophisticated. It gives you permission to move at your own pace rather than feeling like you have to bare everything at once. Talking to Priya about your name would be a beautiful first experiment. Remember: whatever happens is information. If she responds well, wonderful. If it\'s awkward, you\'ll have handled it and that\'s data too. You\'re not a secret anymore — you\'re just choosing how and when to unfold.',
-      analysisStatus: 'complete',
-      analysisWarnings: [],
+      behavioralPatterns: ['Rumination-insomnia cycle', 'Social withdrawal when imperfect', 'Body-signal override', 'Performance-or-hide binary'],
     },
+    analysisStatus: 'complete' as const,
+    analysisWarnings: [],
   },
-];
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SESSION 3: "The Progress" — 2026-04-07
+// Client engaging with ACT techniques. Defused from a perfectionist thought.
+// Sleeping better. Set a boundary at work. Recognizing his father's voice.
+// Risk drops. Prognosis improves to excellent.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const session3 = {
+  session_number: 3,
+  session_date: '2026-04-07T10:00:00Z',
+  treatment_goals: 'Review ACT defusion practice; assess sleep and somatic symptom changes; process boundary-setting experience; reinforce therapeutic gains',
+  status: 'complete',
+  transcript: `Therapist: How have the last two weeks been?
+
+Client: Actually... good. Like, genuinely good. Something happened at work that I want to tell you about. So we were in a sprint planning meeting — same kind of meeting where I passed out, actually — and my manager was about to assign me another project on top of the three I'm already running. And I felt it start: the chest tightness, the jaw clenching. But this time I noticed it. I actually said to myself, "There's that voice again."
+
+Therapist: You used the defusion technique. What happened next?
+
+Client: I said no. I actually said, "I don't have capacity for this right now." And I didn't die. Nobody fired me. My manager just said, "Okay, I'll ask David." That was it. Six years of terror about saying no, and the answer was just... "okay." I almost laughed in the meeting.
+
+Therapist: That's a significant moment. You felt the old pattern activate, you noticed it, and you chose differently.
+
+Client: And the crazy thing is, I slept that night. Like really slept. I think I got seven hours. I haven't slept seven hours in... I don't even know. Months? And the next few nights were better too. I'm averaging maybe six, six and a half now. The 3am thing still happens sometimes, but not every night. And when it does, I do that thing we talked about — I notice the thoughts instead of getting on the train with them.
+
+Therapist: How does your body feel compared to two weeks ago?
+
+Client: The chest tightness is still there sometimes, but it's... quieter. Like it used to be a shout and now it's more of a murmur. The headaches are less frequent — maybe once a week instead of every day. The jaw thing is still happening at night but my dentist gave me a night guard, which actually helps.
+
+Therapist: So your body is starting to quiet down as you give it permission to not be in constant emergency mode.
+
+Client: Yeah. And there's something else. I was on a call with my brother last week — the one I'd been avoiding — and he said something about our dad. He said, "You know Dad was just scared, right? He pushed us because he was terrified we'd end up like Grandpa." And I'd never thought about it that way. My grandfather was an immigrant who struggled financially his whole life. My dad's perfectionism wasn't just cruelty — it was his fear of failure, passed down. I'm not excusing what he said to nine-year-old me. But understanding where it came from... it loosened something.
+
+Therapist: What did it loosen?
+
+Client: The anger, maybe? Or the grip. Like, I've been carrying his fear as my own. And it doesn't actually belong to me. I can put it down. I don't need to chase those eight points because those were his eight points, not mine.
+
+Therapist: [pause] That's a profound recognition. Those were his eight points, not yours.
+
+Client: I feel lighter. I know I'm not fixed — the anxiety is still there, the perfectionism still pops up. But it doesn't own me the way it did. I have a choice now. I didn't have that before.`,
+  analysis_result: {
+    quickInsight: {
+      riskLevel: 'low' as const,
+      clinicalPriority: 'Consolidate therapeutic gains; continue ACT defusion and somatic work; begin relapse prevention planning',
+      prognosis: 'Excellent — rapid treatment response; client demonstrating autonomous use of therapeutic techniques; multiple domains improving simultaneously',
+      topRecommendation: 'Maintain ACT + somatic approach; introduce relapse prevention in sessions 5-6; consider tapering to biweekly after session 6',
+      sessionNumber: 3,
+    },
+    moments: [
+      {
+        id: 1,
+        timestamp: '00:01:30',
+        quote: 'I felt the chest tightness, the jaw clenching. But this time I noticed it. I actually said to myself, "There\'s that voice again."',
+        context: 'ACT defusion technique applied in vivo at the exact site of previous syncope. Client bridging therapy learning to real-world application autonomously.',
+        type: 'recalled_past' as const,
+        valence: 'positive' as const,
+        intensity: 7,
+        structures: ['body' as const, 'cognitive' as const, 'reflective' as const, 'immediate_experience' as const],
+        therapistMove: 'reflection' as const,
+        therapistQuote: 'You used the defusion technique. What happened next?',
+      },
+      {
+        id: 2,
+        timestamp: '00:03:00',
+        quote: 'I said, "I don\'t have capacity for this right now." And I didn\'t die. Nobody fired me. My manager just said, "Okay, I\'ll ask David."',
+        context: 'First boundary-setting in six years. Catastrophic prediction directly disconfirmed. Behavioral breakthrough with emotional and somatic mastery.',
+        type: 'recalled_past' as const,
+        valence: 'positive' as const,
+        intensity: 8,
+        structures: ['behaviour' as const, 'social' as const, 'cognitive' as const, 'emotion' as const],
+        therapistMove: 'empathic_attunement' as const,
+        therapistQuote: 'That\'s a significant moment. You felt the old pattern activate, you noticed it, and you chose differently.',
+      },
+      {
+        id: 3,
+        timestamp: '00:05:15',
+        quote: 'I slept that night. Like really slept. I think I got seven hours. I\'m averaging maybe six, six and a half now.',
+        context: 'Sleep improvement directly following boundary-setting — confirming the perfectionism-sleep connection. Physiological regulation improving with psychological flexibility.',
+        type: 'immediate_experience' as const,
+        valence: 'positive' as const,
+        intensity: 6,
+        structures: ['body' as const, 'immediate_experience' as const, 'ecological' as const],
+        therapistMove: 'reflection' as const,
+        therapistQuote: 'How does your body feel compared to two weeks ago?',
+      },
+      {
+        id: 4,
+        timestamp: '00:07:30',
+        quote: 'The chest tightness is still there sometimes, but it\'s quieter. Like it used to be a shout and now it\'s more of a murmur.',
+        context: 'Somatic awareness language developing — client using metaphor to describe body state changes. Shift from body-signal override to body-signal attunement.',
+        type: 'immediate_experience' as const,
+        valence: 'mixed' as const,
+        intensity: 4,
+        structures: ['body' as const, 'immediate_experience' as const, 'reflective' as const],
+        therapistMove: 'interpretation' as const,
+        therapistQuote: 'Your body is starting to quiet down as you give it permission to not be in constant emergency mode.',
+      },
+      {
+        id: 5,
+        timestamp: '00:10:00',
+        quote: 'I\'ve been carrying his fear as my own. And it doesn\'t actually belong to me. I can put it down. I don\'t need to chase those eight points because those were his eight points, not mine.',
+        context: 'Schema deactivation moment. Intergenerational transmission of perfectionism recognized and separated from self. Defusion from father\'s narrative occurring at a deep structural level.',
+        type: 'reflective' as const,
+        valence: 'positive' as const,
+        intensity: 9,
+        structures: ['narrative' as const, 'reflective' as const, 'emotion' as const, 'cognitive' as const],
+        therapistMove: 'silence' as const,
+        therapistQuote: '[Therapist paused to honor the weight of this recognition] That\'s a profound recognition. Those were his eight points, not yours.',
+      },
+      {
+        id: 6,
+        timestamp: '00:13:00',
+        quote: 'I feel lighter. The anxiety is still there, the perfectionism still pops up. But it doesn\'t own me the way it did. I have a choice now.',
+        context: 'Psychological flexibility articulated. Client recognizes ongoing vulnerability while asserting agency. Hallmark of ACT therapeutic response.',
+        type: 'reflective' as const,
+        valence: 'positive' as const,
+        intensity: 7,
+        structures: ['reflective' as const, 'emotion' as const, 'cognitive' as const, 'narrative' as const],
+        therapistMove: 'empathic_attunement' as const,
+        therapistQuote: '[Therapist reflected the significance of this shift with warmth and presence]',
+      },
+    ],
+    riskFlags: [
+      {
+        id: 1,
+        severity: 'low' as const,
+        signal: 'Residual Somatic Symptoms',
+        detail: 'Chest tightness reduced to "murmur" level. Headaches weekly vs. daily. Jaw clenching ongoing but managed with night guard. All trends favorable.',
+        algorithmMatch: 'residual somatic symptoms, improvement trajectory, chest tightness reduced, headache frequency decreased',
+        recommendation: 'Continue somatic awareness work; monitor for plateau or regression; maintain dental coordination for bruxism',
+        interventionType: 'monitor',
+      },
+      {
+        id: 2,
+        severity: 'low' as const,
+        signal: 'Intermittent Sleep Disturbance',
+        detail: 'Sleep improved from 4 hours to 6-7 hours average. 3am waking still occurs occasionally but client applies defusion technique. Strong positive trajectory.',
+        algorithmMatch: 'sleep improvement, intermittent insomnia, defusion application, positive trajectory',
+        recommendation: 'Reinforce sleep hygiene gains; continue defusion practice for residual nighttime rumination; reassess at session 5',
+        interventionType: 'monitor',
+      },
+    ],
+    practitionerMatches: [
+      {
+        id: 1,
+        code: 'PM-001',
+        name: 'Dr. Elena Vasquez',
+        specialty: 'Acceptance and Commitment Therapy with Somatic Integration',
+        methodology: 'ACT-Somatic Protocol — confirmed as optimal approach. Client demonstrating autonomous defusion, somatic awareness, and values-based behavioral change. Protocol entering consolidation and relapse prevention phase.',
+        matchScore: 0.91,
+        interventionSequence: [
+          'Consolidate defusion gains — expand from perfectionism to other domains where fusion occurs',
+          'Deepen somatic awareness — transition from symptom monitoring to interoceptive intelligence',
+          'Values-based life design: what does a meaningful career look like without perfectionism as driver?',
+          'Introduce relapse prevention framework — identify early warning signs and response plans',
+          'Prepare for treatment spacing — build confidence in autonomous skill use between sessions',
+        ],
+        outcomePatterns: [
+          { metric: 'PHQ-9 reduction', change: '-47% avg over 8 sessions (client on track)', confidence: 0.91 },
+          { metric: 'GAD-7 improvement', change: '-57% avg over 8 sessions (client exceeding)', confidence: 0.89 },
+          { metric: 'Psychological flexibility (AAQ-II)', change: '+38% improvement predicted', confidence: 0.87 },
+          { metric: '6-month maintenance rate', change: '63% maintain gains at follow-up', confidence: 0.85 },
+        ],
+        matchReasoning: 'Client\'s trajectory confirms ACT + somatic as optimal approach. Autonomous use of defusion in the same meeting type where syncope occurred demonstrates genuine skill acquisition, not just compliance. The schema insight about intergenerational perfectionism ("those were his eight points, not mine") shows defusion operating at narrative-structural level. Matched cases show 75% significant improvement with this trajectory.',
+        targetStructures: ['body' as const, 'emotion' as const, 'cognitive' as const, 'narrative' as const, 'reflective' as const],
+      },
+      {
+        id: 2,
+        code: 'PM-002',
+        name: 'Dr. James Whitfield',
+        specialty: 'Cognitive-Behavioral Therapy with Behavioral Experiments',
+        methodology: 'CBT behavioral experiments — the boundary-setting success functions as a powerful behavioral experiment within any framework. CBT elements remain supportive but ACT is primary driver.',
+        matchScore: 0.74,
+        interventionSequence: [
+          'Document and process the boundary-setting behavioral experiment outcome',
+          'Design additional experiments targeting remaining perfectionist predictions',
+          'Develop cognitive maintenance plan for ongoing distortion monitoring',
+          'Build response plan for high-risk situations (major deadlines, performance reviews)',
+          'Transition to self-directed cognitive monitoring with therapist check-ins',
+        ],
+        outcomePatterns: [
+          { metric: 'Behavioral experiment success rate', change: '82% predictions disconfirmed', confidence: 0.84 },
+          { metric: 'Cognitive distortion frequency', change: '-52% reduction at current trajectory', confidence: 0.80 },
+          { metric: 'Return-to-function rate', change: '+78%', confidence: 0.78 },
+          { metric: 'Treatment satisfaction', change: '4.7/5.0', confidence: 0.86 },
+        ],
+        matchReasoning: 'The boundary-setting success is a textbook behavioral experiment — predicted catastrophe (being fired, being seen as incompetent) vs. actual outcome ("Okay, I\'ll ask David"). This disconfirming evidence is powerful regardless of framework. CBT elements can complement ACT as consolidation progresses.',
+        targetStructures: ['cognitive' as const, 'behaviour' as const, 'social' as const],
+      },
+      {
+        id: 3,
+        code: 'PM-006',
+        name: 'Dr. Thomas Brennan',
+        specialty: 'Schema Therapy',
+        methodology: 'Schema Therapy — the intergenerational insight (grandfather\'s struggles → father\'s fear → client\'s perfectionism) represents schema-level processing occurring naturally within the ACT framework. Schema elements integrated.',
+        matchScore: 0.72,
+        interventionSequence: [
+          'Process the intergenerational perfectionism insight — grandfather → father → client transmission',
+          'Strengthen the Healthy Adult mode that emerged in the boundary-setting moment',
+          'Continue separating the Demanding Parent voice from the client\'s authentic values',
+          'Chair work to complete the processing of the "92 on the math test" memory if needed',
+          'Build schema awareness for ongoing self-monitoring',
+        ],
+        outcomePatterns: [
+          { metric: 'Schema severity (YSQ)', change: '-48% reduction at current trajectory', confidence: 0.80 },
+          { metric: 'Self-criticism frequency', change: '-58% reduction', confidence: 0.82 },
+          { metric: 'Intergenerational pattern recognition', change: 'Achieved', confidence: 0.92 },
+          { metric: 'Healthy Adult mode activation', change: '+45% increase', confidence: 0.78 },
+        ],
+        matchReasoning: 'The brother\'s revelation about the grandfather provides crucial intergenerational context that deepens the schema work. Client\'s statement "those were his eight points, not mine" represents advanced schema deactivation. Schema elements are being naturally integrated within the ACT framework.',
+        targetStructures: ['narrative' as const, 'emotion' as const, 'cognitive' as const, 'reflective' as const],
+      },
+      {
+        id: 4,
+        code: 'PM-007',
+        name: 'Dr. Lisa Chang',
+        specialty: 'Relapse Prevention and Maintenance Therapy',
+        methodology: 'Structured Relapse Prevention Protocol — designed for clients showing rapid improvement to ensure durability of gains. Identifies triggers, builds response hierarchies, and creates sustainable self-care routines.',
+        matchScore: 0.67,
+        interventionSequence: [
+          'Map high-risk situations — major deadlines, performance reviews, family gatherings',
+          'Develop tiered response plan: green (maintenance), yellow (early warning), red (crisis)',
+          'Practice in-session rehearsal of challenging scenarios with ACT tools',
+          'Create sustainable daily practices (sleep hygiene, somatic check-ins, defusion)',
+          'Design tapering schedule with planned booster sessions',
+        ],
+        outcomePatterns: [
+          { metric: '6-month maintenance rate', change: '68% maintain gains with structured RP', confidence: 0.82 },
+          { metric: '12-month maintenance rate', change: '54% maintain gains with booster sessions', confidence: 0.76 },
+          { metric: 'Time to relapse (if occurs)', change: 'Extended by avg 4.2 months', confidence: 0.74 },
+          { metric: 'Self-efficacy post-treatment', change: '+42% improvement', confidence: 0.80 },
+        ],
+        matchReasoning: 'New recommendation based on treatment trajectory. Client showing rapid improvement — matched cases suggest introducing relapse prevention in sessions 5-6 to cement gains. Particularly important given the depth of family-of-origin patterns that may reactivate under stress.',
+        targetStructures: ['cognitive' as const, 'behaviour' as const, 'reflective' as const, 'ecological' as const],
+      },
+      {
+        id: 5,
+        code: 'PM-003',
+        name: 'Dr. Sarah Okonkwo',
+        specialty: 'Mindfulness-Based Stress Reduction',
+        methodology: 'MBSR for maintenance — the client\'s developing somatic awareness ("shout to murmur" metaphor) and nighttime defusion practice align with mindfulness as ongoing self-care tool.',
+        matchScore: 0.62,
+        interventionSequence: [
+          'Formalize the somatic awareness practice the client is already developing',
+          'Introduce brief body scan meditation for daily use',
+          'Teach mindful transitions between work and home to prevent weekend collapse',
+          'Develop pre-sleep mindfulness routine to support continued sleep improvement',
+          'Build sustainable 10-minute daily mindfulness practice for long-term maintenance',
+        ],
+        outcomePatterns: [
+          { metric: 'Sustained somatic awareness', change: '+55% at 6-month follow-up', confidence: 0.74 },
+          { metric: 'Perceived stress maintenance', change: '-32% sustained reduction', confidence: 0.72 },
+          { metric: 'Sleep quality maintenance', change: '+42% sustained on PSQI', confidence: 0.70 },
+          { metric: 'Daily practice adherence', change: '58% at 3 months', confidence: 0.68 },
+        ],
+        matchReasoning: 'Client is naturally developing mindfulness skills (noticing body signals, observing thoughts without engagement). MBSR can formalize these into a sustainable daily practice for long-term maintenance. Best positioned as a maintenance tool rather than primary intervention at this stage.',
+        targetStructures: ['body' as const, 'immediate_experience' as const, 'ecological' as const, 'reflective' as const],
+      },
+    ],
+    // Session 3 correlations:
+    // "ACT Engagement" + "Significant Improvement": 6/8 = 75%
+    // "Boundary Setting" + "Reduced Anxiety": 5/8 = 63%
+    // "Somatic Awareness" + "Sleep Improvement": 5/8 = 63%
+    // "Schema Recognition" + "Sustained Progress": 4/8 = 50%
+    similarCases: [
+      {
+        id: 1,
+        patientCode: 'RX-1124',
+        matchScore: 0.94,
+        presentingConcerns: ['ACT Engagement', 'Significant Improvement', 'Boundary Setting', 'Reduced Anxiety'],
+        dominantStructures: ['cognitive' as const, 'behaviour' as const, 'body' as const, 'reflective' as const],
+        sessionCount: 8,
+        keyThemes: ['defusion mastery', 'workplace boundaries', 'anxiety reduction', 'values-based action'],
+        outcome: 'significant_improvement',
+        outcomeDetail: 'PHQ-9 from 17 to 5 over 8 sessions. ACT engagement was the key predictor — client who actively practiced defusion between sessions showed 47% greater improvement than passive participants. Boundary-setting experiments were the behavioral turning point.',
+        representativeQuote: 'I stopped fighting the thoughts and started watching them. Turns out they\'re much less scary when you\'re in the audience instead of on the stage.',
+      },
+      {
+        id: 2,
+        patientCode: 'RX-2258',
+        matchScore: 0.90,
+        presentingConcerns: ['ACT Engagement', 'Significant Improvement', 'Somatic Awareness', 'Sleep Improvement'],
+        dominantStructures: ['body' as const, 'emotion' as const, 'cognitive' as const, 'immediate_experience' as const],
+        sessionCount: 10,
+        keyThemes: ['somatic release', 'sleep normalization', 'defusion practice', 'body-mind integration'],
+        outcome: 'significant_improvement',
+        outcomeDetail: 'Sleep improved from 3.5 to 7.5 hours over 10 sessions. Somatic symptoms reduced 75%. ACT + somatic integration produced improvements across all domains simultaneously rather than sequentially.',
+        representativeQuote: 'My body and I are on the same team now. For years we were fighting each other. Turns out all it wanted was for me to listen.',
+      },
+      {
+        id: 3,
+        patientCode: 'RX-3392',
+        matchScore: 0.86,
+        presentingConcerns: ['ACT Engagement', 'Significant Improvement', 'Schema Recognition', 'Boundary Setting'],
+        dominantStructures: ['cognitive' as const, 'narrative' as const, 'reflective' as const, 'behaviour' as const],
+        sessionCount: 12,
+        keyThemes: ['schema deactivation', 'assertiveness development', 'defusion mastery', 'intergenerational insight'],
+        outcome: 'significant_improvement',
+        outcomeDetail: 'GAD-7 from 16 to 4 over 12 sessions. Schema recognition of father\'s perfectionism was the turning point — once intergenerational transmission was understood, defusion deepened dramatically. Maintained gains at 6-month follow-up.',
+        representativeQuote: 'Understanding why my father was the way he was didn\'t excuse it — but it freed me from repeating it.',
+      },
+      {
+        id: 4,
+        patientCode: 'RX-4467',
+        matchScore: 0.82,
+        presentingConcerns: ['Boundary Setting', 'Reduced Anxiety', 'Somatic Awareness', 'Sleep Improvement'],
+        dominantStructures: ['behaviour' as const, 'body' as const, 'emotion' as const, 'social' as const],
+        sessionCount: 9,
+        keyThemes: ['assertiveness', 'anxiety reduction', 'body attunement', 'sleep hygiene'],
+        outcome: 'significant_improvement',
+        outcomeDetail: 'PHQ-9 from 15 to 6 over 9 sessions. First boundary-setting at work was the behavioral tipping point — anxiety and sleep improved dramatically in the weeks following. Somatic symptoms tracked behavioral changes closely.',
+        representativeQuote: 'The first time I said no to my boss, I braced for the sky to fall. It didn\'t. And I slept eight hours that night for the first time in a year.',
+      },
+      {
+        id: 5,
+        patientCode: 'RX-5501',
+        matchScore: 0.78,
+        presentingConcerns: ['ACT Engagement', 'Significant Improvement', 'Somatic Awareness', 'Reduced Anxiety', 'Sleep Improvement'],
+        dominantStructures: ['body' as const, 'cognitive' as const, 'emotion' as const, 'reflective' as const],
+        sessionCount: 8,
+        keyThemes: ['comprehensive improvement', 'ACT skills mastery', 'somatic integration', 'sustained gains'],
+        outcome: 'significant_improvement',
+        outcomeDetail: 'All five domains improved simultaneously. PHQ-9 from 18 to 7. Average PHQ-9 reduction was 47% over 8 sessions for this treatment trajectory. Client maintained gains at 6-month follow-up with self-directed practice.',
+        representativeQuote: 'Everything changed when I realized that anxiety isn\'t a sign I\'m broken — it\'s a sign I care. I just needed to learn to care without destroying myself.',
+      },
+      {
+        id: 6,
+        patientCode: 'RX-6639',
+        matchScore: 0.73,
+        presentingConcerns: ['Boundary Setting', 'Reduced Anxiety', 'ACT Engagement', 'Schema Recognition', 'Sustained Progress'],
+        dominantStructures: ['behaviour' as const, 'cognitive' as const, 'narrative' as const, 'social' as const],
+        sessionCount: 11,
+        keyThemes: ['workplace boundaries', 'anxiety management', 'family pattern recognition', 'long-term maintenance'],
+        outcome: 'significant_improvement',
+        outcomeDetail: 'GAD-7 from 14 to 5 over 11 sessions. Combined ACT + schema approach. Boundary-setting generalized from workplace to family relationships by session 8. Maintained gains at 6-month follow-up.',
+        representativeQuote: 'I set a boundary with my mother last week. If I can do that, I can do anything. The hardest boundaries are the ones you owe to the people you love.',
+      },
+      {
+        id: 7,
+        patientCode: 'RX-7712',
+        matchScore: 0.67,
+        presentingConcerns: ['Schema Recognition', 'Sustained Progress', 'Somatic Awareness', 'Sleep Improvement'],
+        dominantStructures: ['narrative' as const, 'reflective' as const, 'body' as const, 'cognitive' as const],
+        sessionCount: 14,
+        keyThemes: ['intergenerational insight', 'sustained improvement', 'body awareness', 'sleep restoration'],
+        outcome: 'moderate_improvement',
+        outcomeDetail: 'Longer treatment due to deeper schema work. PHQ-9 from 20 to 10. Schema recognition was slower but once achieved, produced stable improvement. Sleep and somatic gains maintained at follow-up even when mood fluctuated.',
+        representativeQuote: 'The insight about my parents didn\'t come like lightning. It came like sunrise — slowly, then all at once. And once I could see clearly, I couldn\'t unsee it.',
+      },
+      {
+        id: 8,
+        patientCode: 'RX-8845',
+        matchScore: 0.62,
+        presentingConcerns: ['ACT Engagement', 'Sustained Progress', 'Schema Recognition', 'Reduced Anxiety'],
+        dominantStructures: ['cognitive' as const, 'reflective' as const, 'emotion' as const, 'narrative' as const],
+        sessionCount: 10,
+        keyThemes: ['defusion practice', 'ongoing improvement', 'family pattern awareness', 'anxiety management'],
+        outcome: 'moderate_improvement',
+        outcomeDetail: 'PHQ-9 from 16 to 9 over 10 sessions. ACT engagement moderate but consistent. Schema recognition provided context that sustained motivation for change. 63% of similar cases maintained gains at 6-month follow-up.',
+        representativeQuote: 'I\'m not cured. I\'m aware. And somehow that\'s better — because awareness is something I chose, and cured is something I\'d just be waiting to lose.',
+      },
+    ],
+    structureProfile: {
+      body: 0.72,
+      immediate_experience: 0.65,
+      emotion: 0.70,
+      behaviour: 0.78,
+      social: 0.72,
+      cognitive: 0.75,
+      reflective: 0.82,
+      narrative: 0.88,
+      ecological: 0.55,
+      normative: 0.58,
+    } as Record<string, number>,
+    sessionHistory: [
+      { session: 1, emotionalIntensity: 7.5, reflectiveCapacity: 4.8, emotionalRegulation: 4.2, therapeuticAlliance: 5.5 },
+      { session: 2, emotionalIntensity: 8.5, reflectiveCapacity: 6.5, emotionalRegulation: 5.0, therapeuticAlliance: 7.2 },
+      { session: 3, emotionalIntensity: 7.0, reflectiveCapacity: 8.2, emotionalRegulation: 7.5, therapeuticAlliance: 8.5 },
+    ],
+    therapistMoves: [
+      { type: 'empathic_attunement' as const, count: 2, percentage: 33 },
+      { type: 'reflection' as const, count: 2, percentage: 33 },
+      { type: 'interpretation' as const, count: 1, percentage: 17 },
+      { type: 'silence' as const, count: 1, percentage: 17 },
+    ],
+    clinicianReport: 'Session 3 demonstrates significant therapeutic progress across multiple domains. The client applied the ACT defusion technique autonomously during a sprint planning meeting — the same meeting context where his syncope event occurred — and successfully set a boundary with his manager for the first time in six years. The catastrophic prediction ("they\'ll think I\'m incompetent") was directly disconfirmed ("Okay, I\'ll ask David"). This represents a genuine behavioral breakthrough, not compliance.\n\nSleep has improved substantially: from approximately 4 hours with nightly 3am waking to 6-7 hours with intermittent disturbance. Somatic symptoms are reducing — chest tightness described as going from "a shout to a murmur," headaches from daily to weekly, bruxism managed with night guard. The client\'s developing somatic metaphorical language indicates interoceptive awareness is genuinely building rather than being intellectually performed.\n\nThe most clinically significant moment was the intergenerational insight catalyzed by his brother\'s revelation about their grandfather. The client\'s articulation — "those were his eight points, not mine" — represents schema-level deactivation of the Unrelenting Standards pattern. He is differentiating his father\'s fear from his own identity. Prognosis upgraded from "good" to "excellent." PHQ-9 trajectory (16 → 12 → 8) and GAD-7 trajectory (14 → 10 → 6) are consistent with strong treatment response. Recommend introducing relapse prevention framework in sessions 5-6 and considering treatment spacing after session 6. Outcome data from matched cases predicts continued improvement with 75% achieving significant improvement on this trajectory.',
+    patientReport: 'What you did in that meeting was extraordinary — not because saying "I don\'t have capacity" is a dramatic act, but because of what it meant for you. Six years of silence, six years of believing the sky would fall if you said no, and then you did it and the sky held. You proved your own catastrophic prediction wrong with evidence you generated yourself. That\'s not me helping you — that\'s you helping yourself.\n\nThe sleep improvement makes perfect sense: your body has been in emergency mode because it believed it had to be. When you gave yourself permission to set a boundary, your body got the message too. The chest tightness going from a "shout to a murmur" is your nervous system recalibrating. Keep listening to it.\n\nWhat your brother said about your grandfather is a piece of the puzzle I\'m glad you have now. Understanding that your father\'s perfectionism came from his own fear doesn\'t erase the impact it had on you — but it does mean you can stop carrying his fear. "Those were his eight points, not mine" is one of the most important things you\'ve said in our work together. You\'re not fixed — and you named that honestly — but you have something you didn\'t have before: a choice. That choice is yours to keep.',
+    cbtAnalysis: {
+      distortions: [
+        { type: 'Catastrophizing (Disconfirmed)', confidence: 0.35, evidence: 'Six years of terror about saying no — predicted firing/incompetence judgment. Actual outcome: "Okay, I\'ll ask David."', alternativeThought: 'The predicted catastrophe was directly tested and did not occur. This is powerful behavioral evidence against the catastrophic prediction pattern.', momentIndex: 1 },
+        { type: 'All-or-Nothing Thinking (Softening)', confidence: 0.45, evidence: 'I\'m not fixed — the anxiety is still there, the perfectionism still pops up. But it doesn\'t own me.', alternativeThought: 'Client is spontaneously adopting a spectrum view: improvement without perfection. The all-or-nothing framework is loosening.', momentIndex: 5 },
+      ],
+      overallDistortionLoad: 0.42,
+      treatmentReadiness: 0.88,
+      dominantPatterns: ['Catastrophizing (reducing)', 'All-or-Nothing Thinking (softening)', 'Emerging psychological flexibility'],
+      automaticThoughts: [
+        { content: 'Those were his eight points, not mine', beliefStrength: 0.75, supportsWellbeing: true },
+        { content: 'I have a choice now — I didn\'t have that before', beliefStrength: 0.80, supportsWellbeing: true },
+        { content: 'The anxiety is still there but it doesn\'t own me', beliefStrength: 0.72, supportsWellbeing: true },
+      ],
+      behavioralPatterns: ['Autonomous defusion practice', 'Boundary-setting at work', 'Social reconnection (brother call)', 'Somatic self-monitoring', 'Sleep improvement through reduced rumination'],
+    },
+    analysisStatus: 'complete' as const,
+    analysisWarnings: [],
+  },
+};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN SEED FUNCTION
@@ -1849,22 +1310,42 @@ async function main() {
   console.log(`Therapist ID: ${DEV_THERAPIST_ID}`);
   console.log('');
 
-  // Step 1: Delete existing demo data
-  console.log('🗑️  Cleaning existing demo data...');
+  // Step 1: Delete ALL existing demo data (aggressive cleanup)
+  console.log('🗑️  Cleaning ALL existing demo data...');
 
-  // Delete sessions first (FK dependency)
+  // First get all client IDs for this therapist
+  const { data: existingClients } = await supabase
+    .from('clients')
+    .select('client_id')
+    .eq('therapist_id', DEV_THERAPIST_ID);
+
+  const clientIds = (existingClients || []).map((c: { client_id: string }) => c.client_id);
+
+  // Delete outcome scores for these clients
+  if (clientIds.length > 0) {
+    await supabase.from('outcome_scores').delete().in('client_id', clientIds);
+    console.log('  ✓ Outcome scores deleted');
+  }
+
+  // Delete sessions for these clients
+  if (clientIds.length > 0) {
+    await supabase.from('sessions').delete().in('client_id', clientIds);
+    console.log('  ✓ Sessions deleted (by client_id)');
+  }
+
+  // Also delete sessions by therapist_id as backup
   const { error: delSessionsErr } = await supabase
     .from('sessions')
     .delete()
     .eq('therapist_id', DEV_THERAPIST_ID);
 
   if (delSessionsErr) {
-    console.error('  Error deleting sessions:', delSessionsErr.message);
+    console.error('  Note: session cleanup by therapist_id:', delSessionsErr.message);
   } else {
-    console.log('  ✓ Sessions deleted');
+    console.log('  ✓ Sessions deleted (by therapist_id)');
   }
 
-  // Delete clients — also clear any soft-deleted records that may block unique constraint
+  // Delete ALL clients for this therapist
   const { error: delClientsErr } = await supabase
     .from('clients')
     .delete()
@@ -1872,91 +1353,71 @@ async function main() {
 
   if (delClientsErr) {
     console.error('  Error deleting clients:', delClientsErr.message);
-    // Try deleting by specific client codes as fallback
+    // Fallback: delete known client codes
     for (const code of ['CL-4521', 'CL-7803', 'CL-2156']) {
       await supabase.from('clients').delete().eq('client_code', code).eq('therapist_id', DEV_THERAPIST_ID);
     }
     console.log('  ✓ Clients cleaned up (fallback)');
   } else {
-    console.log('  ✓ Clients deleted');
+    console.log(`  ✓ ${clientIds.length} clients deleted`);
   }
 
   console.log('');
 
-  // Step 2: Insert clients
-  console.log('👤 Inserting clients...');
+  // Step 2: Insert client
+  console.log('👤 Inserting client...');
 
-  const clients = [client1, client2, client3];
-  const insertedClients: Record<string, string> = {}; // clientCode -> client_id
+  const { data: clientData, error: clientErr } = await supabase
+    .from('clients')
+    .insert(client1)
+    .select('client_id, client_code')
+    .single();
 
-  for (const client of clients) {
-    const { data, error } = await supabase
-      .from('clients')
-      .insert(client)
-      .select('client_id, client_code')
-      .single();
-
-    if (error) {
-      console.error(`  ✗ Error inserting ${client.client_code}:`, error.message);
-      continue;
-    }
-
-    insertedClients[data.client_code] = data.client_id;
-    console.log(`  ✓ ${client.client_code} → ${data.client_id}`);
+  if (clientErr) {
+    console.error(`  ✗ Error inserting ${client1.client_code}:`, clientErr.message);
+    process.exit(1);
   }
 
+  const clientId = clientData.client_id;
+  console.log(`  ✓ ${clientData.client_code} → ${clientId}`);
   console.log('');
 
   // Step 3: Insert sessions
   console.log('📋 Inserting sessions...');
 
-  const allSessions = [
-    { clientCode: 'CL-4521', sessions: client1Sessions },
-    { clientCode: 'CL-7803', sessions: client2Sessions },
-    { clientCode: 'CL-2156', sessions: client3Sessions },
-  ];
+  const sessions = [session1, session2, session3];
 
-  for (const { clientCode, sessions } of allSessions) {
-    const clientId = insertedClients[clientCode];
-    if (!clientId) {
-      console.error(`  ✗ Skipping sessions for ${clientCode} — client not inserted`);
-      continue;
-    }
+  for (const session of sessions) {
+    const { data, error } = await supabase
+      .from('sessions')
+      .insert({
+        client_id: clientId,
+        therapist_id: DEV_THERAPIST_ID,
+        session_number: session.session_number,
+        transcript: session.transcript,
+        treatment_goals: session.treatment_goals,
+        session_date: session.session_date,
+        status: session.status,
+        analysis_result: session.analysis_result,
+        analysis_complete_at: session.session_date,
+        modality: 'in-person',
+        created_at: session.session_date,
+        updated_at: session.session_date,
+      })
+      .select('session_id')
+      .single();
 
-    console.log(`  ${clientCode}:`);
-
-    for (const session of sessions) {
-      const { data, error } = await supabase
-        .from('sessions')
-        .insert({
-          client_id: clientId,
-          therapist_id: DEV_THERAPIST_ID,
-          session_number: session.session_number,
-          transcript: session.transcript,
-          treatment_goals: session.treatment_goals,
-          session_date: session.session_date,
-          status: session.status,
-          analysis_result: session.analysis_result,
-          analysis_complete_at: session.session_date,
-          modality: 'in-person',
-          created_at: session.session_date,
-          updated_at: session.session_date,
-        })
-        .select('session_id')
-        .single();
-
-      if (error) {
-        console.error(`    ✗ Session ${session.session_number}:`, error.message);
-      } else {
-        console.log(`    ✓ Session ${session.session_number} → ${data.session_id}`);
-      }
+    if (error) {
+      console.error(`    ✗ Session ${session.session_number}:`, error.message);
+    } else {
+      console.log(`    ✓ Session ${session.session_number} → ${data.session_id}`);
     }
   }
 
   console.log('');
   console.log('═══════════════════════════════════════════');
   console.log('✅ Demo seed complete!');
-  console.log(`   ${clients.length} clients, ${client1Sessions.length + client2Sessions.length + client3Sessions.length} sessions`);
+  console.log(`   1 client, 3 sessions`);
   console.log('');
 }
 
