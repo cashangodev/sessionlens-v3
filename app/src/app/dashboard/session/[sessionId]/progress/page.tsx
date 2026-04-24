@@ -548,8 +548,8 @@ export default function ProgressPage() {
                   })}
                 </div>
                 <div className="flex items-center gap-1 w-24 flex-shrink-0 justify-end">
-                  {getTrendIcon(topic.trend)}
-                  <span className="text-xs text-gray-500 capitalize">{topic.trend}</span>
+                  {getTrendIcon(topic.trend || 'stable')}
+                  <span className="text-xs text-gray-500 capitalize">{topic.trend || 'stable'}</span>
                 </div>
               </div>
             ))}
@@ -594,12 +594,12 @@ export default function ProgressPage() {
                 <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${
-                      item.progressPercent >= 70 ? 'bg-green-500' : item.progressPercent >= 30 ? 'bg-primary' : 'bg-gray-300'
+                      (item.progressPercent ?? 0) >= 70 ? 'bg-green-500' : (item.progressPercent ?? 0) >= 30 ? 'bg-primary' : 'bg-gray-300'
                     }`}
-                    style={{ width: `${item.progressPercent}%` }}
+                    style={{ width: `${item.progressPercent ?? 0}%` }}
                   />
                 </div>
-                <span className="text-xs text-gray-500 font-mono w-10 text-right">{item.progressPercent}%</span>
+                <span className="text-xs text-gray-500 font-mono w-10 text-right">{item.progressPercent ?? 0}%</span>
               </div>
               <p className="text-xs text-gray-400 ml-6 mt-2">
                 Last updated: Session {item.lastUpdatedSession}

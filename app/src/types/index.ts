@@ -337,6 +337,18 @@ export interface TopicEvolution {
   topic: string;
   /** Session numbers where this topic appeared */
   sessions: number[];
+  /** Trend direction */
+  trend?: 'increasing' | 'decreasing' | 'stable' | 'new' | 'resolved';
+}
+
+export interface TreatmentPlanItem {
+  id: string;
+  goal: string;
+  status: 'active' | 'completed' | 'paused' | 'in_progress' | 'not_started' | 'achieved';
+  progress?: number;
+  progressPercent?: number;
+  lastUpdatedSession?: number;
+  notes?: string;
 }
 
 // ============ HYPERNOMIC EXPERIENTIAL FIELD ============

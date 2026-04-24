@@ -1561,6 +1561,11 @@ async function main() {
 
   console.log('');
 
+  // Extra cleanup: delete CL-4521 by client_code directly (catches orphaned records)
+  await supabase.from('clients').delete().eq('client_code', 'CL-4521');
+  console.log('  ✓ CL-4521 force-cleaned by client_code');
+  console.log('');
+
   // Step 2: Insert client
   console.log('👤 Inserting client...');
 
@@ -1570,13 +1575,39 @@ async function main() {
     .select('client_id, client_code')
     .single();
 
+  let finalClientId: string;
+  let finalClientCode: string;
+
   if (clientErr) {
     console.error(`  ✗ Error inserting ${client1.client_code}:`, clientErr.message);
-    process.exit(1);
+    // Try to find the existing client
+    console.log('  ↻ Looking for existing CL-4521...');
+    const { data: existing } = await supabase
+      .from('clients')
+      .select('client_id, client_code')
+      .eq('client_code', 'CL-4521')
+      .single();
+    if (existing) {
+      finalClientId = existing.client_id;
+      finalClientCode = existing.client_code;
+      console.log(`  ✓ Found existing ${finalClientCode} → ${finalClientId}`);
+      // Clean out old sessions for this client
+      await supabase.from('sessions').delete().eq('client_id', finalClientId);
+      await supabase.from('outcome_scores').delete().eq('client_id', finalClientId);
+      // Update the client record
+      await supabase.from('clients').update(client1).eq('client_id', finalClientId);
+      console.log('  ✓ Updated existing client record');
+    } else {
+      console.error('  ✗ Cannot find or create CL-4521. Aborting.');
+      process.exit(1);
+    }
+  } else {
+    finalClientId = clientData!.client_id;
+    finalClientCode = clientData!.client_code;
   }
 
-  const clientId = clientData.client_id;
-  console.log(`  ✓ ${clientData.client_code} → ${clientId}`);
+  const clientId = finalClientId;
+  console.log(`  ✓ ${finalClientCode} → ${clientId}`);
   console.log('');
 
   // Step 3: Insert sessions
