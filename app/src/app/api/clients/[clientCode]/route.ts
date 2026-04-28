@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { dbGetClientProfile, dbUpsertClientProfile, dbGetSessionsByClient } from '@/lib/supabase/db';
+import { dbGetClientProfile, dbUpsertClientProfile, dbGetSessionsByClient, dbRemoveClient, dbWriteAuditLog } from '@/lib/supabase/db';
 
 export async function GET(
   _req: Request,
@@ -62,5 +62,43 @@ export async function PATCH(
   } catch (error) {
     console.error('PATCH /api/clients/[clientCode] error:', error);
     return NextResponse.json({ error: 'Failed to update client' }, { status: 500 });
+  }
+}
+
+/**
+ * Remove a client — supports three actions: 'delete' (soft-delete + cascade),
+ * 'archive' (status='terminated'), or 'hide' (status='inactive').
+ *
+ * Body: { action: 'delete' | 'archive' | 'hide', reason: string, note?: string }
+ *
+ * The reason is appended to clinical_notes as an audit-trail line so the
+ * decision is traceable later.
+ */
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ clientCode: string }> }
+) {
+  const { clientCode } = await params;
+  try {
+    const body = await req.json().catch(() => ({}));
+    const action: 'delete' | 'archive' | 'hide' = body?.action === 'archive' || body?.action === 'hide' ? body.action : 'delete';
+    const reason: string = typeof body?.reason === 'string' ? body.reason : 'unspecified';
+    const note: string | undefined = typeof body?.note === 'string' && body.note.trim() ? body.note.trim() : undefined;
+
+    const decoded = decodeURIComponent(clientCode);
+    const result = await dbRemoveClient(decoded, action, reason, note);
+    if (!result.success) {
+      return NextResponse.json({ error: result.error || 'Failed to remove client' }, { status: 500 });
+    }
+    void dbWriteAuditLog({
+      action: 'client.remove',
+      resourceType: 'client',
+      clientCode: decoded,
+      metadata: { removalAction: action, reason, hasNote: !!note },
+    });
+    return NextResponse.json({ success: true, action });
+  } catch (error) {
+    console.error('DELETE /api/clients/[clientCode] error:', error);
+    return NextResponse.json({ error: 'Failed to remove client' }, { status: 500 });
   }
 }

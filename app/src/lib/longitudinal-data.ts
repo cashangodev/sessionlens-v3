@@ -1,7 +1,47 @@
-// Longitudinal tracking data for progress visualization
-// Generates mock historical session data for demonstration
+// Longitudinal tracking data for progress visualization.
+// Per P0-1 audit: real Supabase data only. The mock generator at the bottom
+// of this file is retained for type reference but is NOT called anywhere.
 
 import { StructureName } from '@/types';
+
+/**
+ * Lightweight moment shape used for lineage popovers on the progress tab.
+ * Quotes are clinician-visible source material; we keep only what's needed
+ * to render a snippet without the full pipeline payload.
+ */
+export interface LongitudinalMomentLite {
+  id?: string | number;
+  quote?: string;
+  timestamp?: string;
+  structures?: string[];
+  intensity?: number;
+}
+
+/**
+ * Per-session topic entry: which structures/topics surfaced in this session
+ * and the supporting moment quotes for lineage popovers.
+ */
+export interface LongitudinalSessionTopic {
+  topic: string;          // canonical structure key (e.g. "emotion") or label
+  label: string;          // display label
+  count: number;          // how many moments tagged this topic in the session
+  snippets: LongitudinalMomentLite[]; // up to 3 supporting quotes
+}
+
+/**
+ * Per-session treatment-plan engagement: was the goal addressed in this session?
+ */
+export interface LongitudinalGoalEngagement {
+  sessionNumber: number;
+  addressed: boolean;
+  snippets: LongitudinalMomentLite[];
+}
+
+export interface LongitudinalGoal {
+  id: string;
+  goal: string;
+  perSession: LongitudinalGoalEngagement[];
+}
 
 export interface LongitudinalSessionData {
   sessionNumber: number;
@@ -29,6 +69,27 @@ export interface LongitudinalSessionData {
   therapeuticAlliance: number;
   emotionalRegulation: number;
   reflectiveCapacity: number;
+  // Real-data extensions wired by the progress API:
+  riskFlagCount: number;
+  riskFlagSeverity: { high: number; medium: number; low: number };
+  dominantTopics: LongitudinalSessionTopic[]; // top 3 by frequency
+  momentCount: number;
+}
+
+/**
+ * Full payload returned by GET /api/clients/[clientCode]/progress.
+ * The page renders cards directly off this shape and hides any card whose
+ * underlying real data is empty (no fabrication).
+ */
+export interface ProgressData {
+  sessionCount: number;
+  sessions: LongitudinalSessionData[];
+  /** Treatment goals (from clients.treatment_goals) with per-session engagement. */
+  treatmentPlan: LongitudinalGoal[];
+  /** Whether per-session PHQ-9/GAD-7 trend has at least 2 real data points. */
+  hasOutcomeTrend: boolean;
+  /** Whether topic-recurrence data is real (≥1 session has moments tagged). */
+  hasTopicData: boolean;
 }
 
 export interface ProgressSummaryData {
@@ -96,6 +157,11 @@ export function generateMockLongitudinalData(
       therapeuticAlliance: Math.min(9, 5 + (progressFactor * 3)),
       emotionalRegulation: Math.min(9, 3 + (progressFactor * 4)),
       reflectiveCapacity: Math.min(9, 4 + (progressFactor * 3)),
+      // Real-data-only fields kept zero in the (unused) mock generator.
+      riskFlagCount: 0,
+      riskFlagSeverity: { high: 0, medium: 0, low: 0 },
+      dominantTopics: [],
+      momentCount: 0,
     });
   }
 

@@ -1,14 +1,21 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { generateSOAPNote, generateDAPNote, formatSOAPAsText, formatDAPAsText } from '@/lib/note-generator';
+import { generateSOAPNote, generateDAPNote } from '@/lib/note-generator';
+import { EditableClinicalNote, type ClinicalNoteSection } from '@/components/notes/EditableClinicalNote';
+import { OutcomeScoresForm } from '@/components/outcomes/OutcomeScoresForm';
+// SessionSignOff was moved to the Full Report tab.
+// import { SessionSignOff } from '@/components/notes/SessionSignOff';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useApi } from '@/hooks/use-api';
-import type { AnalysisResult, CBTAnalysisResult, NarrativeArc, NarrativePhase, NarrativeTurningPoint, MomentConfidence } from '@/types';
+import type { AnalysisResult, CBTAnalysisResult } from '@/types';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { InfoTooltip } from '@/components/ui/InfoTooltip';
+import { LineagePopover, type LineageSnippet } from '@/components/ui/LineagePopover';
+import { StructureBar } from '@/components/summary/StructureBar';
+import { getStructureColor } from '@/lib/structures';
 import {
   AlertTriangle,
   Shield,
@@ -25,27 +32,64 @@ import {
   BookOpen,
   Trash2,
   Brain,
-  FileWarning,
   Edit3,
   Check,
   X,
   RotateCcw,
-  Database,
-  ArrowRight,
-  GitBranch,
-  Target,
   Eye,
 } from 'lucide-react';
 import {
   ExtractedTopic,
+  TopicOccurrence,
   ClinicalFlag,
   RiskSeverity,
   StructureName,
   Moment,
   TherapistMoveDistribution,
-  DiagnosticConsideration,
 } from '@/types';
-import { STRUCTURES, getStructure, getStructureColor } from '@/lib/structures';
+
+// Map of generic topic labels -> phenomenological structure(s) from our 10-dimension framework.
+// Used both as the topic's `structure` and to drive the bar color via getStructureColor().
+const TOPIC_STRUCTURE_MAP: Record<string, { label: string; primary: StructureName }> = {
+  'emotional processing': { label: 'emotional', primary: StructureName.EMOTION },
+  'cognitive patterns': { label: 'cognitive', primary: StructureName.COGNITIVE },
+  'social/relational dynamics': { label: 'social', primary: StructureName.SOCIAL },
+  'somatic experience': { label: 'somatic', primary: StructureName.BODY },
+  'self-reflection': { label: 'reflective', primary: StructureName.REFLECTIVE },
+  'behavioral patterns': { label: 'behavioral', primary: StructureName.BEHAVIOUR },
+  'identity/narrative': { label: 'narrative', primary: StructureName.NARRATIVE },
+  'environmental factors': { label: 'ecological', primary: StructureName.ECOLOGICAL },
+  'values/standards': { label: 'normative', primary: StructureName.NORMATIVE },
+  'present-moment awareness': { label: 'experiential', primary: StructureName.IMMEDIATE_EXPERIENCE },
+  'anxiety': { label: 'emotional', primary: StructureName.EMOTION },
+  'panic': { label: 'emotional + somatic', primary: StructureName.EMOTION },
+  'perfectionism': { label: 'cognitive + normative', primary: StructureName.COGNITIVE },
+  'work stress': { label: 'social + ecological', primary: StructureName.ECOLOGICAL },
+  'sleep issues': { label: 'somatic', primary: StructureName.BODY },
+  'relationships': { label: 'social', primary: StructureName.SOCIAL },
+  'self-worth': { label: 'narrative', primary: StructureName.NARRATIVE },
+  'avoidance patterns': { label: 'behavioral', primary: StructureName.BEHAVIOUR },
+  'substance recovery': { label: 'behavioral + normative', primary: StructureName.BEHAVIOUR },
+  'grief & loss': { label: 'emotional + narrative', primary: StructureName.EMOTION },
+  'trauma': { label: 'emotional + somatic', primary: StructureName.EMOTION },
+};
+
+function resolveTopicStructure(label: string, fallback?: string): { structure: string; color: string } {
+  const key = label.toLowerCase();
+  const mapped = TOPIC_STRUCTURE_MAP[key];
+  if (mapped) {
+    return { structure: mapped.label, color: getStructureColor(mapped.primary) };
+  }
+  // Fallback: try matching the existing structureDimension to a StructureName
+  if (fallback) {
+    const fbKey = fallback.toLowerCase();
+    const matchByDim = Object.values(TOPIC_STRUCTURE_MAP).find((m) => m.label === fbKey);
+    if (matchByDim) {
+      return { structure: matchByDim.label, color: getStructureColor(matchByDim.primary) };
+    }
+  }
+  return { structure: fallback || 'mixed', color: '#2D7D7D' };
+}
 
 // ========== TYPES ==========
 
@@ -60,6 +104,24 @@ interface SessionData {
   status: string;
   analysisResult: AnalysisResult | null;
   createdAt: string;
+  consentRecordedAt?: string | null;
+  consentMethod?: 'verbal' | 'written' | 'electronic' | null;
+  consentVersion?: string | null;
+}
+
+/**
+ * Format the consent footer line for clinical-note exports.
+ * Returns empty string if no consent on file (legacy pre-v1 sessions).
+ */
+function formatConsentFooter(s: SessionData): string {
+  if (!s.consentRecordedAt) return '';
+  const dateStr = s.consentRecordedAt.slice(0, 10);
+  const methodLabel =
+    s.consentMethod === 'written' ? 'written form on file'
+    : s.consentMethod === 'electronic' ? 'electronic signature'
+    : 'verbal consent at session start';
+  return `\n\n— Recorded with client consent (${methodLabel}) on ${dateStr}. ` +
+    `Privacy policy ${s.consentVersion || 'v1.0'}.`;
 }
 
 // ========== COLLAPSIBLE SECTION ==========
@@ -71,6 +133,7 @@ function CollapsibleSection({
   children,
   defaultOpen = false,
   tooltip,
+  headerExtra,
 }: {
   title: string;
   icon: React.ReactNode;
@@ -78,21 +141,31 @@ function CollapsibleSection({
   children: React.ReactNode;
   defaultOpen?: boolean;
   tooltip?: React.ReactNode;
+  headerExtra?: React.ReactNode;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
     <div className="bg-white rounded-2xl border border-gray-200">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-6 py-5 flex items-center justify-between hover:bg-gray-50 transition rounded-t-2xl"
-      >
-        <div className="flex items-center gap-3">
+      <div className="w-full px-6 py-5 flex items-center justify-between hover:bg-gray-50 transition rounded-t-2xl">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-3 flex-1 text-left"
+        >
           {icon}
           <h3 className="font-playfair text-lg font-bold text-gray-900">{title}</h3>
           {tooltip}
+        </button>
+        <div className="flex items-center gap-3">
+          {headerExtra}
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            aria-label={isOpen ? 'Collapse' : 'Expand'}
+            className="p-1"
+          >
+            <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+          </button>
         </div>
-        <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
+      </div>
       <div className="px-6 pb-4 -mt-1">{teaser}</div>
       {isOpen && (
         <div className="px-6 pb-6 pt-2 border-t border-gray-100">{children}</div>
@@ -175,51 +248,87 @@ function generateQuickSummary(
 }
 
 function generateTopics(
-  moments: { quote: string; structures: string[] }[],
+  moments: Moment[] | { quote: string; structures: string[]; timestamp?: string; id?: number }[],
   structureProfile?: Record<string, number>,
   cbt?: CBTAnalysisResult,
   transcript?: string,
 ): ExtractedTopic[] {
   const topics: ExtractedTopic[] = [];
-  const safeMoments = Array.isArray(moments) ? moments : [];
-  const allText = safeMoments.map((m) => (m.quote || '').toLowerCase()).join(' ');
+  const safeMoments = (Array.isArray(moments) ? moments : []) as Moment[];
 
-  const transcriptLines: { speaker: 'client' | 'therapist'; text: string }[] = [];
+  const transcriptLines: { speaker: 'client' | 'therapist'; text: string; lineIndex: number }[] = [];
   if (transcript) {
-    for (const line of transcript.split('\n')) {
+    const rawLines = transcript.split('\n');
+    rawLines.forEach((line, idx) => {
       const trimmed = line.trim();
       if (/^(client|patient):/i.test(trimmed)) {
-        transcriptLines.push({ speaker: 'client', text: trimmed.replace(/^(Client|Patient):\s*/i, '').trim() });
+        transcriptLines.push({ speaker: 'client', text: trimmed.replace(/^(Client|Patient):\s*/i, '').trim(), lineIndex: idx });
       } else if (/^(therapist|counselor|doctor):/i.test(trimmed)) {
-        transcriptLines.push({ speaker: 'therapist', text: trimmed.replace(/^(Therapist|Counselor|Doctor):\s*/i, '').trim() });
+        transcriptLines.push({ speaker: 'therapist', text: trimmed.replace(/^(Therapist|Counselor|Doctor):\s*/i, '').trim(), lineIndex: idx });
+      }
+    });
+  }
+
+  function truncateAroundKeyword(text: string, keywords: string[]): string {
+    if (text.length <= 180) return text;
+    const lower = text.toLowerCase();
+    const firstKw = keywords.find((kw) => lower.includes(kw));
+    if (firstKw) {
+      const idx = lower.indexOf(firstKw);
+      const start = Math.max(0, idx - 60);
+      const end = Math.min(text.length, idx + 120);
+      return (start > 0 ? '...' : '') + text.slice(start, end) + (end < text.length ? '...' : '');
+    }
+    return text.slice(0, 180) + '...';
+  }
+
+  // Collect ALL matching snippets for a topic, prioritising real moments (carry timestamp/momentId/structures)
+  // and falling back to transcript lines that aren't represented in any moment.
+  function collectOccurrences(keywords: string[]): TopicOccurrence[] {
+    const occ: TopicOccurrence[] = [];
+    const seenQuotes = new Set<string>();
+
+    for (const m of safeMoments) {
+      const quote = (m.quote || '').toLowerCase();
+      if (!quote) continue;
+      const matches = keywords.some((kw) => quote.includes(kw));
+      if (matches) {
+        const key = (m.quote || '').slice(0, 60).toLowerCase();
+        if (seenQuotes.has(key)) continue;
+        seenQuotes.add(key);
+        occ.push({
+          quote: truncateAroundKeyword(m.quote || '', keywords),
+          timestamp: m.timestamp,
+          momentId: m.id,
+          speaker: 'client',
+          structures: Array.isArray(m.structures) ? m.structures.map((s) => String(s)) : undefined,
+        });
       }
     }
+
+    for (const line of transcriptLines) {
+      const lower = line.text.toLowerCase();
+      const matches = keywords.some((kw) => lower.includes(kw));
+      if (!matches) continue;
+      const key = line.text.slice(0, 60).toLowerCase();
+      if (seenQuotes.has(key)) continue;
+      // Skip if a moment already captures this line (heuristic: substring overlap)
+      const overlapsMoment = occ.some((o) => o.quote.toLowerCase().includes(key) || lower.includes(o.quote.slice(0, 40).toLowerCase()));
+      if (overlapsMoment) continue;
+      seenQuotes.add(key);
+      occ.push({
+        quote: truncateAroundKeyword(line.text, keywords),
+        speaker: line.speaker,
+      });
+    }
+
+    return occ;
   }
 
   function findBestQuote(keywords: string[]): { quote: string; speaker: 'client' | 'therapist' } | null {
-    let bestLine: typeof transcriptLines[0] | null = null;
-    let bestScore = 0;
-    for (const line of transcriptLines) {
-      const lower = line.text.toLowerCase();
-      let score = 0;
-      for (const kw of keywords) { if (lower.includes(kw)) score++; }
-      if (line.speaker === 'client') score *= 1.5;
-      if (score > bestScore) { bestScore = score; bestLine = line; }
-    }
-    if (bestLine && bestScore > 0) {
-      let quote = bestLine.text;
-      if (quote.length > 180) {
-        const firstKw = keywords.find((kw) => quote.toLowerCase().includes(kw));
-        if (firstKw) {
-          const idx = quote.toLowerCase().indexOf(firstKw);
-          const start = Math.max(0, idx - 60);
-          const end = Math.min(quote.length, idx + 120);
-          quote = (start > 0 ? '...' : '') + quote.slice(start, end) + (end < quote.length ? '...' : '');
-        } else { quote = quote.slice(0, 180) + '...'; }
-      }
-      return { quote, speaker: bestLine.speaker };
-    }
-    return null;
+    const occ = collectOccurrences(keywords);
+    if (occ.length === 0) return null;
+    return { quote: occ[0].quote, speaker: occ[0].speaker || 'client' };
   }
 
   const structureToTopicMap: Record<string, { label: string; keywords: string[]; dimension: string }> = {
@@ -243,14 +352,18 @@ function generateTopics(
         const mapping = structureToTopicMap[structureName.toLowerCase().replace(/_/g, '_')];
         const topicLabel = mapping?.label || structureName.replace(/_/g, ' ');
         if (!topics.find((t) => t.label.toLowerCase() === topicLabel.toLowerCase())) {
-          const quoteResult = mapping ? findBestQuote(mapping.keywords) : null;
+          const occurrences = mapping ? collectOccurrences(mapping.keywords) : [];
+          const clientCount = occurrences.filter((o) => o.speaker !== 'therapist').length;
+          const first = occurrences.find((o) => o.speaker !== 'therapist') ?? occurrences[0];
           topics.push({
             id: `topic-struct-${structureName}`,
             label: topicLabel,
             confidence: Math.min(0.95, 0.5 + score * 0.4),
-            mentions: Math.round(score * 10),
-            triggerQuote: quoteResult?.quote,
-            speaker: quoteResult?.speaker,
+            mentions: clientCount || Math.round(score * 10),
+            count: clientCount,
+            occurrences,
+            triggerQuote: first?.quote,
+            speaker: first?.speaker,
             structureDimension: mapping?.dimension,
           });
         }
@@ -265,12 +378,20 @@ function generateTopics(
           ? patternDistortions.reduce((sum, d) => sum + d.confidence, 0) / patternDistortions.length
           : 0.6;
         const bestDistortion = patternDistortions.sort((a, b) => b.confidence - a.confidence)[0];
-        const quoteResult = findBestQuote(pattern.toLowerCase().split(/[\s-]+/));
+        const occurrences = collectOccurrences(pattern.toLowerCase().split(/[\s-]+/));
+        // If keyword search yields nothing, fall back to distortion evidence so we still show a snippet.
+        if (occurrences.length === 0 && bestDistortion?.evidence) {
+          occurrences.push({ quote: bestDistortion.evidence, speaker: 'client' });
+        }
+        const clientCount = occurrences.filter((o) => o.speaker !== 'therapist').length;
+        const first = occurrences.find((o) => o.speaker !== 'therapist') ?? occurrences[0];
         topics.push({
           id: `topic-cbt-${i}`, label: pattern, confidence: avgConfidence,
-          mentions: patternDistortions.length || 1,
-          triggerQuote: quoteResult?.quote || bestDistortion?.evidence,
-          speaker: quoteResult?.speaker || 'client',
+          mentions: clientCount || patternDistortions.length || 1,
+          count: clientCount,
+          occurrences,
+          triggerQuote: first?.quote || bestDistortion?.evidence,
+          speaker: first?.speaker || 'client',
           structureDimension: 'cognitive',
         });
       }
@@ -292,24 +413,42 @@ function generateTopics(
 
   topicDetectors.forEach((detector, i) => {
     if (!topics.find((t) => t.label.toLowerCase() === detector.label.toLowerCase())) {
-      const count = detector.keywords.reduce((sum, kw) => sum + (allText.split(kw).length - 1), 0);
-      if (count > 0) {
-        const quoteResult = findBestQuote(detector.keywords);
+      const occurrences = collectOccurrences(detector.keywords);
+      if (occurrences.length > 0) {
+        const clientCount = occurrences.filter((o) => o.speaker !== 'therapist').length;
+        const first = occurrences.find((o) => o.speaker !== 'therapist') ?? occurrences[0];
+        // Skip topics that only the therapist mentions — those aren't client experiences
+        if (clientCount === 0) return;
         topics.push({
           id: `topic-kw-${i}`, label: detector.label,
-          confidence: Math.min(0.95, 0.6 + count * 0.08), mentions: count,
-          triggerQuote: quoteResult?.quote, speaker: quoteResult?.speaker,
+          confidence: Math.min(0.95, 0.6 + clientCount * 0.08),
+          mentions: clientCount,
+          count: clientCount,
+          occurrences,
+          triggerQuote: first?.quote, speaker: first?.speaker,
           structureDimension: detector.dimension,
         });
       }
     }
   });
 
-  const sorted = topics.sort((a, b) => b.confidence !== a.confidence ? b.confidence - a.confidence : b.mentions - a.mentions);
+  // Annotate each topic with its phenomenological structure label (and color, used by the bar chart).
+  topics.forEach((t) => {
+    const resolved = resolveTopicStructure(t.label, t.structureDimension);
+    t.structure = resolved.structure;
+  });
+
+  // Primary sort: descending count (mentions). Tiebreak by confidence.
+  const sorted = topics.sort((a, b) => {
+    const ca = a.count ?? a.mentions ?? 0;
+    const cb = b.count ?? b.mentions ?? 0;
+    if (cb !== ca) return cb - ca;
+    return b.confidence - a.confidence;
+  });
   if (sorted.length === 0) {
     sorted.push(
-      { id: 'topic-gen-1', label: 'Emotional Processing', confidence: 0.7, mentions: 3 },
-      { id: 'topic-gen-2', label: 'Self-Reflection', confidence: 0.65, mentions: 2 },
+      { id: 'topic-gen-1', label: 'Emotional Processing', confidence: 0.7, mentions: 3, count: 0, occurrences: [], structure: 'emotional' },
+      { id: 'topic-gen-2', label: 'Self-Reflection', confidence: 0.65, mentions: 2, count: 0, occurrences: [], structure: 'reflective' },
     );
   }
   return sorted;
@@ -317,7 +456,7 @@ function generateTopics(
 
 function generateClinicalFlags(
   moments: Moment[],
-  riskFlags: { severity: string; signal: string; detail: string; algorithmMatch?: string }[],
+  riskFlags: { severity: string; signal: string; detail: string; algorithmMatch?: string; interventionType?: string }[],
   cbt: CBTAnalysisResult | undefined,
   structureProfile: Record<string, number>,
   therapistMoves: TherapistMoveDistribution[],
@@ -378,9 +517,15 @@ function generateClinicalFlags(
     const scoreMatch = rf.detail?.match(/Final adjusted score:\s*([\d.]+)/);
     const realConfidence = scoreMatch ? Math.min(parseFloat(scoreMatch[1]), 0.95) : (rf.severity === 'high' ? 0.85 : rf.severity === 'medium' ? 0.65 : 0.45);
 
+    // Pass interventionType through so the icon/colour can distinguish "act now"
+    // (immediate) from "keep an eye on this going forward" (monitor). Defaults to
+    // 'immediate' when missing so legacy data still renders as alarm-shape.
+    const interventionType: 'immediate' | 'monitor' =
+      rf.interventionType === 'monitor' ? 'monitor' : 'immediate';
     flags.push({
       id: `flag-risk-${i}`, type: 'risk', label: rf.signal, transcriptQuote, location,
       severity: rf.severity as RiskSeverity, confidence: realConfidence,
+      interventionType,
     });
   });
 
@@ -447,68 +592,260 @@ function generateClinicalFlags(
   return flags;
 }
 
-function generateDiagnosticConsiderations(
-  riskLevel: string,
-  moments: { quote: string; structures: string[] }[],
-  cbtAnalysis?: CBTAnalysisResult,
-): DiagnosticConsideration[] {
-  const allText = moments.map((m) => m.quote.toLowerCase()).join(' ');
-  const considerations: DiagnosticConsideration[] = [];
-  const distortionTypes = (cbtAnalysis?.distortions ?? []).map((d) => d.type.toLowerCase());
-  const hasCatastrophizing = distortionTypes.some((t) => t.includes('catastroph'));
-  const hasAllOrNothing = distortionTypes.some((t) => t.includes('all-or-nothing') || t.includes('all or nothing'));
-  const hasLabeling = distortionTypes.some((t) => t.includes('label'));
-  const hasPersonalization = distortionTypes.some((t) => t.includes('personal'));
 
-  if (allText.includes('anxi') || allText.includes('worry') || allText.includes('nervous')) {
-    considerations.push({
-      id: 'dx-gad', code: 'F41.1', name: 'Generalized Anxiety Disorder',
-      indicators: [
-        'Excessive worry reported across multiple domains',
-        'Physical symptoms (tension, restlessness) noted',
-        ...(hasCatastrophizing ? ['Catastrophizing distortion detected in CBT analysis'] : []),
-        ...(hasAllOrNothing ? ['All-or-nothing thinking pattern detected'] : []),
-      ],
-      confidence: Math.min(0.95, 0.72 + (hasCatastrophizing || hasAllOrNothing ? 0.1 : 0)),
-      status: 'monitor',
-    });
+// ========== TOPICS BAR CHART ==========
+
+/**
+ * Dual-view topic visualisation:
+ *  - Top: horizontal bar chart, one bar per topic (length proportional to count).
+ *    Bar colour comes from the topic's mapped phenomenological structure.
+ *  - Bottom: when a topic is selected, every matching snippet is rendered with
+ *    timestamp + speaker, each wrapped in a LineagePopover for source lineage.
+ * The long tail (>7 topics) collapses under "Other (N more)".
+ */
+function TopicsBarChart({
+  topics,
+  expandedTopic,
+  onSelect,
+}: {
+  topics: ExtractedTopic[];
+  expandedTopic: string | null;
+  onSelect: (id: string) => void;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const [showTherapistRefs, setShowTherapistRefs] = useState(false);
+  const TOP_N = 7;
+  const visibleTopics = showAll ? topics : topics.slice(0, TOP_N);
+  const tail = topics.slice(TOP_N);
+
+  // Adapt visual scale: even with small counts (1-4 in the demo) bars should fill space.
+  const maxCount = Math.max(1, ...topics.map((t) => t.count ?? t.mentions ?? 0));
+
+  const selected = topics.find((t) => t.id === expandedTopic) || null;
+  // Default snippet view = client only. Therapist refs are clinical scaffolding,
+  // not client experience, so we show them behind a toggle.
+  const selectedClientOcc = (selected?.occurrences ?? []).filter((o) => o.speaker !== 'therapist');
+  const selectedTherapistOcc = (selected?.occurrences ?? []).filter((o) => o.speaker === 'therapist');
+  const visibleOccurrences = showTherapistRefs
+    ? [...selectedClientOcc, ...selectedTherapistOcc]
+    : selectedClientOcc;
+
+  return (
+    <div>
+      <div className="space-y-2 mb-4">
+        {visibleTopics.map((topic) => {
+          const count = topic.count ?? topic.mentions ?? 0;
+          const therapistRefCount = (topic.occurrences ?? []).filter((o) => o.speaker === 'therapist').length;
+          const isSelected = expandedTopic === topic.id;
+          const widthPct = Math.max(8, Math.round((count / maxCount) * 100));
+          const resolved = resolveTopicStructure(topic.label, topic.structureDimension);
+          const color = resolved.color;
+          const structureLabel = topic.structure || resolved.structure;
+          return (
+            <button
+              key={topic.id}
+              type="button"
+              onClick={() => onSelect(topic.id)}
+              aria-pressed={isSelected}
+              className={`w-full text-left rounded-lg border transition-all px-3 py-2 ${
+                isSelected
+                  ? 'border-primary/40 ring-1 ring-primary/20 bg-primary/5'
+                  : 'border-gray-200 bg-white hover:border-primary/30 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-3 mb-1.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-sm font-medium text-gray-800 truncate">{topic.label}</span>
+                  {structureLabel && (
+                    <span
+                      className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full hidden sm:inline whitespace-nowrap"
+                      style={{ borderLeft: `2px solid ${color}` }}
+                    >
+                      {structureLabel}
+                    </span>
+                  )}
+                </div>
+                <span className="text-xs text-gray-500 font-mono flex-shrink-0">
+                  {count} client {count === 1 ? 'quote' : 'quotes'}
+                  {therapistRefCount > 0 && (
+                    <span className="text-gray-400 ml-1">
+                      &middot; +{therapistRefCount} therapist {therapistRefCount === 1 ? 'ref' : 'refs'}
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-300"
+                  style={{ width: `${widthPct}%`, backgroundColor: color, opacity: isSelected ? 1 : 0.75 }}
+                />
+              </div>
+            </button>
+          );
+        })}
+        {tail.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowAll((v) => !v)}
+            className="text-xs text-primary hover:text-primary-dark font-medium px-2 py-1"
+          >
+            {showAll ? 'Show fewer' : `Other (${tail.length} more)`}
+          </button>
+        )}
+      </div>
+
+      {selected ? (
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              {selected.label}
+              <span className="text-gray-400 font-normal normal-case tracking-normal ml-2">
+                {selectedClientOcc.length} client {selectedClientOcc.length === 1 ? 'quote' : 'quotes'}
+                {selectedTherapistOcc.length > 0 && !showTherapistRefs && (
+                  <span> &middot; {selectedTherapistOcc.length} therapist {selectedTherapistOcc.length === 1 ? 'reference' : 'references'} hidden</span>
+                )}
+              </span>
+            </p>
+            <div className="flex items-center gap-2">
+              {selectedTherapistOcc.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowTherapistRefs((v) => !v)}
+                  className="text-[10px] font-medium text-primary hover:text-primary-dark bg-white border border-primary/20 hover:border-primary/40 px-2 py-0.5 rounded-full transition-colors"
+                >
+                  {showTherapistRefs
+                    ? 'Hide therapist references'
+                    : `+ Show ${selectedTherapistOcc.length} therapist ${selectedTherapistOcc.length === 1 ? 'reference' : 'references'}`}
+                </button>
+              )}
+              {selected.structure && (
+                <span className="text-[10px] bg-white border border-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
+                  {selected.structure}
+                </span>
+              )}
+            </div>
+          </div>
+          {visibleOccurrences.length > 0 ? (
+            <div className="space-y-2">
+              {visibleOccurrences.map((occ, i) => {
+                const snippets: LineageSnippet[] = [{
+                  text: occ.quote,
+                  timestamp: occ.timestamp,
+                  momentId: occ.momentId,
+                  speaker: occ.speaker,
+                }];
+                return (
+                  <div key={`${selected.id}-occ-${i}`} className="flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-100">
+                    <div className="flex-shrink-0 mt-0.5">
+                      {occ.speaker === 'therapist' ? (
+                        <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center">
+                          <Stethoscope className="w-3.5 h-3.5 text-blue-600" />
+                        </div>
+                      ) : (
+                        <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center">
+                          <User className="w-3.5 h-3.5 text-amber-600" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <p className="text-xs font-semibold text-gray-500">
+                          {occ.speaker === 'therapist' ? 'Therapist' : 'Client'}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          {occ.timestamp && (
+                            <span className="text-[10px] font-mono text-gray-400">{occ.timestamp}</span>
+                          )}
+                          <LineagePopover
+                            snippets={snippets}
+                            methodology={`Topic: ${selected.label} (${selected.structure || 'mixed'}). Detected by keyword + structure matching across moments and transcript.`}
+                          >
+                            <span className="text-[10px] text-gray-400">source</span>
+                          </LineagePopover>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-700 italic leading-relaxed">&ldquo;{occ.quote}&rdquo;</p>
+                      {occ.structures && occ.structures.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {occ.structures.slice(0, 4).map((s, si) => (
+                            <span key={si} className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">
+                              {String(s).replace(/_/g, ' ')}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400 italic">No quotes captured for this topic.</p>
+          )}
+        </div>
+      ) : (
+        <p className="text-xs text-gray-400 italic px-1">Click a bar to see every quote.</p>
+      )}
+    </div>
+  );
+}
+
+// ========== SUMMARY LENGTH FILTER ==========
+
+/**
+ * Strip out any "## Risk Assessment" / "## Current Risk Level" / "## Risk Profile"
+ * sections from an AI-generated clinical summary.
+ *
+ * Rationale: assessing risk is the clinician's responsibility, not the AI's.
+ * The Risk & Clinical Flags section already surfaces the underlying transcript
+ * signals (e.g. specific quotes, severity, recommendation). We do NOT want a
+ * top-line "Current Risk Level: High" verdict appearing inside the prose summary
+ * because it reads as a clinical conclusion the AI is not qualified to deliver.
+ *
+ * The actual doctor-assigned risk lives on the Session Sign-Off panel.
+ */
+function stripAIRiskAssessment(report: string): string {
+  if (!report) return '';
+  // Remove any "## Risk Assessment / Risk Level / Risk Profile / Risk Picture" section
+  // (and its body) up to the next ## heading or end of text. Case-insensitive.
+  return report
+    .replace(
+      /\n*##\s+(Risk Assessment|Risk Level|Current Risk Level|Risk Profile|Risk Picture|Risk Stratification)[^\n]*\n[\s\S]*?(?=\n##\s|\n#(?!#)|$)/gi,
+      '\n',
+    )
+    // Also drop bare "Risk Level: <verdict>" / "Current Risk Level: ..." lines that
+    // sometimes appear inline outside their own section.
+    .replace(/^[\s-*•]*\*?\*?(Current\s+)?Risk\s+(Level|Score|Rating)\*?\*?:.*$/gim, '')
+    // Collapse multiple blank lines left behind
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/**
+ * Derive a Short/Medium/Full view of an existing clinician report string.
+ * No new content is fabricated — Short is the first paragraph (or first 2
+ * sentences if no paragraph break), Medium is the first ~3 paragraphs, Full
+ * is the whole report. This honors the strict-audit rule: the toggle only
+ * filters what the LLM already produced.
+ */
+function deriveSummaryByLength(report: string, length: 'short' | 'medium' | 'full'): string {
+  if (!report) return '';
+  if (length === 'full') return report;
+
+  // Split by markdown header or blank-line paragraph breaks.
+  const paragraphs = report
+    .split(/\n\s*\n|\n(?=##\s)/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  if (length === 'medium') {
+    return paragraphs.slice(0, 3).join('\n\n');
   }
 
-  if (allText.includes('perfect') || allText.includes('standard')) {
-    considerations.push({
-      id: 'dx-ocd-traits', code: 'Z73.1', name: 'Perfectionism (not a disorder)',
-      indicators: ['Rigid personal standards expressed', 'Self-critical evaluation patterns'],
-      confidence: 0.65, status: 'monitor',
-    });
-  }
-
-  considerations.push({
-    id: 'dx-adjustment', code: 'F43.20', name: 'Adjustment Disorder, Unspecified',
-    indicators: ['Identifiable stressor(s) present', 'Symptoms emerged in relation to stressor timeline'],
-    confidence: 0.58, status: 'rule_in',
-  });
-
-  if (riskLevel === 'high' || allText.includes('sad') || allText.includes('depress') || allText.includes('hopeless')) {
-    considerations.push({
-      id: 'dx-mdd', code: 'F32.1', name: 'Major Depressive Disorder, Moderate',
-      indicators: ['Depressed mood reported or observed', 'Functional impairment noted', 'Duration criteria need clarification'],
-      confidence: 0.45, status: 'rule_out',
-    });
-  }
-
-  if (hasLabeling || hasPersonalization) {
-    considerations.push({
-      id: 'dx-self-worth', code: 'Z73.0', name: 'Self-Worth / Identity Concerns',
-      indicators: [
-        ...(hasLabeling ? ['Labeling distortion detected -- client applies fixed negative labels to self'] : []),
-        ...(hasPersonalization ? ['Personalization distortion detected -- client over-attributes blame to self'] : []),
-        'Pattern suggests underlying self-worth schema',
-      ],
-      confidence: Math.min(0.95, 0.55 + distortionTypes.length * 0.05), status: 'monitor',
-    });
-  }
-
-  return considerations;
+  // Short: first paragraph, or first 2 sentences if there is only one block.
+  if (paragraphs.length > 1) return paragraphs[0];
+  const sentences = report.match(/[^.!?]+[.!?]+/g) || [report];
+  return sentences.slice(0, 2).join(' ').trim();
 }
 
 // ========== COMPONENT ==========
@@ -524,11 +861,83 @@ export default function SessionOverviewPage() {
   const [expandedTopic, setExpandedTopic] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  // Clinical-summary length toggle (Short / Medium / Full). Persisted per
+  // therapist via localStorage so the practitioner's preferred density sticks.
+  type SummaryLength = 'short' | 'medium' | 'full';
+  const [summaryLength, setSummaryLength] = useState<SummaryLength>('medium');
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const saved = window.localStorage.getItem('sessionlens-summary-length');
+    if (saved === 'short' || saved === 'medium' || saved === 'full') {
+      setSummaryLength(saved);
+    }
+  }, []);
+  const updateSummaryLength = useCallback((next: SummaryLength) => {
+    setSummaryLength(next);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('sessionlens-summary-length', next);
+    }
+  }, []);
+
   // Assessment state (from analysis page)
   const [sessionAssessment, setSessionAssessment] = useState('');
   const [isEditingAssessment, setIsEditingAssessment] = useState(false);
   const [assessmentDraft, setAssessmentDraft] = useState('');
   const [savingAssessment, setSavingAssessment] = useState(false);
+
+  // Which clinical-note format is currently shown in Notes & Export
+  const [activeNoteType, setActiveNoteType] = useState<'soap' | 'dap'>('soap');
+
+  // Notes & Export panel — collapsed by default. The collapsed state still shows
+  // tabs + Copy/Download toolbar (so the doctor can grab the AI draft without
+  // expanding); the per-section editor only appears when expanded.
+  const [notesExpanded, setNotesExpanded] = useState(false);
+
+  // Outcome-scores capture (PHQ-9 / GAD-7) — opened from a CTA below.
+  const [outcomeFormOpen, setOutcomeFormOpen] = useState(false);
+  // Cached scores from analysisResult.outcomeMeasures so we can show a quick
+  // "Already recorded: PHQ-9 X · GAD-7 Y" badge instead of just the CTA.
+  const existingOutcomes = (() => {
+    if (!session?.analysisResult) return null;
+    const o = (session.analysisResult as unknown as Record<string, unknown>).outcomeMeasures as
+      | { phq9?: number; gad7?: number }
+      | undefined;
+    if (!o || (o.phq9 == null && o.gad7 == null)) return null;
+    return o;
+  })();
+
+  // Editable clinical summary — doctor can override the AI-generated text.
+  // Stored in localStorage keyed by sessionId. Empty string = use AI draft.
+  const [editedSummary, setEditedSummary] = useState<string>('');
+  const [isEditingSummary, setIsEditingSummary] = useState<boolean>(false);
+  const [summaryDraft, setSummaryDraft] = useState<string>('');
+
+  useEffect(() => {
+    if (!sessionId || typeof window === 'undefined') return;
+    try {
+      const saved = window.localStorage.getItem(`sessionlens-summary-edit-${sessionId}`);
+      if (saved) setEditedSummary(saved);
+    } catch {
+      /* ignore */
+    }
+  }, [sessionId]);
+
+  const persistSummaryEdit = useCallback(
+    (next: string) => {
+      setEditedSummary(next);
+      if (typeof window === 'undefined') return;
+      try {
+        if (next) {
+          window.localStorage.setItem(`sessionlens-summary-edit-${sessionId}`, next);
+        } else {
+          window.localStorage.removeItem(`sessionlens-summary-edit-${sessionId}`);
+        }
+      } catch {
+        /* ignore */
+      }
+    },
+    [sessionId],
+  );
 
   useEffect(() => {
     if (session?.analysisResult) {
@@ -604,52 +1013,120 @@ export default function SessionOverviewPage() {
   const cbt = analysis.cbtAnalysis as CBTAnalysisResult | undefined;
   const topics = generateTopics(analysis.moments, analysis.structureProfile, cbt, session.transcript);
   const quickSummary = generateQuickSummary(analysis, topics, cbt);
+  const severityRank: Record<string, number> = { high: 3, medium: 2, low: 1 };
   const clinicalFlags = generateClinicalFlags(
     analysis.moments, analysis.riskFlags, cbt,
     analysis.structureProfile, analysis.therapistMoves, session.transcript,
-  );
-  const diagnosticConsiderations = generateDiagnosticConsiderations(
-    analysis.quickInsight.riskLevel, analysis.moments, cbt,
-  );
-
-  const riskCount = clinicalFlags.filter((f) => f.type === 'risk').length;
+  ).slice().sort((a, b) => (severityRank[b.severity] ?? 0) - (severityRank[a.severity] ?? 0));
+  // Split risk flags by interventionType so the teaser reflects what each one
+  // actually calls for. A 'monitor' flag is a forward-looking precaution, not an
+  // active risk — counting it as one over-fires the red alarm and contradicts the
+  // muted Eye icon used on the card itself.
+  const activeRiskCount = clinicalFlags.filter(
+    (f) => f.type === 'risk' && f.interventionType !== 'monitor',
+  ).length;
+  const monitorCount = clinicalFlags.filter(
+    (f) => f.type === 'risk' && f.interventionType === 'monitor',
+  ).length;
   const protectiveCount = clinicalFlags.filter((f) => f.type === 'protective').length;
   const notableCount = clinicalFlags.filter((f) => f.type === 'notable').length;
 
-  const getFlagIcon = (type: string) => {
-    switch (type) {
-      case 'risk': return <AlertTriangle className="w-4 h-4 text-red-500" />;
-      case 'protective': return <Shield className="w-4 h-4 text-green-500" />;
-      default: return <Info className="w-4 h-4 text-blue-500" />;
+  /**
+   * Pick a flag icon by combining `type`, `severity`, and `interventionType`.
+   *
+   * Visual logic:
+   *   - Protective flag → green Shield (positive observation)
+   *   - Notable flag    → blue Info (worth noticing, not a risk)
+   *   - Risk flag with interventionType === 'monitor'
+   *       → Eye icon (forward-looking precaution, not an active alarm)
+   *       → colour tinted by severity: red (high) / amber (medium) / slate (low)
+   *   - Risk flag with interventionType === 'immediate' (or unspecified)
+   *       → AlertTriangle (the alarm shape)
+   *       → colour tinted by severity: red (high) / amber (medium) / muted slate (low)
+   *
+   * The point: a low-severity "monitor" flag now reads as a quiet eye-icon, not the
+   * same red triangle that would shout for an acute high-severity risk. This stops
+   * the colour signal from over-firing on forward-looking precautions.
+   */
+  const getFlagIcon = (flag: ClinicalFlag) => {
+    if (flag.type === 'protective') return <Shield className="w-4 h-4 text-green-500" />;
+    if (flag.type === 'notable') return <Info className="w-4 h-4 text-blue-500" />;
+
+    // Risk flags — colour by severity, shape by interventionType
+    const colorClass =
+      flag.severity === RiskSeverity.HIGH
+        ? 'text-red-500'
+        : flag.severity === RiskSeverity.MEDIUM
+          ? 'text-amber-500'
+          : 'text-slate-400';
+    if (flag.interventionType === 'monitor') {
+      return <Eye className={`w-4 h-4 ${colorClass}`} />;
     }
+    return <AlertTriangle className={`w-4 h-4 ${colorClass}`} />;
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'rule_in': return 'bg-amber-100 text-amber-700';
-      case 'rule_out': return 'bg-red-100 text-red-700';
-      case 'monitor': return 'bg-blue-100 text-blue-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
-  };
+  // Build note section configs for SOAP and DAP — used by the EditableClinicalNote panel.
+  // Sections include AI drafts (regenerated from current analysis), plus the explanations
+  // that appear in the per-section InfoTooltips.
+  const soapDraft = generateSOAPNote(analysis);
+  const dapDraft = generateDAPNote(analysis);
 
-  const downloadNote = (type: 'soap' | 'dap') => {
-    const text = type === 'soap'
-      ? formatSOAPAsText(generateSOAPNote(analysis))
-      : formatDAPAsText(generateDAPNote(analysis));
-    const filename = `${type.toUpperCase()}_Note_${session.clientCode}_Session${session.sessionNumber}_${session.date}.txt`;
-    const blob = new Blob([text], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+  const soapSections: ClinicalNoteSection[] = [
+    {
+      key: 'subjective',
+      label: 'Subjective (S)',
+      description: "What the client reported in their own words — their feelings, complaints, and self-described experience this session.",
+      methodology: 'Drafted from the top 3 highest-intensity moments (verbatim quotes), the session\'s clinical priority, and the client\'s expressed prognosis. No values invented.',
+      aiDraft: soapDraft.subjective,
+    },
+    {
+      key: 'objective',
+      label: 'Objective (O)',
+      description: "What the clinician observed and measured — behavioral observations, dominant phenomenological structures, therapist moves used, risk indicators.",
+      methodology: 'Drafted from: count of high-intensity moments (≥7/10), top 3 dominant structures from the structure profile, top 2 therapist-move types, and the high-severity risk-flag list.',
+      aiDraft: soapDraft.objective,
+    },
+    {
+      key: 'assessment',
+      label: 'Assessment (A)',
+      description: "The clinician's clinical interpretation — primary concern, formulation, risk picture, prognosis, and progress toward treatment goals.",
+      methodology: 'Drafted from: clinical priority + risk level (from Quick Insight), the first two moment contexts, and any risk flags above low severity. Prognosis carries through verbatim from the analysis.',
+      aiDraft: soapDraft.assessment,
+    },
+    {
+      key: 'plan',
+      label: 'Plan (P)',
+      description: "What happens next — interventions, homework, referrals, monitoring, and the next session date.",
+      methodology: 'Drafted from: top recommendation (Quick Insight), structure-specific intervention suggestions (e.g. somatic grounding when body is dominant), and standard follow-up scaffolding (homework review, next-session-in-1-week).',
+      aiDraft: soapDraft.plan,
+    },
+  ];
 
-  const defaultAssessment = `Client presents with ${analysis.quickInsight.riskLevel} risk level. ${analysis.quickInsight.clinicalPriority}. ${analysis.quickInsight.prognosis}. Primary phenomenological structures activated include ${
+  const dapSections: ClinicalNoteSection[] = [
+    {
+      key: 'data',
+      label: 'Data (D)',
+      description: "What was reported AND observed — the DAP format collapses Subjective + Objective into a single section. Includes verbatim quotes plus measured/observed signals.",
+      methodology: 'Drafted from: top 2 moment quotes with their context and intensity scores, plus session-level metrics (emotional regulation, therapeutic alliance) and any detected risk factors with detail strings.',
+      aiDraft: dapDraft.data,
+    },
+    {
+      key: 'assessment',
+      label: 'Assessment (A)',
+      description: "The clinician's interpretation — primary concern, recurring patterns, client strengths, prognosis.",
+      methodology: 'Drafted from: clinical priority, risk level, deduplicated moment contexts (recurring themes), reflective-capacity score, and prognosis text from the Quick Insight.',
+      aiDraft: dapDraft.assessment,
+    },
+    {
+      key: 'plan',
+      label: 'Plan (P)',
+      description: "Numbered action items for the next session and ongoing treatment.",
+      methodology: 'Drafted from: top recommendation, standard treatment-continuity items, homework prompt, and conditional risk-monitoring item that appears only when active risk flags exist.',
+      aiDraft: dapDraft.plan,
+    },
+  ];
+
+  const defaultAssessment = `${analysis.quickInsight.clinicalPriority}. ${analysis.quickInsight.prognosis}. Dominant experience patterns: ${
     Object.entries(analysis.structureProfile)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 3)
@@ -659,42 +1136,16 @@ export default function SessionOverviewPage() {
 
   const displayAssessment = sessionAssessment || defaultAssessment;
 
-  const similarCases = analysis.similarCases || [];
-  const getSimilarCasesCountForDx = (indicators: string[]): number => {
-    if (similarCases.length === 0) return 0;
-    const dxStructures = indicators.filter((ind) => ind.toLowerCase().includes('structure') || ind.toLowerCase().includes('pattern'));
-    if (dxStructures.length === 0) return 0;
-    return similarCases.filter((c) => {
-      const caseStructures = (c.dominantStructures || []).map((s) => s.toLowerCase());
-      return dxStructures.some((ds) => caseStructures.some((cs) => cs.includes(ds.toLowerCase())));
-    }).length;
-  };
-
   return (
     <div className="space-y-4">
       {/* 1. Quick Insight Banner */}
-      <div
-        className={`rounded-xl p-6 border-l-4 ${
-          analysis.quickInsight.riskLevel === 'high'
-            ? 'bg-red-50 border-l-red-500'
-            : analysis.quickInsight.riskLevel === 'moderate'
-              ? 'bg-amber-50 border-l-amber-500'
-              : 'bg-green-50 border-l-green-500'
-        }`}
-      >
+      <div className="rounded-xl p-6 border-l-4 bg-white border-l-primary border border-gray-200">
         <div className="flex items-center gap-3 mb-2">
-          <Badge
-            label={analysis.quickInsight.riskLevel.charAt(0).toUpperCase() + analysis.quickInsight.riskLevel.slice(1) + ' Risk'}
-            variant={
-              analysis.quickInsight.riskLevel === 'high' ? 'risk-high'
-                : analysis.quickInsight.riskLevel === 'moderate' ? 'risk-medium' : 'risk-low'
-            }
-          />
           <span className="text-xs text-gray-500 font-mono">Session #{session.sessionNumber} &middot; {session.date}</span>
           <InfoTooltip
             title="Quick Insight Engine"
-            description="Synthesized from the session's structure profile, risk signals, and CBT distortion load. The risk level reflects the highest-severity flag detected, while clinical priority is derived from the dominant presenting concerns."
-            methodology="Multi-layer analysis: phenomenological structure coding → risk detection (4-layer algorithm) → cognitive distortion mapping → clinical synthesis"
+            description="Synthesized from the session's structure profile, detected clinical signals, and CBT distortion load. Clinical priority is derived from the dominant presenting concerns; specific risk signals appear in the Risk & Clinical Flags section below."
+            methodology="Multi-layer analysis: phenomenological structure coding → signal detection (4-layer algorithm) → cognitive distortion mapping → clinical synthesis"
           />
         </div>
         <p className="text-gray-800 font-medium">{analysis.quickInsight.clinicalPriority}</p>
@@ -712,203 +1163,189 @@ export default function SessionOverviewPage() {
             methodology="GPT-4o clinical synthesis with structure-weighted attention across 10 phenomenological dimensions"
           />
         }
+        headerExtra={
+          <div
+            className="inline-flex items-center rounded-lg border border-gray-200 bg-gray-50 p-0.5 text-xs"
+            role="group"
+            aria-label="Summary length"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {(['short', 'medium', 'full'] as const).map((opt) => (
+              <button
+                key={opt}
+                onClick={(e) => { e.stopPropagation(); updateSummaryLength(opt); }}
+                className={`px-2.5 py-1 rounded-md font-medium capitalize transition ${
+                  summaryLength === opt
+                    ? 'bg-white text-primary shadow-sm border border-gray-200'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+                aria-pressed={summaryLength === opt}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        }
         teaser={
           <p className="text-sm text-gray-700 leading-relaxed line-clamp-3">{quickSummary}</p>
         }
       >
-        <p className="text-sm text-gray-700 leading-relaxed mb-4">{analysis.clinicianReport || quickSummary}</p>
-        {Object.entries(analysis.structureProfile || {})
-          .filter(([, v]) => typeof v === 'number' && v > 0.1)
-          .sort(([, a], [, b]) => b - a)
-          .length > 0 && (
-          <div>
-            <p className="text-xs text-gray-500 font-medium mb-2">Dominant structures:</p>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(analysis.structureProfile || {})
-                .filter(([, v]) => typeof v === 'number' && v > 0.1)
-                .sort(([, a], [, b]) => b - a)
-                .slice(0, 5)
-                .map(([name, score]) => (
-                  <span key={name} className="text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full">
-                    {name.replace(/_/g, ' ')} {Math.round(score * 100)}%
+        {/* Editable clinical summary — doctor can override the AI text. Risk-assessment
+            sections are stripped before rendering (risk verdicts are clinician work). */}
+        {(() => {
+          // Source: edited override if present, else AI-generated. Always strip AI risk verdicts.
+          const aiSourceText = analysis.clinicianReport || quickSummary;
+          const sourceText = editedSummary || aiSourceText;
+          const sanitized = stripAIRiskAssessment(sourceText);
+          const displayText = deriveSummaryByLength(sanitized, summaryLength);
+          const isEdited = !!editedSummary;
+
+          if (isEditingSummary) {
+            return (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                  <p className="text-[11px] uppercase tracking-wider font-semibold text-primary">
+                    Editing clinical summary
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        persistSummaryEdit(summaryDraft);
+                        setIsEditingSummary(false);
+                      }}
+                      className="flex items-center gap-1 text-xs text-green-700 hover:text-green-800 font-medium px-2.5 py-1 rounded hover:bg-green-50 transition"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      Save
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsEditingSummary(false);
+                        setSummaryDraft('');
+                      }}
+                      className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 font-medium px-2.5 py-1 rounded hover:bg-gray-100 transition"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+                <textarea
+                  value={summaryDraft}
+                  onChange={(e) => setSummaryDraft(e.target.value)}
+                  rows={Math.max(8, Math.min(20, summaryDraft.split('\n').length + 1))}
+                  autoFocus
+                  className="w-full text-sm text-gray-700 leading-relaxed bg-white border border-primary/30 rounded-lg p-3 focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary resize-y font-sans"
+                  placeholder="Your clinical summary..."
+                />
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Markdown supported (## headings, - bullets, **bold**). AI risk verdicts are always stripped — only your judgment lives in the Sign-Off panel below.
+                </p>
+              </div>
+            );
+          }
+
+          return (
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                {isEdited ? (
+                  <span className="text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full inline-flex items-center gap-1">
+                    <Edit3 className="w-2.5 h-2.5" />
+                    Clinician-edited
                   </span>
-                ))}
+                ) : (
+                  <span className="text-[10px] font-semibold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full inline-flex items-center gap-1">
+                    <Sparkles className="w-2.5 h-2.5" />
+                    AI draft
+                  </span>
+                )}
+                <div className="flex items-center gap-1">
+                  {isEdited && (
+                    <button
+                      onClick={() => {
+                        if (window.confirm('Discard your edits and revert to the AI draft?')) {
+                          persistSummaryEdit('');
+                        }
+                      }}
+                      className="flex items-center gap-1 text-[11px] text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100 transition"
+                      title="Revert to AI draft"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      Revert
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      // Initialize the editor with the sanitized current text (so doctor doesn't see/edit AI risk language)
+                      setSummaryDraft(stripAIRiskAssessment(sourceText));
+                      setIsEditingSummary(true);
+                    }}
+                    className="flex items-center gap-1 text-xs text-primary hover:text-primary-dark font-medium px-2 py-1 rounded hover:bg-primary/10 transition"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    Edit summary
+                  </button>
+                </div>
+              </div>
+              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+                {displayText}
+              </p>
             </div>
-          </div>
-        )}
+          );
+        })()}
+        {(() => {
+          const structureRows = Object.entries(analysis.structureProfile || {})
+            .filter(([, v]) => typeof v === 'number' && v > 0.1)
+            .sort(([, a], [, b]) => (b as number) - (a as number))
+            .slice(0, 5);
+          if (structureRows.length === 0) return null;
+          const barData = structureRows.map(([name, score]) => {
+            let color = '#2D7D7D';
+            try {
+              color = getStructureColor(name as StructureName);
+            } catch {
+              color = '#2D7D7D';
+            }
+            return { name, score: score as number, color };
+          });
+          return (
+            <div>
+              <p className="text-xs text-gray-500 font-medium mb-2">Dominant experience patterns:</p>
+              <StructureBar
+                data={barData}
+                renderLabel={(d, defaultLabel) => {
+                  const matchingMoments = (analysis.moments || [])
+                    .filter((m) =>
+                      Array.isArray(m.structures) &&
+                      m.structures.map((s) => String(s).toLowerCase()).includes(d.name.toLowerCase()),
+                    )
+                    .sort((a, b) => (b.intensity || 0) - (a.intensity || 0))
+                    .slice(0, 3);
+                  const structureSnippets: LineageSnippet[] = matchingMoments.map((m) => ({
+                    text: m.quote,
+                    timestamp: m.timestamp,
+                    momentId: m.id,
+                    speaker: 'client',
+                  }));
+                  return (
+                    <LineagePopover
+                      snippets={structureSnippets}
+                      methodology={`Phenomenological structure coding: ${d.name.replace(/_/g, ' ')} present in ${matchingMoments.length} moment(s); aggregate weight ${Math.round(d.score * 100)}%`}
+                    >
+                      <span className="cursor-pointer hover:text-primary transition">{defaultLabel}</span>
+                    </LineagePopover>
+                  );
+                }}
+              />
+            </div>
+          );
+        })()}
         <p className="text-xs text-gray-400 mt-3 flex items-center gap-1">
           <Sparkles className="w-3 h-3" />
           Auto-generated clinical summary -- review before relying on for documentation
         </p>
       </CollapsibleSection>
 
-      {/* 2b. Session Story Arc (Narrative Arc) */}
-      {analysis?.narrativeArc && (
-        <CollapsibleSection
-          title="Session Story Arc"
-          icon={<GitBranch className="w-5 h-5 text-teal-500" />}
-          tooltip={
-            <InfoTooltip
-              title="Narrative Arc Analysis"
-              description="Maps the session's narrative flow -- turning points, phases, and trajectory. Preserves the experiential Gestalt rather than fragmenting the story into disconnected data points."
-              methodology="Based on phenomenological story mapping (Henriksen et al., 2021/2022; Daly et al., 2024). Each moment is tracked for structural shifts, intensity changes, and valence transitions to identify meaningful turning points and phases."
-            />
-          }
-          teaser={
-            <div className="space-y-2">
-              {analysis.narrativeArc.gestaltSummary && (
-                <p className="text-sm text-gray-700 italic line-clamp-2">{analysis.narrativeArc.gestaltSummary}</p>
-              )}
-              {analysis.narrativeArc.overallTrajectory && (
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                  analysis.narrativeArc.overallTrajectory === 'improving' ? 'bg-green-100 text-green-700' :
-                  analysis.narrativeArc.overallTrajectory === 'deteriorating' ? 'bg-red-100 text-red-700' :
-                  analysis.narrativeArc.overallTrajectory === 'stable' ? 'bg-amber-100 text-amber-700' :
-                  analysis.narrativeArc.overallTrajectory === 'oscillating' ? 'bg-purple-100 text-purple-700' :
-                  'bg-teal-100 text-teal-700'
-                }`}>
-                  {analysis.narrativeArc.overallTrajectory.charAt(0).toUpperCase() + analysis.narrativeArc.overallTrajectory.slice(1)}
-                </span>
-              )}
-            </div>
-          }
-        >
-          {/* Gestalt Summary */}
-          {analysis.narrativeArc.gestaltSummary && (
-            <div className="mb-6">
-              <div className="border-l-4 border-teal-400 pl-4 py-2">
-                <p className="text-base text-gray-700 italic leading-relaxed">{analysis.narrativeArc.gestaltSummary}</p>
-              </div>
-              {analysis.narrativeArc.overallTrajectory && (
-                <div className="mt-3 flex items-center gap-2">
-                  <span className="text-xs text-gray-500 font-medium">Overall trajectory:</span>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                    analysis.narrativeArc.overallTrajectory === 'improving' ? 'bg-green-100 text-green-700' :
-                    analysis.narrativeArc.overallTrajectory === 'deteriorating' ? 'bg-red-100 text-red-700' :
-                    analysis.narrativeArc.overallTrajectory === 'stable' ? 'bg-amber-100 text-amber-700' :
-                    analysis.narrativeArc.overallTrajectory === 'oscillating' ? 'bg-purple-100 text-purple-700' :
-                    'bg-teal-100 text-teal-700'
-                  }`}>
-                    {analysis.narrativeArc.overallTrajectory.charAt(0).toUpperCase() + analysis.narrativeArc.overallTrajectory.slice(1)}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Phases Timeline */}
-          {Array.isArray(analysis.narrativeArc.phases) && analysis.narrativeArc.phases.length > 0 && (
-            <div className="mb-6">
-              <p className="text-xs text-gray-500 font-medium mb-3">Session Phases</p>
-              <div className="flex items-stretch gap-1 overflow-x-auto pb-2">
-                {analysis.narrativeArc.phases.map((phase, i) => {
-                  const valenceColor =
-                    phase.dominantValence === 'positive' ? 'border-green-300 bg-green-50' :
-                    phase.dominantValence === 'negative' ? 'border-red-300 bg-red-50' :
-                    phase.dominantValence === 'mixed' ? 'border-purple-300 bg-purple-50' :
-                    'border-gray-300 bg-gray-50';
-                  return (
-                    <div
-                      key={i}
-                      className={`flex-1 min-w-[140px] rounded-xl border-2 p-3 ${valenceColor}`}
-                    >
-                      <p className="text-sm font-semibold text-gray-800 mb-1">{phase.label}</p>
-                      <p className="text-xs text-gray-600 leading-relaxed mb-2">{phase.description}</p>
-                      <div className="flex flex-wrap gap-1">
-                        {phase.dominantStructures?.map((s) => {
-                          const color = getStructureColor(s);
-                          const structure = getStructure(s);
-                          return (
-                            <span
-                              key={s}
-                              className="w-3 h-3 rounded-full inline-block"
-                              style={{ backgroundColor: color }}
-                              title={structure.label}
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Turning Points */}
-          {Array.isArray(analysis.narrativeArc.turningPoints) && analysis.narrativeArc.turningPoints.length > 0 && (
-            <div>
-              <p className="text-xs text-gray-500 font-medium mb-3">Turning Points</p>
-              <div className="space-y-3">
-                {analysis.narrativeArc.turningPoints.map((tp, i) => {
-                  const typeColors: Record<string, string> = {
-                    onset: 'bg-blue-100 text-blue-700',
-                    escalation: 'bg-orange-100 text-orange-700',
-                    crisis: 'bg-red-100 text-red-700',
-                    insight: 'bg-green-100 text-green-700',
-                    shift: 'bg-purple-100 text-purple-700',
-                    resolution: 'bg-teal-100 text-teal-700',
-                  };
-                  const badgeClass = typeColors[tp.type] || 'bg-gray-100 text-gray-700';
-                  return (
-                    <div key={i} className="p-4 bg-white rounded-xl border border-gray-200">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <Target className="w-4 h-4 text-gray-400" />
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badgeClass}`}>
-                            {tp.type.charAt(0).toUpperCase() + tp.type.slice(1)}
-                          </span>
-                          <span className="text-xs text-gray-400">Moment #{tp.momentId}</span>
-                        </div>
-                      </div>
-                      <p className="text-sm text-gray-700 mb-3 pl-6">{tp.description}</p>
-                      {tp.emotionalShift && (
-                        <div className="flex items-center gap-2 pl-6 mb-2">
-                          <span className="text-xs text-gray-500 font-medium">Emotional shift:</span>
-                          <span className="text-xs text-gray-700">{tp.emotionalShift.from}</span>
-                          <ArrowRight className="w-3 h-3 text-gray-400" />
-                          <span className="text-xs text-gray-700">{tp.emotionalShift.to}</span>
-                        </div>
-                      )}
-                      {((tp.structuresBefore && tp.structuresBefore.length > 0) || (tp.structuresAfter && tp.structuresAfter.length > 0)) && (
-                        <div className="flex items-center gap-2 pl-6">
-                          <span className="text-xs text-gray-500 font-medium">Structures:</span>
-                          <div className="flex gap-1">
-                            {tp.structuresBefore?.map((s) => (
-                              <span
-                                key={`before-${s}`}
-                                className="w-3 h-3 rounded-full inline-block"
-                                style={{ backgroundColor: getStructureColor(s) }}
-                                title={getStructure(s).label}
-                              />
-                            ))}
-                          </div>
-                          <ArrowRight className="w-3 h-3 text-gray-400" />
-                          <div className="flex gap-1">
-                            {tp.structuresAfter?.map((s) => (
-                              <span
-                                key={`after-${s}`}
-                                className="w-3 h-3 rounded-full inline-block"
-                                style={{ backgroundColor: getStructureColor(s) }}
-                                title={getStructure(s).label}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          <p className="text-xs text-gray-400 mt-4 flex items-center gap-1">
-            <Sparkles className="w-3 h-3" />
-            Narrative arc mapped from phenomenological story analysis -- review with clinical context
-          </p>
-        </CollapsibleSection>
-      )}
 
       {/* 3. Session Topics & Key Moments */}
       <CollapsibleSection
@@ -918,82 +1355,37 @@ export default function SessionOverviewPage() {
           <InfoTooltip
             title="Topic Extraction"
             description="Topics are extracted from the transcript using semantic clustering of client utterances. Each topic is scored by frequency (mentions) and clinical relevance (AI confidence). Key moments are identified by emotional intensity peaks."
-            methodology="NLP topic modeling with phenomenological structure alignment. Confidence reflects inter-rater reliability simulation."
+            methodology="NLP topic modeling with phenomenological structure alignment. Confidence reflects inter-rater reliability simulation (agreement between independent raters)."
           />
         }
         teaser={
           <div>
             <div className="flex flex-wrap gap-2 mb-2">
-              {topics.slice(0, 4).map((t) => (
-                <span key={t.id} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/5 border border-primary/20 text-sm font-medium text-gray-800">
-                  {t.label}
-                  {t.mentions > 1 && <span className="text-xs text-gray-400">x{t.mentions}</span>}
-                </span>
-              ))}
+              {topics.slice(0, 4).map((t) => {
+                const c = t.count ?? t.mentions ?? 0;
+                return (
+                  <span key={t.id} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/5 border border-primary/20 text-sm font-medium text-gray-800">
+                    {t.label}
+                    {c > 0 && <span className="text-xs text-gray-400">x{c}</span>}
+                  </span>
+                );
+              })}
               {topics.length > 4 && <span className="text-xs text-gray-400 self-center">+{topics.length - 4} more</span>}
             </div>
-            {topics[0]?.triggerQuote && (
-              <p className="text-xs text-gray-500 italic truncate">&ldquo;{topics[0].triggerQuote}&rdquo;</p>
+            {topics[0]?.occurrences?.[0]?.quote && (
+              <p className="text-xs text-gray-500 italic truncate">&ldquo;{topics[0].occurrences[0].quote}&rdquo;</p>
             )}
           </div>
         }
       >
-        <div className="flex flex-wrap gap-2 mb-4">
-          {topics.map((topic) => (
-            <button
-              key={topic.id}
-              onClick={(e) => { e.stopPropagation(); setExpandedTopic(expandedTopic === topic.id ? null : topic.id); }}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border transition-all text-left ${
-                expandedTopic === topic.id
-                  ? 'bg-primary/10 border-primary/40 ring-1 ring-primary/20'
-                  : 'bg-white border-gray-200 hover:border-primary/30 hover:bg-primary/5'
-              }`}
-            >
-              <span className="text-sm font-medium text-gray-800">{topic.label}</span>
-              {topic.mentions > 1 && <span className="text-xs text-gray-400">x{topic.mentions}</span>}
-              {topic.structureDimension && (
-                <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full hidden sm:inline">{topic.structureDimension}</span>
-              )}
-              <span
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: topic.confidence > 0.8 ? '#10B981' : topic.confidence > 0.6 ? '#F59E0B' : '#9CA3AF' }}
-                title={`Confidence: ${Math.round(topic.confidence * 100)}%`}
-              />
-            </button>
-          ))}
-        </div>
-
-        {expandedTopic && (() => {
-          const topic = topics.find((t) => t.id === expandedTopic);
-          if (!topic?.triggerQuote) return null;
-          return (
-            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 mt-0.5">
-                  {topic.speaker === 'therapist' ? (
-                    <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center"><Stethoscope className="w-3.5 h-3.5 text-blue-600" /></div>
-                  ) : (
-                    <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center"><User className="w-3.5 h-3.5 text-amber-600" /></div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-gray-500 mb-1">{topic.speaker === 'therapist' ? 'Therapist:' : 'Client:'}</p>
-                  <p className="text-sm text-gray-700 italic leading-relaxed">&ldquo;{topic.triggerQuote}&rdquo;</p>
-                  <div className="flex items-center gap-3 mt-2">
-                    {topic.structureDimension && <span className="text-[10px] bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">{topic.structureDimension}</span>}
-                    <span className="text-[10px] text-gray-400">{Math.round(topic.confidence * 100)}% confidence &middot; {topic.mentions} mention{topic.mentions !== 1 ? 's' : ''}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-
+        <TopicsBarChart
+          topics={topics}
+          expandedTopic={expandedTopic}
+          onSelect={(id) => setExpandedTopic(expandedTopic === id ? null : id)}
+        />
         <p className="text-xs text-gray-400 mt-3 flex items-center gap-1">
           <Sparkles className="w-3 h-3" />
-          Confidence: <span className="inline-block w-2 h-2 rounded-full bg-green-500" /> &gt;80%&nbsp;
-          <span className="inline-block w-2 h-2 rounded-full bg-amber-500" /> 60-80%&nbsp;
-          <span className="inline-block w-2 h-2 rounded-full bg-gray-400" /> &lt;60%
+          Bar length = number of matching moments/utterances. Click a bar to see every quote.
         </p>
       </CollapsibleSection>
 
@@ -1010,43 +1402,100 @@ export default function SessionOverviewPage() {
         }
         teaser={
           <div className="flex items-center gap-4 text-sm">
-            {riskCount > 0 && <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500" />{riskCount} risk flag{riskCount !== 1 ? 's' : ''}</span>}
+            {activeRiskCount > 0 && <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500" />{activeRiskCount} active risk{activeRiskCount !== 1 ? 's' : ''}</span>}
+            {monitorCount > 0 && <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-slate-400" />{monitorCount} to monitor</span>}
             {protectiveCount > 0 && <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-green-500" />{protectiveCount} protective factor{protectiveCount !== 1 ? 's' : ''}</span>}
             {notableCount > 0 && <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-500" />{notableCount} notable finding{notableCount !== 1 ? 's' : ''}</span>}
-            {riskCount === 0 && protectiveCount === 0 && notableCount === 0 && <span className="text-gray-400">No clinical flags detected</span>}
+            {activeRiskCount === 0 && monitorCount === 0 && protectiveCount === 0 && notableCount === 0 && <span className="text-gray-400">No clinical flags detected</span>}
           </div>
         }
       >
+        {/* Confidence calculation explainer — appears once at the top of the flag list */}
+        <div className="flex items-center justify-end gap-1.5 mb-2 text-[10px] text-gray-400">
+          <span className="uppercase tracking-wider font-semibold">Confidence</span>
+          <InfoTooltip
+            title="How detection confidence is calculated"
+            description="Each clinical flag is scored from a base confidence (the strength of the rule that fired it) plus a signal-specific weight derived from the underlying moment. Higher-intensity moments, stronger structure-profile alignment, and clearer therapist-move patterns all push the score up."
+            methodology="confidence = base + (signal_weight × signal_strength), capped at 0.95.  Examples — Reflective capacity: 0.75 + (moment.intensity × 0.15). Therapeutic alliance: 0.70 + (empathic_move% × 0.15). Emotional regulation: 0.65 + (intensity_drop_ratio × 0.20). Risk flags: confidence comes directly from the 4-layer risk detector (lexical → negation → temporal → contextual)."
+          />
+        </div>
         <div className="space-y-3">
-          {clinicalFlags.map((flag) => (
+          {clinicalFlags.map((flag) => {
+            // Detect speaker from the flag's signature: alliance / empathic-attunement flags
+            // are evidenced by the THERAPIST's quote (e.g. "That sounds terrifying. Can you tell me…").
+            // All other flags are client-experience.
+            const isTherapistEvidence =
+              flag.type === 'protective' && /alliance|empathic|therapist/i.test(flag.label);
+            const speakerLabel = isTherapistEvidence ? 'Therapist' : 'Client';
+            const SpeakerIcon = isTherapistEvidence ? Stethoscope : User;
+            const speakerColor = isTherapistEvidence
+              ? { bg: 'bg-blue-100', text: 'text-blue-600', tag: 'bg-blue-50 text-blue-700' }
+              : { bg: 'bg-amber-100', text: 'text-amber-600', tag: 'bg-amber-50 text-amber-700' };
+
+            const flagSnippets: LineageSnippet[] = flag.transcriptQuote
+              ? [{ text: flag.transcriptQuote, timestamp: flag.location, speaker: isTherapistEvidence ? 'therapist' : 'client' }]
+              : [];
+            const flagMethodology =
+              flag.type === 'risk'
+                ? '4-layer risk detection: lexical → negation-aware → temporal → contextual'
+                : flag.type === 'protective'
+                  ? isTherapistEvidence
+                    ? 'Protective-factor detection from therapist-move analysis (alliance evidenced by the therapist\'s empathic attunement, not the client\'s words)'
+                    : 'Protective-factor detection from phenomenological structure profile (client-coded moments)'
+                  : flag.label.toLowerCase().startsWith('cognitive distortion')
+                    ? `CBT distortion: ${flag.label.replace(/^cognitive distortion:\s*/i, '')}`
+                    : 'Clinical signal detection from coded moments';
+            return (
             <div
               key={flag.id}
               className="p-4 bg-white rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-50 transition"
               onClick={() => setExpandedFlag(expandedFlag === flag.id ? null : flag.id)}
             >
               <div className="flex items-start gap-3">
-                {getFlagIcon(flag.type)}
+                {getFlagIcon(flag)}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium text-gray-900 text-sm">{flag.label}</p>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <p className="font-medium text-gray-900 text-sm">
+                      <LineagePopover snippets={flagSnippets} methodology={flagMethodology}>
+                        <span>{flag.label}</span>
+                      </LineagePopover>
+                    </p>
                     <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full inline-flex items-center gap-1 ${speakerColor.tag}`}>
+                        <SpeakerIcon className="w-3 h-3" />
+                        {speakerLabel}
+                      </span>
                       <span className="text-xs text-gray-400 font-mono">{flag.location}</span>
-                      <span className="text-xs text-gray-400">{Math.round(flag.confidence * 100)}% conf.</span>
+                      <span
+                        className="text-xs text-gray-400 cursor-help"
+                        title={`${Math.round(flag.confidence * 100)}% — derived from rule base + signal strength (see Confidence ⓘ above)`}
+                      >
+                        {Math.round(flag.confidence * 100)}% conf.
+                      </span>
                     </div>
                   </div>
                   {expandedFlag === flag.id && (
                     <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                      <div className="flex items-start gap-2">
-                        <MessageSquareQuote className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <p className="text-sm text-gray-700 italic leading-relaxed">&ldquo;{flag.transcriptQuote}&rdquo;</p>
+                      <div className="flex items-start gap-3">
+                        <div className={`w-7 h-7 rounded-full ${speakerColor.bg} flex items-center justify-center flex-shrink-0 mt-0.5`}>
+                          <SpeakerIcon className={`w-3.5 h-3.5 ${speakerColor.text}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] font-semibold text-gray-500 mb-1 uppercase tracking-wide">{speakerLabel}</p>
+                          <p className="text-sm text-gray-700 italic leading-relaxed">&ldquo;{flag.transcriptQuote}&rdquo;</p>
+                        </div>
                       </div>
-                      <p className="text-xs text-gray-400 mt-2">Source: Transcript at {flag.location} &middot; Detection confidence: {Math.round(flag.confidence * 100)}%</p>
+                      <p className="text-xs text-gray-400 mt-2">
+                        Source: Transcript at {flag.location} &middot; Detection confidence: {Math.round(flag.confidence * 100)}%
+                        {isTherapistEvidence && ' (therapist-move evidence — alliance is observed in clinician behavior, not client speech)'}
+                      </p>
                     </div>
                   )}
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </CollapsibleSection>
 
@@ -1064,15 +1513,29 @@ export default function SessionOverviewPage() {
         teaser={
           cbt && Array.isArray(cbt.distortions) && cbt.distortions.length > 0 ? (
             <div className="space-y-2">
-              <div className="flex items-center gap-4 text-sm">
-                <span className="text-gray-600">Distortion load:</span>
+              <div className="flex items-center gap-4 text-sm flex-wrap">
+                <span className="text-gray-600 inline-flex items-center gap-1">
+                  Distortion load:
+                  <InfoTooltip
+                    title="How distortion load is calculated"
+                    description="The overall presence of cognitive distortions across this session. It's the average detection confidence across every distortion the analyzer flagged. Higher = more pervasive distorted thinking patterns; useful for tracking change session-over-session."
+                    methodology={`distortionLoad = Σ(distortion.confidence) / count(distortions). For this session: ${cbt.distortions.length} distortion${cbt.distortions.length === 1 ? '' : 's'} averaged to ${Math.round((cbt.overallDistortionLoad || 0) * 100)}%. Bar color: green ≤ 30%, amber 31–60%, red > 60%.`}
+                  />
+                </span>
                 <div className="flex items-center gap-2 flex-1 max-w-48">
                   <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div className={`h-full rounded-full ${(cbt.overallDistortionLoad || 0) > 0.6 ? 'bg-red-400' : (cbt.overallDistortionLoad || 0) > 0.3 ? 'bg-amber-400' : 'bg-green-400'}`} style={{ width: `${Math.round((cbt.overallDistortionLoad || 0) * 100)}%` }} />
                   </div>
                   <span className="text-xs font-bold">{Math.round((cbt.overallDistortionLoad || 0) * 100)}%</span>
                 </div>
-                <span className="text-gray-600">Readiness:</span>
+                <span className="text-gray-600 inline-flex items-center gap-1">
+                  Readiness:
+                  <InfoTooltip
+                    title="How treatment readiness is estimated"
+                    description="An estimate of how ready the client appears to engage in active cognitive restructuring work this session. Derived from in-session signals: demonstrated insight, willingness to consider alternative interpretations, reflective capacity, and engagement with the therapist."
+                    methodology="Estimated by GPT-4o from the same coded moments used for distortion detection. Signals include: presence of reflective/metacognitive language, openness to therapist reframes, intensity of self-criticism (lower = higher readiness). Falls back to 0.5 (neutral) when the language model is unavailable. Bar color: green > 60%, amber otherwise."
+                  />
+                </span>
                 <div className="flex items-center gap-2 flex-1 max-w-48">
                   <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div className={`h-full rounded-full ${(cbt.treatmentReadiness || 0) > 0.6 ? 'bg-green-400' : 'bg-amber-400'}`} style={{ width: `${Math.round((cbt.treatmentReadiness || 0) * 100)}%` }} />
@@ -1094,12 +1557,45 @@ export default function SessionOverviewPage() {
         {cbt && Array.isArray(cbt.distortions) && cbt.distortions.length > 0 ? (
           <>
             <div className="space-y-3 mb-5">
-              {cbt.distortions.map((d, i) => (
+              {cbt.distortions.map((d, i) => {
+                const linkedMoment = analysis.moments?.[d.momentIndex];
+                // Two distinct snippets when both exist:
+                //   1. The evidence — the specific phrase that demonstrates the distortion.
+                //      (Same text shown in the card body — labeled as "evidence" by methodology.)
+                //   2. The surrounding moment — the broader transcript context where this surfaced.
+                //      (Carries the timestamp + speaker. Often a sibling sentence from the same
+                //      client utterance; helps the clinician trace WHERE in the session it appeared.)
+                const distortionSnippets: LineageSnippet[] = [];
+                if (d.evidence && d.evidence.trim()) {
+                  distortionSnippets.push({
+                    text: d.evidence,
+                    speaker: 'client',
+                    label: 'Evidence (the phrase that triggered the detection)',
+                  });
+                }
+                if (linkedMoment?.quote && linkedMoment.quote.trim() && linkedMoment.quote !== d.evidence) {
+                  distortionSnippets.push({
+                    text: linkedMoment.quote,
+                    timestamp: linkedMoment.timestamp,
+                    momentId: linkedMoment.id,
+                    speaker: 'client',
+                    label: 'Surrounding moment (where this surfaced in the session)',
+                  });
+                }
+                return (
                 <div key={i} className="p-4 bg-white rounded-xl border border-gray-200">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <Brain className="w-4 h-4 text-amber-500" />
-                      <span className="font-semibold text-gray-900 text-sm">{d.type}</span>
+                      <span className="font-semibold text-gray-900 text-sm">
+                        <LineagePopover
+                          snippets={distortionSnippets}
+                          methodology={`CBT distortion: ${d.type}`}
+                          literatureRef="Beck's cognitive model; Diagnosis-of-Thought (DoT) framework"
+                        >
+                          <span>{d.type}</span>
+                        </LineagePopover>
+                      </span>
                       <span className="text-xs text-gray-400">Moment #{d.momentIndex + 1}</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -1110,11 +1606,49 @@ export default function SessionOverviewPage() {
                     </div>
                   </div>
                   <p className="text-sm text-gray-600 italic mb-2 pl-6">&ldquo;{d.evidence}&rdquo;</p>
-                  <div className="p-2 bg-green-50 rounded-lg border border-green-100 ml-6">
-                    <p className="text-xs text-green-700"><span className="font-medium">Reframe:</span> {d.alternativeThought}</p>
-                  </div>
+                  {/* Show the actual transcript quote from the linked moment in place of
+                      the AI-generated "Reframe". The reframe was editorial AI content that
+                      doesn't always make clinical sense (especially for resolved distortions
+                      where the alternative thought reads as meta-commentary rather than a
+                      real CBT reframe). The moment quote is the patient's actual words and
+                      gives the clinician a verifiable source. We hide it when it would be
+                      a duplicate of d.evidence (active distortions where evidence already
+                      IS the patient quote). */}
+                  {(() => {
+                    const linkedMoment = analysis.moments?.[d.momentIndex];
+                    if (!linkedMoment?.quote) return null;
+                    const evidenceLower = (d.evidence || '').toLowerCase().trim();
+                    const momentLower = linkedMoment.quote.toLowerCase().trim();
+                    // Skip duplicate when the evidence IS the moment quote (substring overlap either way)
+                    const isDuplicate =
+                      evidenceLower === momentLower ||
+                      (evidenceLower.length > 30 && momentLower.includes(evidenceLower)) ||
+                      (momentLower.length > 30 && evidenceLower.includes(momentLower));
+                    if (isDuplicate) return null;
+                    return (
+                      <div className="p-2 bg-gray-50 rounded-lg border border-gray-200 ml-6">
+                        <div className="flex items-start gap-2">
+                          <MessageSquareQuote className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-0.5">
+                              From the transcript
+                              {linkedMoment.timestamp && (
+                                <span className="ml-1.5 font-mono normal-case tracking-normal text-gray-400">
+                                  {linkedMoment.timestamp}
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-xs text-gray-700 italic leading-relaxed">
+                              &ldquo;{linkedMoment.quote}&rdquo;
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {Array.isArray(cbt.automaticThoughts) && cbt.automaticThoughts.length > 0 && (
@@ -1146,85 +1680,6 @@ export default function SessionOverviewPage() {
         )}
       </CollapsibleSection>
 
-      {/* 6. Diagnostic Considerations */}
-      <CollapsibleSection
-        title="Diagnostic Considerations"
-        icon={<Stethoscope className="w-5 h-5 text-primary" />}
-        tooltip={
-          <InfoTooltip
-            title="Diagnostic Screening"
-            description="Based on pattern matching between the session's structure profile, risk signals, and established diagnostic criteria. These are screening-level suggestions — not clinical diagnoses. Always apply clinical judgment."
-            methodology="Structure profile → DSM-5 criteria alignment. Confidence reflects strength of indicator match, not diagnostic certainty."
-          />
-        }
-        teaser={
-          <div>
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              {diagnosticConsiderations.slice(0, 3).map((dx) => (
-                <span key={dx.id} className="inline-flex items-center gap-2 text-sm">
-                  <span className="font-mono text-xs text-gray-500">{dx.code}</span>
-                  <span className="font-medium text-gray-800">{dx.name}</span>
-                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${getStatusColor(dx.status)}`}>
-                    {Math.round(dx.confidence * 100)}%
-                  </span>
-                </span>
-              ))}
-            </div>
-            <p className="text-[11px] text-amber-600 font-medium">AI-generated suggestions -- not clinical diagnoses</p>
-          </div>
-        }
-      >
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 flex items-start gap-3">
-          <FileWarning className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-bold text-amber-800">THIS IS NOT A DIAGNOSIS</p>
-            <p className="text-xs text-amber-700 mt-1 leading-relaxed">
-              The following are AI-generated considerations based on transcript analysis only.
-              They are intended to support clinical thinking, not replace professional diagnostic assessment.
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          {diagnosticConsiderations.map((dx) => {
-            const similarCount = getSimilarCasesCountForDx(dx.indicators);
-            return (
-              <div key={dx.id} className="p-5 bg-white rounded-xl border border-gray-200">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <Stethoscope className="w-4 h-4 text-gray-400" />
-                    <div>
-                      <span className="font-mono text-xs text-gray-500 mr-2">{dx.code}</span>
-                      <span className="font-semibold text-gray-900">{dx.name}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getStatusColor(dx.status)}`}>
-                      {dx.status === 'rule_in' ? 'Consider' : dx.status === 'rule_out' ? 'Rule Out' : 'Monitor'}
-                    </span>
-                    <span className="text-xs text-gray-400">{Math.round(dx.confidence * 100)}% conf.</span>
-                  </div>
-                </div>
-                <ul className="space-y-1">
-                  {dx.indicators.map((ind, i) => (
-                    <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
-                      <span className="text-gray-400 mt-1">&#8226;</span>{ind}
-                    </li>
-                  ))}
-                </ul>
-                {similarCount > 0 && dx.confidence > 0.65 && (
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <p className="text-xs text-emerald-600 flex items-center gap-1 font-medium">
-                      <Database className="w-3 h-3" />
-                      Supported by {similarCount} similar {similarCount === 1 ? 'case' : 'cases'} from research archive
-                    </p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </CollapsibleSection>
 
       {/* 7. Therapist Intervention Profile */}
       {Array.isArray(analysis.therapistMoves) && analysis.therapistMoves.length > 0 && (
@@ -1281,135 +1736,179 @@ export default function SessionOverviewPage() {
         </CollapsibleSection>
       )}
 
-      {/* 7b. Moment Confidence */}
-      {Array.isArray(analysis?.momentConfidence) && analysis.momentConfidence.length > 0 && (
-        <CollapsibleSection
-          title="Moment Confidence"
-          icon={<Eye className="w-5 h-5 text-teal-500" />}
-          tooltip={
-            <InfoTooltip
-              title="Moment Confidence Scoring"
-              description="Each identified moment is scored across four dimensions of reliability: spontaneity, concrete detail, contextual richness, and narrative coherence. Moments prompted by therapist questions are flagged."
-              methodology="Multi-dimensional confidence assessment based on discourse analysis markers. Therapist influence detection uses turn-by-turn analysis of question-response patterns."
-            />
-          }
-          teaser={
-            <div className="flex items-center gap-4 text-sm">
-              {(() => {
-                const mc = analysis.momentConfidence!;
-                const avg = mc.reduce((sum, m) => sum + m.overallConfidence, 0) / mc.length;
-                const prompted = mc.filter((m) => m.therapistInfluence).length;
-                return (
-                  <>
-                    <span className="text-gray-600">
-                      Avg confidence: <span className={`font-bold ${avg > 0.7 ? 'text-green-600' : avg > 0.4 ? 'text-amber-600' : 'text-red-600'}`}>{Math.round(avg * 100)}%</span>
-                    </span>
-                    {prompted > 0 && (
-                      <span className="text-orange-500 text-xs font-medium">{prompted} prompted moment{prompted !== 1 ? 's' : ''}</span>
-                    )}
-                    <span className="text-gray-400 text-xs">{mc.length} moment{mc.length !== 1 ? 's' : ''} scored</span>
-                  </>
-                );
-              })()}
+
+      {/* Session Sign-Off was moved to the Full Report tab — clinically it's
+          the LAST step in the workflow (review → sign off → done). Keeping it
+          here was making it look like a mid-page interrupt. The handoff is
+          now: complete the analysis here → move to Full Report → sign off. */}
+
+      {/* Outcome Scores capture (PHQ-9 / GAD-7). Optional, but the way to
+          turn this app into a real outcome-tracking tool over time. The CTA
+          card stays compact when scores aren't recorded; once recorded it
+          shows the totals + severity pills and a "Re-record" button. The
+          actual capture happens in the modal — this card is just the entry
+          point so the workflow doesn't sprawl on the summary page. */}
+      <div className="bg-white rounded-2xl border border-gray-200 px-6 py-5 flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h3 className="font-playfair text-lg font-bold text-gray-900 mb-1">Outcome Scores</h3>
+          {existingOutcomes ? (
+            <div className="flex items-center gap-3 text-sm text-gray-700 flex-wrap">
+              {typeof existingOutcomes.phq9 === 'number' && (
+                <span>
+                  <span className="font-semibold">PHQ-9:</span> {existingOutcomes.phq9} / 27
+                </span>
+              )}
+              {typeof existingOutcomes.gad7 === 'number' && (
+                <span>
+                  <span className="font-semibold">GAD-7:</span> {existingOutcomes.gad7} / 21
+                </span>
+              )}
+              <span className="text-xs text-gray-400">· recorded for this session</span>
             </div>
-          }
+          ) : (
+            <p className="text-sm text-gray-500">
+              Capture validated PHQ-9 (depression) and GAD-7 (anxiety) scores to track outcomes across sessions.
+            </p>
+          )}
+        </div>
+        <button
+          onClick={() => setOutcomeFormOpen(true)}
+          className="px-4 py-2 text-sm font-semibold border border-primary/30 text-primary rounded-lg hover:bg-primary/5 transition whitespace-nowrap"
         >
-          <div className="space-y-3">
-            {analysis.momentConfidence!.map((mc) => {
-              const moment = analysis.moments?.find((m) => m.id === mc.momentId);
-              const confColor = mc.overallConfidence > 0.7 ? 'bg-green-100 text-green-700' : mc.overallConfidence > 0.4 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700';
-              const barColor = (val: number) => val > 0.7 ? 'bg-green-400' : val > 0.4 ? 'bg-amber-400' : 'bg-red-400';
+          {existingOutcomes ? 'Re-record scores' : 'Record outcome scores'}
+        </button>
+      </div>
 
-              return (
-                <div key={mc.momentId} className="p-4 bg-white rounded-xl border border-gray-200">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className="text-xs text-gray-400 flex-shrink-0">#{mc.momentId}</span>
-                      {moment?.quote && (
-                        <p className="text-sm text-gray-700 italic truncate">&ldquo;{moment.quote}&rdquo;</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${confColor}`}>
-                        {Math.round(mc.overallConfidence * 100)}%
-                      </span>
-                      {mc.therapistInfluence && (
-                        <span
-                          className="text-xs font-medium px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 cursor-help"
-                          title={mc.influenceNote || 'This moment was prompted by the therapist'}
-                        >
-                          Prompted
-                        </span>
-                      )}
-                    </div>
-                  </div>
+      <OutcomeScoresForm
+        open={outcomeFormOpen}
+        onClose={() => setOutcomeFormOpen(false)}
+        initial={existingOutcomes ? { phq9: existingOutcomes.phq9 ?? null, gad7: existingOutcomes.gad7 ?? null } : undefined}
+        onSubmit={async (scores) => {
+          // Merge with any existing outcomeMeasures so partial updates don't
+          // wipe a previously-recorded score on the other instrument.
+          const merged = {
+            ...(existingOutcomes ?? {}),
+            ...scores,
+          };
+          const res = await fetch(`/api/sessions/${sessionId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ outcomeMeasures: merged }),
+          });
+          if (!res.ok) throw new Error('Failed to save outcome scores');
+          // Refresh the page so the chip + trends pick up the new scores.
+          window.location.reload();
+        }}
+      />
 
-                  {/* Sub-score bars */}
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-3 pl-6">
-                    {([
-                      { label: 'Spontaneity', value: mc.spontaneity },
-                      { label: 'Concrete Detail', value: mc.concreteDetail },
-                      { label: 'Context Richness', value: mc.contextualRichness },
-                      { label: 'Narrative Coherence', value: mc.narrativeCoherence },
-                    ] as { label: string; value: number }[]).map((sub) => (
-                      <div key={sub.label} className="flex items-center gap-2">
-                        <span className="text-[10px] text-gray-500 w-28 flex-shrink-0">{sub.label}</span>
-                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${barColor(sub.value)}`} style={{ width: `${Math.round(sub.value * 100)}%` }} />
-                        </div>
-                        <span className="text-[10px] text-gray-400 w-8 text-right">{Math.round(sub.value * 100)}%</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {mc.therapistInfluence && mc.influenceNote && (
-                    <p className="text-xs text-orange-500 mt-2 pl-6 italic">{mc.influenceNote}</p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          <p className="text-xs text-gray-400 mt-4 flex items-center gap-1">
-            <Sparkles className="w-3 h-3" />
-            Confidence scoring helps identify which moments carry strongest evidentiary weight
-          </p>
-        </CollapsibleSection>
-      )}
-
-      {/* 8. Notes & Export */}
+      {/* 8. Notes & Export — collapsible like other sections. The header strip
+          (title + tabs + toolbar) stays visible by default; the per-section
+          editor cards only render when expanded. */}
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
         <div className="px-6 py-5">
-          <h3 className="font-playfair text-lg font-bold text-gray-900 mb-4">Notes & Export</h3>
-
-          {/* Note download buttons */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-            <button onClick={() => downloadNote('soap')} className="flex items-center gap-3 px-5 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-primary/5 transition-all group">
-              <FileText className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" />
-              <div className="text-left flex-1">
-                <p className="font-semibold text-gray-900 text-sm">SOAP Note</p>
-                <p className="text-xs text-gray-500">Subjective, Objective, Assessment, Plan</p>
-              </div>
-              <Download className="w-4 h-4 text-gray-300 group-hover:text-primary transition-colors" />
-            </button>
-            <button onClick={() => downloadNote('dap')} className="flex items-center gap-3 px-5 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-primary/5 transition-all group">
-              <FileText className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" />
-              <div className="text-left flex-1">
-                <p className="font-semibold text-gray-900 text-sm">DAP Note</p>
-                <p className="text-xs text-gray-500">Data, Assessment, Plan</p>
-              </div>
-              <Download className="w-4 h-4 text-gray-300 group-hover:text-primary transition-colors" />
+          <div className="flex items-start justify-between gap-3 mb-1">
+            <h3 className="font-playfair text-lg font-bold text-gray-900 flex items-center gap-2">
+              Clinical Notes &amp; Export
+              <InfoTooltip
+                title="Clinical Notes — SOAP and DAP formats"
+                description="Two standard chart-note formats used in mental health documentation. SOAP (Subjective, Objective, Assessment, Plan) is the medical-record gold standard required by most EHRs and insurance billing. DAP (Data, Assessment, Plan) is a simpler 3-section variant common in private practice. Switch tabs to see each. Edits persist locally per session."
+                methodology="Drafts are deterministically generated from the analysis result fields (no LLM call here). The methodology icon on each section shows exactly which fields fed it. Edits override the AI draft and are stored in localStorage scoped by session ID. Use 'Reset all' to revert to a fresh AI draft."
+              />
+            </h3>
+            <button
+              type="button"
+              onClick={() => setNotesExpanded((v) => !v)}
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-primary hover:bg-primary/5 px-2.5 py-1 rounded-lg transition flex-shrink-0"
+              aria-expanded={notesExpanded}
+              aria-label={notesExpanded ? 'Collapse section editor' : 'Expand to edit each section'}
+            >
+              {notesExpanded ? 'Collapse' : 'Edit sections'}
+              <ChevronDown className={`w-4 h-4 transition-transform ${notesExpanded ? 'rotate-180' : ''}`} />
             </button>
           </div>
-          <p className="text-xs text-gray-400 mb-6 flex items-center gap-1">
-            <Info className="w-3 h-3" />
-            Notes are AI-generated drafts. Always review and edit before including in clinical records.
+          <p className="text-xs text-gray-500 mb-4">
+            Pick the format your record system uses. Edit each section before exporting — your edits are kept per-session.
           </p>
 
-          {/* Session Assessment (editable) */}
-          <div className="border-t border-gray-100 pt-5">
+          {/* SOAP / DAP tab switcher */}
+          <div className="inline-flex items-center gap-0 bg-gray-100 rounded-lg p-1 mb-5">
+            <button
+              type="button"
+              onClick={() => setActiveNoteType('soap')}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                activeNoteType === 'soap'
+                  ? 'bg-white text-primary shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+              aria-pressed={activeNoteType === 'soap'}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              SOAP
+              <span className="text-[10px] font-normal text-gray-400 hidden sm:inline">· Subjective · Objective · Assessment · Plan</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveNoteType('dap')}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                activeNoteType === 'dap'
+                  ? 'bg-white text-primary shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+              aria-pressed={activeNoteType === 'dap'}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              DAP
+              <span className="text-[10px] font-normal text-gray-400 hidden sm:inline">· Data · Assessment · Plan</span>
+            </button>
+          </div>
+
+          {/* Editable note panel — sections only show when expanded; toolbar
+              (Copy / Download .txt / status text) stays visible regardless. */}
+          {activeNoteType === 'soap' ? (
+            <EditableClinicalNote
+              key={`soap-${session.id}`}
+              sessionId={session.id}
+              noteType="soap"
+              noteTitle="SOAP Note"
+              clientCode={session.clientCode}
+              sessionNumber={session.sessionNumber}
+              sections={soapSections}
+              showSections={notesExpanded}
+              formatForExport={(s) =>
+                `SOAP NOTE\nSession: ${session.clientCode} — Session #${session.sessionNumber}\nDate: ${session.date}\n\n` +
+                `SUBJECTIVE\n${s.subjective}\n\nOBJECTIVE\n${s.objective}\n\nASSESSMENT\n${s.assessment}\n\nPLAN\n${s.plan}` +
+                formatConsentFooter(session)
+              }
+            />
+          ) : (
+            <EditableClinicalNote
+              key={`dap-${session.id}`}
+              sessionId={session.id}
+              noteType="dap"
+              noteTitle="DAP Note"
+              clientCode={session.clientCode}
+              sessionNumber={session.sessionNumber}
+              sections={dapSections}
+              showSections={notesExpanded}
+              formatForExport={(s) =>
+                `DAP NOTE\nSession: ${session.clientCode} — Session #${session.sessionNumber}\nDate: ${session.date}\n\n` +
+                `DATA\n${s.data}\n\nASSESSMENT\n${s.assessment}\n\nPLAN\n${s.plan}` +
+                formatConsentFooter(session)
+              }
+            />
+          )}
+
+          {/* Session Assessment (editable) — separate free-form notes field, NOT the SOAP/DAP note */}
+          <div className="border-t border-gray-100 pt-5 mt-6">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-semibold text-gray-700">Session Assessment</p>
+              <p className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                Free-form Session Notes
+                <InfoTooltip
+                  title="Free-form Session Notes"
+                  description="A scratch-pad for your own thinking about this session — what you noticed, what to follow up, anything that doesn't fit a SOAP or DAP slot. Saved to the session record (not just locally). Distinct from the chart notes above."
+                  methodology="Stored on the session record via the existing assessment field. The default text is auto-generated from the clinical priority + prognosis + dominant structures so the field starts non-empty; click Edit to overwrite with your own."
+                />
+              </p>
               {!isEditingAssessment ? (
                 <div className="flex items-center gap-2">
                   <button

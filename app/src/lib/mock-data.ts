@@ -254,11 +254,7 @@ export const MOCK_ANALYSIS: AnalysisResult = {
         StructureName.EMOTION,
         StructureName.COGNITIVE,
       ],
-      sessionCount: 8,
       keyThemes: ['Perfectionism', 'Workplace pressure', 'Identity shift', 'Somatic anxiety'],
-      outcome: 'Significant improvement',
-      outcomeDetail:
-        'Client successfully returned to work on modified schedule. Anxiety symptoms reduced by 60% within 6 weeks. Developed effective somatic coping strategies.',
       representativeQuote:
         '"I still get nervous, but now I know how to calm my body down. And I\'m being kinder to myself about mistakes."',
     },
@@ -272,11 +268,7 @@ export const MOCK_ANALYSIS: AnalysisResult = {
         StructureName.NORMATIVE,
         StructureName.EMOTION,
       ],
-      sessionCount: 6,
       keyThemes: ['Family expectations', 'Values clarification', 'Boundary setting'],
-      outcome: 'Significant improvement',
-      outcomeDetail:
-        'Client established clearer boundaries with family regarding career decisions. Anxiety decreased as alignment between personal values and actions improved.',
       representativeQuote:
         '"I realized I was living for my parents\' approval, not for myself. Changing that has made a huge difference."',
     },
@@ -290,11 +282,7 @@ export const MOCK_ANALYSIS: AnalysisResult = {
         StructureName.BEHAVIOUR,
         StructureName.REFLECTIVE,
       ],
-      sessionCount: 10,
       keyThemes: ['Trauma aftermath', 'Body awareness', 'Gradual exposure'],
-      outcome: 'Moderate improvement',
-      outcomeDetail:
-        'Client developed improved somatic awareness and capacity to tolerate difficult emotions. Able to engage in previously avoided activities with reduced anxiety.',
       representativeQuote:
         '"Therapy helped me understand that my body is trying to protect me, not punish me. That changed everything."',
     },

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useApi } from '@/hooks/use-api';
 import type { AnalysisResult } from '@/types';
@@ -54,6 +54,10 @@ export default function ProfileReviewPage() {
   const [clinicalNotes, setClinicalNotes] = useState('');
   const [preferredApproach, setPreferredApproach] = useState('');
   const [profileLoading, setProfileLoading] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  // Skip auto-save on the initial profile load — only save on real user edits.
+  const skipNextAutoSave = useRef(true);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!session) return;
@@ -104,6 +108,42 @@ export default function ProfileReviewPage() {
 
     loadProfile();
   }, [session]);
+
+  // Debounced auto-save: any change to profile, clinicalNotes, or
+  // preferredApproach is PATCHed to the server 800ms after the last edit.
+  // Without this, edits are kept only in local state and lost on refresh /
+  // navigate-back / closing the tab before clicking Confirm or Skip.
+  useEffect(() => {
+    if (!profile || !session) return;
+    if (skipNextAutoSave.current) {
+      // The first run after loadProfile() finishes — values came from the
+      // server (or were just PATCHed there during profile creation), so don't
+      // re-save them. Subsequent changes are real user edits.
+      skipNextAutoSave.current = false;
+      return;
+    }
+
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    setSaveStatus('saving');
+    saveTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/clients/${session.clientCode}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...profile, clinicalNotes, preferredApproach }),
+        });
+        setSaveStatus(res.ok ? 'saved' : 'error');
+      } catch {
+        setSaveStatus('error');
+      }
+    }, 800);
+
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+    // session.clientCode is the only `session` field used; profile/notes/approach
+    // are the actual edit-source-of-truth.
+  }, [profile, clinicalNotes, preferredApproach, session]);
 
   if (loading || profileLoading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
@@ -207,13 +247,37 @@ export default function ProfileReviewPage() {
           <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
             <UserCircle className="w-7 h-7 text-primary" />
           </div>
-          <div>
+          <div className="flex-1">
             <h2 className="font-playfair text-2xl font-bold text-gray-900">Client Profile</h2>
             <p className="text-sm text-gray-500">
               <span className="font-mono font-semibold text-primary">{profile.clientCode}</span>
               {' '}&middot; First session analysis complete
             </p>
           </div>
+          {/* Auto-save status — small, unobtrusive. Reassures the clinician
+              that their edits are persisted without needing Confirm. */}
+          {saveStatus !== 'idle' && (
+            <div className="text-xs text-gray-500 flex items-center gap-1.5">
+              {saveStatus === 'saving' && (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Saving…
+                </>
+              )}
+              {saveStatus === 'saved' && (
+                <>
+                  <Check className="w-3 h-3 text-green-600" />
+                  <span className="text-green-700">Saved</span>
+                </>
+              )}
+              {saveStatus === 'error' && (
+                <>
+                  <X className="w-3 h-3 text-red-500" />
+                  <span className="text-red-600">Save failed</span>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 rounded-xl p-5 border border-primary/10">
@@ -352,40 +416,20 @@ export default function ProfileReviewPage() {
           </div>
         </Card>
 
-        {/* Risk Level & Structures */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <AlertCircle className={`w-5 h-5 ${
-                profile.currentRiskLevel === 'high' ? 'text-red-500' : profile.currentRiskLevel === 'moderate' ? 'text-amber-500' : 'text-green-500'
-              }`} />
-              <h3 className="font-semibold text-gray-900">Current Risk Level</h3>
-            </div>
-            <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold ${
-              profile.currentRiskLevel === 'high'
-                ? 'bg-red-100 text-red-700'
-                : profile.currentRiskLevel === 'moderate'
-                  ? 'bg-amber-100 text-amber-700'
-                  : 'bg-green-100 text-green-700'
-            }`}>
-              {profile.currentRiskLevel.charAt(0).toUpperCase() + profile.currentRiskLevel.slice(1)}
-            </div>
-          </Card>
-
-          <Card className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Brain className="w-5 h-5 text-primary" />
-              <h3 className="font-semibold text-gray-900">Dominant Structures</h3>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {(profile.dominantStructures || []).map((s) => (
-                <span key={s} className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full font-medium">
-                  {s.replace(/_/g, ' ')}
-                </span>
-              ))}
-            </div>
-          </Card>
-        </div>
+        {/* Dominant Structures */}
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Brain className="w-5 h-5 text-primary" />
+            <h3 className="font-semibold text-gray-900">Dominant Structures</h3>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {(profile.dominantStructures || []).map((s) => (
+              <span key={s} className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full font-medium">
+                {s.replace(/_/g, ' ')}
+              </span>
+            ))}
+          </div>
+        </Card>
 
         {/* Preferred Approach */}
         <Card className="p-6">

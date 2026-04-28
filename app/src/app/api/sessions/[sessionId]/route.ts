@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
-import { dbGetSession, dbDeleteSession, dbUpdateSessionAnalysis } from '@/lib/supabase/db';
+import {
+  dbGetSession,
+  dbGetSessionAudited,
+  dbDeleteSession,
+  dbUpdateSessionAnalysis,
+  dbWriteAuditLog,
+} from '@/lib/supabase/db';
 
 export async function GET(
   _req: Request,
@@ -7,7 +13,8 @@ export async function GET(
 ) {
   const { sessionId } = await params;
   try {
-    const session = await dbGetSession(sessionId);
+    // Audited variant — every clinician-driven session read is logged.
+    const session = await dbGetSessionAudited(sessionId);
     if (!session) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
@@ -25,6 +32,13 @@ export async function DELETE(
   const { sessionId } = await params;
   try {
     const deleted = await dbDeleteSession(sessionId);
+    if (deleted) {
+      void dbWriteAuditLog({
+        action: 'session.delete',
+        resourceType: 'session',
+        resourceId: sessionId,
+      });
+    }
     if (!deleted) {
       return NextResponse.json({ error: 'Failed to delete session' }, { status: 500 });
     }

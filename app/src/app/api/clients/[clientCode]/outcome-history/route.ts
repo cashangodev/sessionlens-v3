@@ -34,7 +34,7 @@ export async function GET(
     }
 
     const supabase = createClient();
-    const therapistId = getTherapistId();
+    const therapistId = await getTherapistId();
 
     // Query all completed sessions for this client in chronological order
     const { data: sessions, error } = await supabase

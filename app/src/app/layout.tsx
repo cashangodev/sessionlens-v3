@@ -1,18 +1,14 @@
 import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
-// Dynamically import ClerkProvider only when a real key is set
-let ClerkProvider: React.ComponentType<{ children: React.ReactNode; publishableKey?: string }> | null = null;
-try {
-  const hasRealKey =
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
-    !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.includes("placeholder");
-  if (hasRealKey) {
-    ClerkProvider = require("@clerk/nextjs").ClerkProvider;
-  }
-} catch {
-  // Clerk not available
-}
+// Whether to wrap the app in Clerk's provider. Render-time conditional based
+// on the env var — the provider is statically imported (so Next.js wires up
+// the client/server boundary correctly) but only mounted when a real key is
+// configured. This way the demo build keeps working without Clerk credentials.
+const hasRealClerkKey =
+  !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
+  !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.includes("placeholder");
 
 export const metadata: Metadata = {
   title: "SessionLens — AI Clinical Decision Support",
@@ -33,7 +29,7 @@ export default function RootLayout({
     </html>
   );
 
-  if (ClerkProvider) {
+  if (hasRealClerkKey) {
     return (
       <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}>
         {content}

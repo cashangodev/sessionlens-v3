@@ -22,10 +22,31 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { clientCode, transcript, treatmentGoals, sessionNumber, date, time, analysisResult } = body;
+    const {
+      clientCode,
+      transcript,
+      treatmentGoals,
+      sessionNumber,
+      date,
+      time,
+      analysisResult,
+      consentMethod,
+      consentVersion,
+    } = body;
 
     if (!clientCode) {
       return NextResponse.json({ error: 'clientCode is required' }, { status: 400 });
+    }
+
+    // GDPR gate: every new session must carry consent. The UI gates this with
+    // a checkbox before the "Start Session" button is enabled — this server
+    // check is the backstop for direct API calls.
+    const ALLOWED_METHODS = ['verbal', 'written', 'electronic'];
+    if (!consentMethod || !ALLOWED_METHODS.includes(consentMethod)) {
+      return NextResponse.json(
+        { error: 'consentMethod is required (verbal | written | electronic)' },
+        { status: 400 },
+      );
     }
 
     const sessionId = await dbStoreSession({
@@ -36,6 +57,10 @@ export async function POST(req: Request) {
       date: date || new Date().toISOString().split('T')[0],
       time: time || '00:00',
       analysisResult: analysisResult || undefined,
+      consent: {
+        method: consentMethod as 'verbal' | 'written' | 'electronic',
+        version: consentVersion || 'v1.0',
+      },
     });
 
     if (!sessionId) {

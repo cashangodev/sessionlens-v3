@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useApi } from '@/hooks/use-api';
+import { RemoveClientModal, type RemoveAction } from '@/components/clients/RemoveClientModal';
 import {
   ArrowLeft,
   Plus,
@@ -16,7 +17,6 @@ import {
   AlertCircle,
   Stethoscope,
   Brain,
-  Activity,
   FileText,
   TrendingDown,
   TrendingUp,
@@ -29,6 +29,8 @@ import {
   Edit3,
   Check,
   Save,
+  MoreVertical,
+  Trash2,
 } from 'lucide-react';
 
 interface OutcomeScoreEntry {
@@ -92,11 +94,25 @@ function getGad7Severity(score: number): { label: string; color: string } {
 
 export default function ClientDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const clientCode = decodeURIComponent(params.clientCode as string);
 
   const { data, loading, mutate } = useApi<{ profile: ClientProfile; sessions: SessionSummary[] }>(
     `/api/clients/${encodeURIComponent(clientCode)}`
   );
+
+  // Remove-client modal + the small overflow menu that opens it
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
+  const [showOverflowMenu, setShowOverflowMenu] = useState(false);
+
+  const handleRemoved = (action: RemoveAction) => {
+    // After any remove action, send the user back to the client list
+    setShowRemoveModal(false);
+    setShowOverflowMenu(false);
+    // Brief toast-like state could go here; for now just navigate.
+    void action; // action is captured by the modal; no-op here
+    router.push('/dashboard/clients');
+  };
 
   const profile = data?.profile ?? null;
   const sessions = data?.sessions ?? [];
@@ -264,12 +280,6 @@ export default function ClientDetailPage() {
   const firstSessionDate = sessions.length > 0 ? sessions[sessions.length - 1]?.date : null;
   const lastSessionDate = sessions.length > 0 ? sessions[0]?.date : null;
 
-  const riskColor = profile?.currentRiskLevel === 'high'
-    ? 'bg-red-100 text-red-700'
-    : profile?.currentRiskLevel === 'moderate'
-      ? 'bg-amber-100 text-amber-700'
-      : 'bg-green-100 text-green-700';
-
   return (
     <div className="max-w-3xl mx-auto">
       {/* Back */}
@@ -320,11 +330,54 @@ export default function ClientDetailPage() {
             <Plus className="w-4 h-4" />
             New Session
           </Link>
+          {/* Overflow menu — currently only houses "Remove client", but built as
+              a menu so future actions (export, transfer, etc.) drop in cleanly. */}
+          <div className="relative">
+            <button
+              onClick={() => setShowOverflowMenu((v) => !v)}
+              onBlur={() => window.setTimeout(() => setShowOverflowMenu(false), 150)}
+              className="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-colors"
+              aria-label="Client actions"
+              aria-haspopup="menu"
+              aria-expanded={showOverflowMenu}
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
+            {showOverflowMenu && (
+              <div
+                role="menu"
+                className="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-30"
+              >
+                <button
+                  role="menuitem"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    setShowOverflowMenu(false);
+                    setShowRemoveModal(true);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition-colors text-left"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Remove client…
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
+      {/* Remove modal */}
+      {showRemoveModal && (
+        <RemoveClientModal
+          clientCode={clientCode}
+          sessionCount={sessions.length}
+          onClose={() => setShowRemoveModal(false)}
+          onRemoved={handleRemoved}
+        />
+      )}
+
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Hash className="w-3 h-3" />Sessions</p>
           <p className="text-2xl font-bold text-gray-900">{sessionCount}</p>
@@ -336,16 +389,6 @@ export default function ClientDetailPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Clock className="w-3 h-3" />Last</p>
           <p className="text-sm font-semibold text-gray-900">{lastSessionDate ? formatDateShort(lastSessionDate) : '—'}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Activity className="w-3 h-3" />Risk</p>
-          {profile ? (
-            <span className={`inline-flex text-xs font-medium px-2 py-0.5 rounded-full ${riskColor}`}>
-              {profile.currentRiskLevel.charAt(0).toUpperCase() + profile.currentRiskLevel.slice(1)}
-            </span>
-          ) : (
-            <p className="text-sm text-gray-400">—</p>
-          )}
         </div>
       </div>
 

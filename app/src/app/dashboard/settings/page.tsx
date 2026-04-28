@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, Lock, Key, Users, Shield } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowLeft, Key, Shield, Sparkles, Upload, FileText } from 'lucide-react';
+import { useState, useRef } from 'react';
 
 export default function SettingsPage() {
   const [name, setName] = useState('Dr. Demo');
@@ -16,6 +16,38 @@ export default function SettingsPage() {
   const [openAPIKey, setOpenAPIKey] = useState('');
   const [supabaseURL, setSupabaseURL] = useState('');
   const [expandedAPI, setExpandedAPI] = useState(false);
+
+  // Doctor-tone mimicry stub state
+  const [toneSampleCount, setToneSampleCount] = useState(0);
+  const [useToneForEmails, setUseToneForEmails] = useState(false);
+  const [uploadingSample, setUploadingSample] = useState(false);
+  const [toneError, setToneError] = useState<string | null>(null);
+  const toneFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleToneFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploadingSample(true);
+    setToneError(null);
+    try {
+      let added = 0;
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/settings/tone-samples', {
+          method: 'POST',
+          body: formData,
+        });
+        if (res.ok) added += 1;
+      }
+      setToneSampleCount((c) => Math.min(3, c + added));
+    } catch {
+      setToneError('Upload failed. Please try again.');
+    } finally {
+      setUploadingSample(false);
+      if (toneFileInputRef.current) toneFileInputRef.current.value = '';
+    }
+  };
 
   const handleSaveProfile = () => {
     alert('Settings saved');
@@ -239,6 +271,91 @@ export default function SettingsPage() {
               onChange={(e) => setShowPeerComparison(e.target.checked)}
               className="w-5 h-5 accent-primary"
             />
+          </div>
+        </div>
+      </div>
+
+      {/* Personalize Your Reports — Doctor-tone mimicry stub */}
+      <div className="bg-white rounded-xl border border-gray-200 p-8 mb-6">
+        <h2 className="text-xl font-bold text-slate-900 mb-1 flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-primary" />
+          Personalize your reports
+        </h2>
+        <p className="text-sm text-slate-600 mb-6">
+          Match your voice and style on patient emails
+        </p>
+
+        <div className="space-y-5">
+          {/* Upload zone */}
+          <div
+            className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-primary/40 transition-colors cursor-pointer bg-slate-50/50"
+            onClick={() => toneFileInputRef.current?.click()}
+          >
+            <Upload className="w-7 h-7 text-slate-400 mx-auto mb-2" />
+            <p className="text-sm font-medium text-slate-900 mb-1">
+              Upload 1-3 of your past reports
+            </p>
+            <p className="text-xs text-slate-500 mb-3">
+              The AI will learn your tone. Accepted formats: .pdf, .docx, .txt
+            </p>
+            <button
+              type="button"
+              disabled={uploadingSample}
+              className="px-4 py-2 bg-white border border-gray-200 text-slate-900 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium disabled:opacity-50"
+            >
+              {uploadingSample ? 'Uploading...' : 'Choose files'}
+            </button>
+            <input
+              ref={toneFileInputRef}
+              type="file"
+              accept=".pdf,.docx,.txt"
+              multiple
+              className="hidden"
+              onChange={handleToneFileSelect}
+            />
+            {toneError && (
+              <p className="text-xs text-red-600 mt-2">{toneError}</p>
+            )}
+          </div>
+
+          {/* Status */}
+          <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg border border-slate-200">
+            <FileText className="w-5 h-5 text-slate-400" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-slate-900">
+                {toneSampleCount === 0
+                  ? 'Tone profile not yet created'
+                  : `Tone profile active (${toneSampleCount} ${toneSampleCount === 1 ? 'sample' : 'samples'})`}
+              </p>
+              <p className="text-xs text-slate-500">
+                {toneSampleCount === 0
+                  ? 'Upload at least one report to begin training your style.'
+                  : 'Your tone profile is being learned from the samples above.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Toggle */}
+          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
+            <div>
+              <h3 className="font-medium text-slate-900">Use my tone for patient emails</h3>
+              <p className="text-sm text-slate-600">
+                Apply your learned voice when generating patient-facing recaps
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={useToneForEmails}
+              onChange={(e) => setUseToneForEmails(e.target.checked)}
+              className="w-5 h-5 accent-primary"
+            />
+          </div>
+
+          <div className="flex items-start gap-2 px-1">
+            <Sparkles className="w-3.5 h-3.5 text-primary/70 mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-slate-500 italic">
+              Currently in beta. We&apos;re learning your style from each report you generate.
+            </p>
           </div>
         </div>
       </div>

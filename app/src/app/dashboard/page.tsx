@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, CalendarDays, Settings, HelpCircle, CreditCard, ArrowRight, Brain, Shield, BarChart3, Search, Users, UserPlus } from 'lucide-react';
+import { Plus, ArrowRight, Brain, Shield, BarChart3, Search, Users, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useApi } from '@/hooks/use-api';
+import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 
 interface SessionSummary {
   id: string;
@@ -46,6 +47,13 @@ export default function HomePage() {
 
   return (
     <div className="max-w-5xl mx-auto">
+      {/* First-run tour. Auto-opens for new users (no localStorage flag and
+          no sessions yet) and after Clerk sign-up via ?onboarding=1.
+          Only pass hasSessions once the API call has resolved — passing
+          `false` while loading would falsely flag every refresh as a
+          "new user" before we know whether sessions exist. */}
+      <OnboardingTour hasSessions={sessionsLoading ? undefined : hasAnySessions} />
+
       {/* Welcome + Search Row */}
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-12">
         <div>
@@ -82,7 +90,23 @@ export default function HomePage() {
                     </Link>
                   ))}
                 {clientsData.clients.filter((c) => c.clientCode.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
-                  <div className="px-4 py-3 text-sm text-gray-400">No clients found</div>
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      router.push('/dashboard/clients?new=1');
+                    }}
+                    className="w-full text-left px-4 py-3 hover:bg-mint-50 transition-colors flex items-center gap-3 group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+                      <UserPlus className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-700">
+                        No client matching <span className="font-mono font-semibold text-gray-900">&ldquo;{searchQuery}&rdquo;</span>
+                      </p>
+                      <p className="text-xs text-primary font-medium">+ Add as a new client</p>
+                    </div>
+                  </button>
                 )}
               </div>
             )}
@@ -172,8 +196,11 @@ export default function HomePage() {
         </Link>
       )}
 
-      {/* Primary Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+      {/* Primary Actions
+          Calendar card was removed for v1 — its underlying page still exists
+          at /dashboard/calendar (kept for v1.1) but isn't part of the
+          founders-cohort surface. */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
         {/* New Session */}
         <Link
           href="/dashboard/session/new"
@@ -206,38 +233,12 @@ export default function HomePage() {
           </p>
         </Link>
 
-        {/* Calendar */}
-        <Link
-          href="/dashboard/calendar"
-          className="group bg-white rounded-2xl p-8 border border-gray-200 hover:border-primary/30 transition-all duration-200"
-        >
-          <div className="w-12 h-12 mb-5 rounded-xl bg-mint-50 group-hover:bg-mint-100 flex items-center justify-center transition-colors">
-            <CalendarDays className="w-6 h-6 text-primary" />
-          </div>
-          <h3 className="font-playfair text-xl font-bold text-gray-900 mb-1.5">Calendar</h3>
-          <p className="text-secondary text-sm leading-relaxed">
-            Browse sessions by date and track progress
-          </p>
-        </Link>
       </div>
 
-      {/* Footer links */}
-      <div className="flex items-center justify-center gap-6 pt-10 mt-6 border-t border-gray-100">
-        <Link href="/dashboard/settings" className="flex items-center gap-2 text-sm text-gray-400 hover:text-primary transition-colors">
-          <Settings className="w-4 h-4" />
-          Settings
-        </Link>
-        <span className="text-gray-200">·</span>
-        <Link href="/dashboard/billing" className="flex items-center gap-2 text-sm text-gray-400 hover:text-primary transition-colors">
-          <CreditCard className="w-4 h-4" />
-          Billing
-        </Link>
-        <span className="text-gray-200">·</span>
-        <Link href="/dashboard/help" className="flex items-center gap-2 text-sm text-gray-400 hover:text-primary transition-colors">
-          <HelpCircle className="w-4 h-4" />
-          Help
-        </Link>
-      </div>
+      {/* Footer links — Settings / Billing / Help removed for v1.
+          The pages still exist (/dashboard/settings, /dashboard/billing,
+          /dashboard/help) but aren't navigable from the home dashboard.
+          Sign-out is exposed via Clerk's <UserButton/> when configured. */}
     </div>
   );
 }

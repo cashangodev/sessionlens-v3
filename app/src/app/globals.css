@@ -175,3 +175,40 @@ body {
   }
   .no-print { display: none !important; }
 }
+
+/* ─── Print stylesheet for the Full Report tab ───────────────────────────
+ * Triggered by adding `printing-report` to <body> right before window.print()
+ * (see handlePrintPDF in /dashboard/session/[id]/report/page.tsx).
+ *
+ * Strategy: hide everything outside the report content (nav, action bars,
+ * floating toasts), force a clean white background, ensure colors render
+ * (Chromium hides backgrounds by default in print), and avoid mid-card page
+ * breaks. The `#report-print-area` id wraps the printable content; if it's
+ * not present, we fall back to the main element so the print isn't empty.
+ */
+@media print {
+  body.printing-report * { visibility: hidden; }
+  body.printing-report #report-print-area,
+  body.printing-report #report-print-area * { visibility: visible; }
+  body.printing-report #report-print-area {
+    position: absolute;
+    left: 0; top: 0; right: 0;
+    padding: 1.5rem 2rem;
+    background: white;
+    color: black;
+  }
+  body.printing-report .no-print,
+  body.printing-report header,
+  body.printing-report nav,
+  body.printing-report aside,
+  body.printing-report [data-no-print] { display: none !important; }
+  body.printing-report .card,
+  body.printing-report [class*='rounded-xl'],
+  body.printing-report [class*='rounded-2xl'] { page-break-inside: avoid; break-inside: avoid; }
+  body.printing-report a { color: black; text-decoration: none; }
+  /* Force background colors to render in print (Chrome opt-in). */
+  body.printing-report * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

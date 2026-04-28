@@ -87,18 +87,66 @@ export interface PractitionerMatch {
   targetStructures: StructureName[];
 }
 
+/**
+ * A single moment from a lived-experience story that the person describes
+ * as a turning point — something they noticed, named, started, or that
+ * shifted for them. Surfaced in the "What helped this person" panel.
+ *
+ * These are NOT clinician annotations — they are the participant's own
+ * words about what helped, drawn from their coded moments by valence +
+ * structure + turning-point keyword filters.
+ */
+export interface HelpfulMoment {
+  /** Verbatim quote from the participant's own account. */
+  quote: string;
+  /** Optional timestamp in the source recording. */
+  timestamp?: string;
+  /** Reference to the source moment record. */
+  momentId?: string | number;
+  /** PTS structures activated in this moment — lets the clinician map intervention type. */
+  structures: StructureName[];
+}
+
+/**
+ * Compact representation of how a story's experience-pattern reorganized
+ * over the arc of the participant's narrative. Computed by splitting the
+ * story's coded moments into early/late halves by timestamp and reporting
+ * the dominant structures in each half.
+ *
+ * Stated as DATA, not as prescription. The clinician decides whether the
+ * shift is meaningful for their client.
+ */
+export interface StoryJourney {
+  /** Top 1–3 dominant structures in the story's earliest moments. */
+  early: StructureName[];
+  /** Top 1–3 dominant structures in the story's latest moments. */
+  late: StructureName[];
+  /** Total coded moment count for the story. */
+  momentCount: number;
+}
+
 export interface SimilarCase {
   id: number;
   patientCode: string;
   matchScore: number;
   presentingConcerns: string[];
   dominantStructures: StructureName[];
-  sessionCount: number;
   keyThemes: string[];
-  outcome: string;
-  outcomeDetail: string;
   representativeQuote: string;
-  matchExplanation?: string;
+
+  /** Demographic snapshot drawn from real lived_experiences fields. */
+  ageRange?: string;
+  gender?: string;
+  primaryTopic?: string;
+
+  /** One-sentence basis for the match — derived from shared structures + dominant shared theme. */
+  matchBasis?: string;
+
+  /** Top 2–4 turning-point quotes from this person's own account. */
+  helpfulMoments?: HelpfulMoment[];
+
+  /** Structural arc (early → late) over the story's coded moments. */
+  journey?: StoryJourney;
 }
 
 export interface VectorInsight {
@@ -253,18 +301,32 @@ export interface OutcomeMeasure {
   change: 'improved' | 'worsened' | 'stable' | 'new';
 }
 
+export interface TopicOccurrence {
+  quote: string;
+  timestamp?: string;
+  speaker?: 'client' | 'therapist';
+  momentId?: string | number;
+  structures?: string[];
+}
+
 export interface ExtractedTopic {
   id: string;
   label: string;
   /** AI confidence 0-1 */
   confidence: number;
-  /** Number of times referenced in session */
+  /** Number of times referenced in session — equals occurrences.length when occurrences are populated */
   mentions: number;
-  /** Verbatim quote that triggered this topic */
+  /** Number of matching moments/lines for this topic */
+  count?: number;
+  /** Phenomenological structure label this topic maps to (e.g. 'emotional', 'somatic', 'cognitive + somatic') */
+  structure?: string;
+  /** Every matching snippet for this topic */
+  occurrences?: TopicOccurrence[];
+  /** @deprecated Use occurrences[0] instead */
   triggerQuote?: string;
-  /** Who said it: 'client' or 'therapist' */
+  /** @deprecated Use occurrences[0].speaker instead */
   speaker?: 'client' | 'therapist';
-  /** Phenomenological structure dimension */
+  /** @deprecated Use structure instead */
   structureDimension?: string;
 }
 
@@ -279,6 +341,12 @@ export interface ClinicalFlag {
   severity: RiskSeverity;
   /** AI confidence 0-1 */
   confidence: number;
+  /**
+   * Whether this flag calls for immediate clinical action or just forward-looking
+   * monitoring. Drives the icon shape (alarm vs watch) so a "monitor" flag with low
+   * severity doesn't visually shout the same way a high-severity acute risk does.
+   */
+  interventionType?: 'immediate' | 'monitor';
 }
 
 export interface RecommendedNextStep {

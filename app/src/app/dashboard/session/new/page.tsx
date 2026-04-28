@@ -23,7 +23,7 @@ interface SessionSummary {
   date: string;
   time: string;
 }
-import { ShieldCheck, Loader2, ArrowLeft, Clock, ChevronRight, UserPlus, Upload, FileAudio, X, Music, FileText, Mic, Square, Pause, Play, RotateCcw, CheckCircle2, AlertTriangle, Volume2, Monitor, Headphones, Edit3, Save, Check } from 'lucide-react';
+import { ShieldCheck, Loader2, ArrowLeft, Clock, ChevronRight, UserPlus, Upload, FileAudio, X, Music, FileText, Mic, Square, Pause, Play, RotateCcw, CheckCircle2, AlertTriangle, Volume2, Monitor, Headphones, Edit3, Save, Check, Brain, Eye, Stethoscope, Sparkles } from 'lucide-react';
 
 // ─── Analysis stage labels ───
 const ANALYSIS_STAGES_AUDIO = [
@@ -85,7 +85,22 @@ export default function NewSessionPage() {
   const [activeTab, setActiveTab] = useState(isLiveSession ? 'record' : 'upload');
   const [bulkTranscripts, setBulkTranscripts] = useState('');
   const [expandedBulk, setExpandedBulk] = useState(false);
+  // GDPR consent: bool + method. The bool is the explicit attestation
+  // checkbox; the method captures HOW consent was obtained (verbal | written
+  // | electronic). Both are required to enable any "Analyze" action and are
+  // persisted on the sessions row (see migration 003_session_consent.sql).
   const [consentGiven, setConsentGiven] = useState(false);
+  const [consentMethod, setConsentMethod] = useState<'verbal' | 'written' | 'electronic'>('verbal');
+  const CONSENT_VERSION = 'v1.0';
+
+  // Whisper upload state — driven by handleAudioAnalyze below.
+  // - uploadPercent: 0..100 during upload, then null while Whisper is
+  //   processing (server side — no progress signal available).
+  // - transcribeAbort: abort controller exposed to a Cancel button.
+  // - whisperError: set when transcription fails; UI offers a paste fallback.
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null);
+  const transcribeAbort = useRef<AbortController | null>(null);
+  const [whisperError, setWhisperError] = useState<string>('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const bulkRef = useRef<HTMLTextAreaElement>(null);
 
@@ -615,7 +630,7 @@ export default function NewSessionPage() {
       const stages = ANALYSIS_STAGES_AUDIO;
       setCurrentStage(0);
       const file = new File([recordedBlob], `recording-${Date.now()}.webm`, { type: 'audio/webm' });
-      const transcribedText = await transcribeAudio(file);
+      const { transcript: transcribedText } = await transcribeAudio(file);
 
       for (let i = 1; i < stages.length; i++) {
         setCurrentStage(i);
@@ -633,6 +648,8 @@ export default function NewSessionPage() {
           sessionNumber,
           date: sessionDate,
           time: sessionTime,
+          consentMethod,
+          consentVersion: CONSENT_VERSION,
         }),
       });
       if (!res.ok) throw new Error('Failed to create session');
@@ -692,13 +709,26 @@ export default function NewSessionPage() {
 
   const handleRemoveAudio = useCallback(() => { setAudioFile(null); setAudioError(''); }, []);
 
+  const handleCancelTranscribe = () => {
+    transcribeAbort.current?.abort();
+  };
+
   // ─── Analysis: from uploaded audio ───
   const handleAudioAnalyze = async () => {
     if (!audioFile) return;
     setIsAnalyzing(true);
+    setWhisperError('');
+    setUploadPercent(0);
+    transcribeAbort.current = new AbortController();
     try {
       setCurrentStage(0);
-      const transcribedText = await transcribeAudio(audioFile);
+      const { transcript: transcribedText } = await transcribeAudio(audioFile, {
+        signal: transcribeAbort.current.signal,
+        onProgress: (p) => setUploadPercent(p),
+      });
+      // Upload finished — server is now running Whisper; no progress signal
+      // available, so flip back to indeterminate.
+      setUploadPercent(null);
       for (let i = 1; i < ANALYSIS_STAGES_AUDIO.length; i++) {
         setCurrentStage(i);
         await new Promise((resolve) => setTimeout(resolve, 700));
@@ -715,6 +745,8 @@ export default function NewSessionPage() {
           sessionNumber,
           date: sessionDate,
           time: sessionTime,
+          consentMethod,
+          consentVersion: CONSENT_VERSION,
         }),
       });
       if (!res.ok) throw new Error('Failed to create session');
@@ -727,8 +759,21 @@ export default function NewSessionPage() {
       await finishAndRoute(sessionId);
     } catch (error) {
       console.error('Analysis failed:', error);
-      alert('Analysis failed. Please try again.');
+      const msg = error instanceof Error ? error.message : 'Analysis failed';
+      // Cancellation is a normal user action — don't show as an error, just
+      // unwind state so they can re-pick a file or switch to the paste tab.
+      if (msg.includes('cancelled')) {
+        setWhisperError(''); // cleared
+      } else {
+        // Surface the error inline (with a "switch to paste" CTA) instead of
+        // the old alert(). Audio failures are common (file format, audio too
+        // long, network blip) and the paste tab is always a viable fallback.
+        setWhisperError(msg);
+      }
       setIsAnalyzing(false);
+      setUploadPercent(null);
+    } finally {
+      transcribeAbort.current = null;
     }
   };
 
@@ -865,7 +910,7 @@ export default function NewSessionPage() {
       try {
         const stages = ANALYSIS_STAGES_AUDIO;
         setBulkCurrentStage(0);
-        const transcribedText = await transcribeAudio(audioFiles[i]);
+        const { transcript: transcribedText } = await transcribeAudio(audioFiles[i]);
 
         for (let s = 1; s < stages.length; s++) {
           setBulkCurrentStage(s);
@@ -1699,11 +1744,112 @@ export default function NewSessionPage() {
                     </div>
                   </div>
 
-                  <button onClick={handleAudioAnalyze} disabled={isAnalyzing || !audioFile} className="w-full px-6 py-3.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                    {isAnalyzing ? <><Loader2 className="w-5 h-5 animate-spin" />Analyzing...</> : <><Upload className="w-5 h-5" />Upload & Analyze</>}
+                  {/* Audio-tab consent gate. Mirrors the paste-tab block so
+                      both entry points enforce GDPR consent before sending
+                      transcript material to the analysis pipeline. */}
+                  <div className="mb-6 p-4 border-2 border-amber-200 bg-amber-50 rounded-xl space-y-3">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={consentGiven}
+                        onChange={(e) => setConsentGiven(e.target.checked)}
+                        className="w-5 h-5 mt-0.5 border-2 border-amber-400 rounded focus:ring-2 focus:ring-primary focus:ring-offset-0 cursor-pointer"
+                      />
+                      <span className="text-sm text-gray-900">
+                        I confirm the client has consented to this session being analyzed by AI for clinical decision support.
+                      </span>
+                    </label>
+                    <div className="flex items-center gap-2 pl-8 flex-wrap">
+                      <span className="text-xs text-gray-700 font-medium">Consent obtained:</span>
+                      {(['verbal', 'written', 'electronic'] as const).map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setConsentMethod(m)}
+                          className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                            consentMethod === m
+                              ? 'bg-primary text-white border-primary'
+                              : 'bg-white text-gray-700 border-gray-300 hover:border-primary/40'
+                          }`}
+                        >
+                          {m === 'verbal' && 'Verbally at session start'}
+                          {m === 'written' && 'Written form on file'}
+                          {m === 'electronic' && 'Electronically signed'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button onClick={handleAudioAnalyze} disabled={isAnalyzing || !audioFile || !consentGiven} className="w-full px-6 py-3.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    {isAnalyzing ? (
+                      uploadPercent !== null && uploadPercent < 100
+                        ? <><Loader2 className="w-5 h-5 animate-spin" />Uploading… {uploadPercent}%</>
+                        : <><Loader2 className="w-5 h-5 animate-spin" />Transcribing audio…</>
+                    ) : <><Upload className="w-5 h-5" />Upload & Analyze</>}
                   </button>
 
-                  {/* Bulk Upload Section */}
+                  {/* Upload progress bar — visible only during the upload
+                      portion. Once Whisper takes over server-side, we drop to
+                      an indeterminate "Transcribing audio…" label above. */}
+                  {isAnalyzing && uploadPercent !== null && uploadPercent < 100 && (
+                    <div className="mt-3 space-y-2">
+                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary transition-all duration-200"
+                          style={{ width: `${uploadPercent}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-gray-500">Uploading audio to transcription service…</span>
+                        <button
+                          type="button"
+                          onClick={handleCancelTranscribe}
+                          className="text-primary hover:text-primary-dark font-medium underline"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Whisper failure → offer paste-instead fallback. Audio
+                      transcription is brittle (file format quirks, length
+                      limits, network issues); the paste tab is always a
+                      viable backup, so we surface that path explicitly
+                      rather than just showing an error. */}
+                  {whisperError && !isAnalyzing && (
+                    <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl">
+                      <div className="flex items-start gap-3">
+                        <X className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-red-900 mb-1">Transcription failed</p>
+                          <p className="text-xs text-red-700 mb-3">{whisperError}</p>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => { setWhisperError(''); }}
+                              className="text-xs px-3 py-1.5 bg-white border border-red-200 text-red-700 rounded-lg hover:bg-red-50 transition"
+                            >
+                              Try again
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setWhisperError(''); setActiveTab('paste'); }}
+                              className="text-xs px-3 py-1.5 bg-primary text-white rounded-lg hover:bg-primary-dark transition"
+                            >
+                              Paste transcript instead
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Bulk Upload Section — hidden in v1.
+                      Set NEXT_PUBLIC_FEATURE_BULK_UPLOAD=1 to expose it.
+                      The implementation stays in the source so we can ship it
+                      in v1.1 without re-building the upload flow. */}
+                  {process.env.NEXT_PUBLIC_FEATURE_BULK_UPLOAD === '1' && (
                   <div className="border-t border-gray-200 pt-8 mt-12">
                     <button onClick={() => setExpandedBulk(!expandedBulk)} className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
                       <span className="font-semibold text-gray-900">Upload Multiple Sessions</span>
@@ -1768,6 +1914,7 @@ export default function NewSessionPage() {
                       </div>
                     )}
                   </div>
+                  )}
                 </>
               )}
 
@@ -1793,8 +1940,13 @@ export default function NewSessionPage() {
                     </div>
                   </div>
 
-                  {/* Therapist Consent Confirmation */}
-                  <div className="mb-8 p-4 border-2 border-amber-200 bg-amber-50 rounded-xl">
+                  {/* GDPR consent attestation. Required (gates the Analyze
+                      button). Method selector lets the clinician record HOW
+                      consent was obtained — verbal at session start, written
+                      form on file, or electronic signature in-app. The choice
+                      is persisted on the sessions row so we can prove it
+                      later if the client exercises data rights. */}
+                  <div className="mb-8 p-4 border-2 border-amber-200 bg-amber-50 rounded-xl space-y-3">
                     <label className="flex items-start gap-3 cursor-pointer">
                       <input
                         type="checkbox"
@@ -1803,9 +1955,28 @@ export default function NewSessionPage() {
                         className="w-5 h-5 mt-0.5 border-2 border-amber-400 rounded focus:ring-2 focus:ring-primary focus:ring-offset-0 cursor-pointer"
                       />
                       <span className="text-sm text-gray-900">
-                        I confirm that the client has verbally consented to this session being recorded and analyzed. This consent was obtained at the beginning of the session.
+                        I confirm the client has consented to this session being analyzed by AI for clinical decision support. The recorded transcript and analysis are stored under our privacy policy and will be deleted on request.
                       </span>
                     </label>
+                    <div className="flex items-center gap-2 pl-8 flex-wrap">
+                      <span className="text-xs text-gray-700 font-medium">Consent obtained:</span>
+                      {(['verbal', 'written', 'electronic'] as const).map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setConsentMethod(m)}
+                          className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                            consentMethod === m
+                              ? 'bg-primary text-white border-primary'
+                              : 'bg-white text-gray-700 border-gray-300 hover:border-primary/40'
+                          }`}
+                        >
+                          {m === 'verbal' && 'Verbally at session start'}
+                          {m === 'written' && 'Written form on file'}
+                          {m === 'electronic' && 'Electronically signed'}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="flex gap-4 mb-12">
@@ -1820,26 +1991,96 @@ export default function NewSessionPage() {
 
             {/* Sidebar */}
             <div className="lg:col-span-1">
-              <div className="bg-gradient-to-br from-success/10 to-success/5 border border-success/20 rounded-xl p-6 mb-8">
-                <div className="flex items-start gap-3">
+              {/* Privacy card — expanded to spell out the four concrete privacy
+                  promises a clinician and client need to hear before sharing
+                  session content with any AI tool. Each line is a specific
+                  commitment, not generic language. */}
+              <div className="bg-gradient-to-br from-success/10 to-success/5 border border-success/20 rounded-xl p-6 mb-6">
+                <div className="flex items-start gap-3 mb-4">
                   <ShieldCheck className="w-6 h-6 text-success mt-1 flex-shrink-0" />
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">Privacy First</h3>
-                    <p className="text-gray-600 text-sm leading-relaxed">Only the client code is stored as an identifier. No real names enter the system.</p>
+                    <p className="text-gray-600 text-sm leading-relaxed">100% private — for both clinician and client.</p>
                   </div>
                 </div>
+                <ul className="space-y-3 text-sm pl-1">
+                  <li className="flex items-start gap-2.5">
+                    <Eye className="w-4 h-4 text-success/80 flex-shrink-0 mt-0.5" />
+                    <span className="text-gray-700 leading-relaxed">
+                      <span className="font-semibold text-gray-900">Anonymous codes only.</span> Real names never enter SessionLens — your client dictionary stays with you.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <Brain className="w-4 h-4 text-success/80 flex-shrink-0 mt-0.5" />
+                    <span className="text-gray-700 leading-relaxed">
+                      <span className="font-semibold text-gray-900">Never used to train AI.</span> Session content is never used for model training, benchmarking, or any third-party research.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <Monitor className="w-4 h-4 text-success/80 flex-shrink-0 mt-0.5" />
+                    <span className="text-gray-700 leading-relaxed">
+                      <span className="font-semibold text-gray-900">Your edits live on your device.</span> Notes, sign-offs, and clinical-note edits are stored locally — not in a shared cloud.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <RotateCcw className="w-4 h-4 text-success/80 flex-shrink-0 mt-0.5" />
+                    <span className="text-gray-700 leading-relaxed">
+                      <span className="font-semibold text-gray-900">You stay in control.</span> Export or delete any session at any time — no retention without your consent.
+                    </span>
+                  </li>
+                </ul>
               </div>
 
+              {/* "What happens next" workflow preview — replaces the prior
+                  "Analysis Includes" feature list (that content lives on the
+                  landing page; here it's redundant). This sets expectations
+                  about the 4-step workflow ahead and reinforces that the
+                  clinician — not the AI — has the final word. */}
               <div className="bg-white border border-gray-200 rounded-xl p-6">
-                <h3 className="font-playfair font-bold text-gray-900 mb-5 text-lg">Analysis Includes</h3>
-                <ul className="space-y-4 text-sm">
-                  {['AI audio transcription', '10 phenomenological structure codes', 'Risk signal detection', 'Similar case matches', 'Practitioner methodology matches', 'Clinician & patient reports'].map((item) => (
-                    <li key={item} className="flex items-start gap-3">
-                      <span className="text-primary font-bold mt-0.5 flex-shrink-0">✓</span>
-                      <span className="text-gray-600 leading-relaxed">{item}</span>
-                    </li>
-                  ))}
-                </ul>
+                <h3 className="font-playfair font-bold text-gray-900 mb-1 text-lg">What happens next</h3>
+                <p className="text-xs text-gray-500 mb-5">The workflow ahead, in four steps.</p>
+                <ol className="space-y-4 text-sm">
+                  <li className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">1</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-gray-400" />
+                        Transcribe &amp; segment
+                      </p>
+                      <p className="text-gray-600 text-xs leading-relaxed mt-0.5">If you uploaded audio, we transcribe it. The session is then split into discrete moments.</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">2</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-gray-400" />
+                        Pattern surfacing
+                      </p>
+                      <p className="text-gray-600 text-xs leading-relaxed mt-0.5">Each moment is coded across 10 phenomenological dimensions. Risk signals, cognitive distortions, and matches against similar lived experiences are surfaced.</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">3</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 flex items-center gap-1.5">
+                        <Edit3 className="w-3.5 h-3.5 text-gray-400" />
+                        You review &amp; edit
+                      </p>
+                      <p className="text-gray-600 text-xs leading-relaxed mt-0.5">Every section is editable. Override any AI draft, add your own clinical observations, trace any claim back to the source quote.</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">4</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 flex items-center gap-1.5">
+                        <Stethoscope className="w-3.5 h-3.5 text-gray-400" />
+                        You sign off
+                      </p>
+                      <p className="text-gray-600 text-xs leading-relaxed mt-0.5">Set your own risk score, confirm your assessment, lock the record. Your clinical judgment is the authoritative one — never the AI&apos;s.</p>
+                    </div>
+                  </li>
+                </ol>
               </div>
             </div>
           </div>

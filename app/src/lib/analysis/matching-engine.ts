@@ -208,10 +208,7 @@ export async function matchSessionMoments(
     const supabase = getSupabaseClient();
     if (!supabase) {
       console.warn('[matching-engine] Supabase not configured, returning demo similar cases');
-      return MOCK_ANALYSIS.similarCases.map(c => ({
-        ...c,
-        outcomeDetail: `[Demo Data] ${c.outcomeDetail}`,
-      }));
+      return MOCK_ANALYSIS.similarCases;
     }
 
     if (moments.length === 0) {

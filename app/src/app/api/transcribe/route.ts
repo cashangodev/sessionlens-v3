@@ -62,15 +62,30 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const uploadFile = await toFile(buffer, file.name, { type: file.type });
 
-    // Call OpenAI Whisper API
+    // Optional `language` form field — caller can hint the language
+    // (ISO-639-1 code) when they know it. If omitted, Whisper auto-detects.
+    // Auto-detection is the new default; the previous hardcoded 'en' broke
+    // sessions in any other language and was the #1 GDPR-cohort blocker for
+    // EU therapists outside the UK.
+    const langHint = (formData.get('language') as string | null) || undefined;
+
+    // Call OpenAI Whisper API. Use verbose_json so we can return the detected
+    // language back to the client (handy for the UI to confirm and for QA).
     const transcript = await client.audio.transcriptions.create({
       file: uploadFile,
       model: 'whisper-1',
-      language: 'en', // English only as per requirements
+      response_format: 'verbose_json',
+      ...(langHint ? { language: langHint } : {}),
     });
 
     return NextResponse.json(
-      { transcript: transcript.text },
+      {
+        transcript: transcript.text,
+        // verbose_json includes `language` (full name like "english")
+        // and `duration` (seconds). Clients can ignore safely.
+        language: (transcript as unknown as { language?: string }).language ?? null,
+        duration: (transcript as unknown as { duration?: number }).duration ?? null,
+      },
       { status: 200 }
     );
   } catch (error) {
