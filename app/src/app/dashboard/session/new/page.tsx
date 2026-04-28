@@ -800,6 +800,8 @@ export default function NewSessionPage() {
           sessionNumber,
           date: sessionDate,
           time: sessionTime,
+          consentMethod,
+          consentVersion: CONSENT_VERSION,
         }),
       });
       if (!res.ok) throw new Error('Failed to create session');
@@ -885,6 +887,8 @@ export default function NewSessionPage() {
             sessionNumber: currentSessionNum,
             date: sessionDate,
             time: sessionTime,
+            consentMethod,
+            consentVersion: CONSENT_VERSION,
           }),
         });
         if (!res.ok) throw new Error('Failed to create session');
@@ -928,6 +932,8 @@ export default function NewSessionPage() {
             sessionNumber: currentSessionNum,
             date: sessionDate,
             time: sessionTime,
+            consentMethod,
+            consentVersion: CONSENT_VERSION,
           }),
         });
         if (!res.ok) throw new Error('Failed to create session');
