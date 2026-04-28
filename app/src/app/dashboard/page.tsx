@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Plus, ArrowRight, Brain, Shield, BarChart3, Search, Users, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useApi } from '@/hooks/use-api';
-import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
+// OnboardingTour temporarily removed — UX is imperfect, will re-introduce in v1.1.
+// import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 
 interface SessionSummary {
   id: string;
@@ -47,12 +48,8 @@ export default function HomePage() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      {/* First-run tour. Auto-opens for new users (no localStorage flag and
-          no sessions yet) and after Clerk sign-up via ?onboarding=1.
-          Only pass hasSessions once the API call has resolved — passing
-          `false` while loading would falsely flag every refresh as a
-          "new user" before we know whether sessions exist. */}
-      <OnboardingTour hasSessions={sessionsLoading ? undefined : hasAnySessions} />
+      {/* OnboardingTour disabled for v1 — UX needs polish. Component file
+          still exists at src/components/onboarding/OnboardingTour.tsx. */}
 
       {/* Welcome + Search Row */}
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-12">

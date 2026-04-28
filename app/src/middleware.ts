@@ -31,6 +31,7 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api/webhooks/clerk(.*)',
+  '/api/demo-request(.*)',
 ]);
 
 // Branch the export so the dev/demo build (no Clerk keys) doesn't try to
