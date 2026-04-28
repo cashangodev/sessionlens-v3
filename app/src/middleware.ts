@@ -1,71 +1,55 @@
 /**
- * Auth middleware.
+ * Auth middleware (Clerk Next.js v6 API).
  *
  * Behavior is conditional on Clerk being configured:
  *
- *  - When `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` is missing or contains
+ *  - When NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is missing or contains
  *    "placeholder" (dev / demo / preview without auth), the middleware is a
- *    no-op. The app keeps using the dev therapist fallback in
- *    `getTherapistId()` so local development and the public demo continue to
- *    work without sign-in.
+ *    no-op pass-through. The app keeps using the dev therapist fallback in
+ *    getTherapistId() so local dev and the public demo continue to work
+ *    without sign-in.
  *
  *  - When Clerk IS configured, every route except a small public allow-list
- *    requires an authenticated session. Unauthenticated requests to protected
- *    pages are redirected to /sign-in; unauthenticated API requests get 401.
+ *    requires an authenticated session. clerkMiddleware() handles the
+ *    redirect to /sign-in for protected pages and 401 responses for protected
+ *    APIs. The public allow-list uses createRouteMatcher() per Clerk v6 docs.
  *
- * The Clerk SDK is loaded lazily inside the handler so the dev build doesn't
- * import @clerk/nextjs/server when no key is set.
+ * NOTE: This file MUST use Clerk's clerkMiddleware() rather than manually
+ * calling getAuth(req). The old v4-style getAuth(req) doesn't work in v6 and
+ * causes a 500 MIDDLEWARE_INVOCATION_FAILED on every protected route.
  */
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLIC_ROUTES = [
+const isClerkConfigured =
+  !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
+  !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.includes('placeholder');
+
+// Routes that don't require sign-in. Everything else is protected by default.
+const isPublicRoute = createRouteMatcher([
   '/',
-  '/sign-in',
-  '/sign-up',
-  '/api/webhooks/clerk',
-];
+  '/sign-in(.*)',
+  '/sign-up(.*)',
+  '/api/webhooks/clerk(.*)',
+]);
 
-function isPublic(pathname: string): boolean {
-  return PUBLIC_ROUTES.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`),
-  );
-}
+// Branch the export so the dev/demo build (no Clerk keys) doesn't try to
+// initialize Clerk's middleware at all.
+const noopMiddleware = (_req: NextRequest) => NextResponse.next();
 
-function isClerkConfigured(): boolean {
-  const key = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  return !!key && !key.includes('placeholder');
-}
-
-export default async function middleware(req: NextRequest) {
-  if (!isClerkConfigured()) return NextResponse.next();
-
-  const { pathname } = req.nextUrl;
-  if (isPublic(pathname)) return NextResponse.next();
-
-  // Lazy-load Clerk so the dev build doesn't pull it in.
-  const { clerkClient, getAuth } = await import('@clerk/nextjs/server').catch(
-    () => ({ clerkClient: null, getAuth: null }),
-  );
-  if (!getAuth) return NextResponse.next();
-
-  // getAuth in @clerk/nextjs v6 expects the request and returns { userId, ... }
-  const { userId } = getAuth(req as unknown as Parameters<typeof getAuth>[0]);
-
-  if (!userId) {
-    if (pathname.startsWith('/api/')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const signIn = new URL('/sign-in', req.url);
-    signIn.searchParams.set('redirect_url', pathname);
-    return NextResponse.redirect(signIn);
-  }
-
-  // Touching clerkClient avoids unused-import lint when extended later
-  void clerkClient;
-  return NextResponse.next();
-}
+export default isClerkConfigured
+  ? clerkMiddleware(async (auth, req) => {
+      if (isPublicRoute(req)) return;
+      // Throws a redirect to /sign-in for HTML routes; returns a 401 JSON
+      // response for /api routes. Clerk handles both cases internally.
+      await auth.protect();
+    })
+  : noopMiddleware;
 
 export const config = {
-  // Run on everything except Next internals & static files
-  matcher: ['/((?!_next/|.*\\.(?:ico|png|jpg|jpeg|svg|gif|webp|css|js|map|txt|woff2?)$).*)'],
+  // Skip Next.js internals and all static files; always run on /api and /trpc.
+  matcher: [
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    '/(api|trpc)(.*)',
+  ],
 };
