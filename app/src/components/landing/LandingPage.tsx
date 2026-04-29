@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   Eye,
@@ -574,26 +574,22 @@ export function LandingPage() {
 /**
  * "Structure map" — 10 nodes around a circle, faint connections.
  *
- * Animation: short, soft sparks that travel between non-adjacent node pairs.
- * Multiple sparks fire continuously on staggered, prime-ish timings — they
- * never sync, so the eye sees different connections lighting up moment to
- * moment. Reads as "the system is finding interconnections across the
- * client's experience," not as a marching pattern.
+ * Animation: a SINGLE soft segment travels between two nodes, then jumps to
+ * a different pair, and repeats. Reads as "the system is following one
+ * thread of connection at a time," not "many things firing at once."
  *
- * Each spark:
- *  - is a single <line> between two nodes, normalized to pathLength=100
- *  - has a 30% visible dasharray segment that slides from "before A" to
- *    "after B", giving a brief swept-in/swept-out trail
- *  - varies in duration and start delay so the set never aligns
+ * Implementation:
+ *  - A `tickIdx` state ticks every 4s via setInterval.
+ *  - The active pair is picked via `(tickIdx * 7 + 3) % 10` — a coprime
+ *    multiplier through 10 hand-picked pairs, so every pair is hit before
+ *    repeating, but the visit order doesn't feel sequential.
+ *  - The <line> uses `key={tickIdx}` so every tick remounts it — restarting
+ *    the CSS sweep animation cleanly without stutter.
  *
- * Pairs were hand-picked to skip immediate neighbors — every spark crosses
- * meaningfully across the diagram (long diagonals + medium chords), no
- * rim-hugging. Symmetry is intentionally broken — the set isn't rotationally
- * uniform, which keeps the visual feel asymmetric/organic instead of
- * geometric.
- *
- * Static layers stay: outer ring, dim mesh, all 10 nodes. The sparks float
- * over them. `prefers-reduced-motion` collapses everything to fully static.
+ * Tunables:
+ *  - 4000ms tick → swap to taste (slower = more meditative).
+ *  - opacity 0.75 in keyframes (10% softer than the previous 0.85).
+ *  - 3.6s sweep duration matches the 4s tick with a small rest gap.
  */
 function StructureMap() {
   const cx = 220;
@@ -617,21 +613,24 @@ function StructureMap() {
     }
   }
 
-  // Spark connections. Each {a, b} pair is a single firing. Durations and
-  // delays use prime-ish values so the set never repeats — the eye reads
-  // this as random even though it's deterministic.
-  const sparks: Array<{ a: number; b: number; dur: number; delay: number }> = [
-    { a: 0, b: 5, dur: 2.6, delay: 0    },
-    { a: 1, b: 6, dur: 2.3, delay: 0.7  },
-    { a: 3, b: 8, dur: 2.9, delay: 1.4  },
-    { a: 7, b: 2, dur: 2.4, delay: 0.3  },
-    { a: 4, b: 9, dur: 2.7, delay: 1.9  },
-    { a: 6, b: 1, dur: 2.5, delay: 2.4  },
-    { a: 8, b: 3, dur: 2.8, delay: 1.1  },
-    { a: 0, b: 7, dur: 2.2, delay: 2.1  },
-    { a: 2, b: 9, dur: 3.1, delay: 0.9  },
-    { a: 5, b: 0, dur: 2.6, delay: 1.6  },
+  // Pre-built pair pool — every pair crosses the diagram (skips immediate
+  // neighbors) so the visible line always has visual length.
+  const pairs: Array<[number, number]> = [
+    [0, 5], [1, 6], [3, 8], [7, 2], [4, 9],
+    [6, 1], [8, 3], [0, 7], [2, 9], [5, 0],
   ];
+
+  const [tickIdx, setTickIdx] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setTickIdx((n) => n + 1);
+    }, 4000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  // Coprime-multiplier order through pairs — visits all 10 before repeating
+  // but never feels sequential.
+  const [a, b] = pairs[(tickIdx * 7 + 3) % pairs.length];
 
   return (
     <div className="structure-map w-full max-w-md ml-auto">
@@ -639,42 +638,37 @@ function StructureMap() {
         viewBox="0 0 440 440"
         className="w-full h-auto"
         role="img"
-        aria-label="Schematic of the 10 phenomenological dimensions arranged around a circle, with short connections briefly lighting up between dimensions across the diagram."
+        aria-label="Schematic of the 10 phenomenological dimensions arranged around a circle. A single faint line travels between two dimensions at a time, jumping to a different pair every few seconds."
       >
         {/* Static layer: outer ring + dim edge mesh. */}
         <circle cx={cx} cy={cy} r={r} fill="none" stroke="#E2E8F0" strokeWidth="1" />
-        {edges.map(([a, b], idx) => (
+        {edges.map(([ea, eb], idx) => (
           <line
             key={idx}
-            x1={nodes[a].x}
-            y1={nodes[a].y}
-            x2={nodes[b].x}
-            y2={nodes[b].y}
+            x1={nodes[ea].x}
+            y1={nodes[ea].y}
+            x2={nodes[eb].x}
+            y2={nodes[eb].y}
             stroke="#CBD5E1"
             strokeWidth="0.6"
           />
         ))}
 
-        {/* Spark layer — each line is invisible at rest; the animation
-            sweeps a 30% visible segment from one end to the other. */}
-        {sparks.map((s, idx) => (
-          <line
-            key={idx}
-            className="structure-spark"
-            x1={nodes[s.a].x}
-            y1={nodes[s.a].y}
-            x2={nodes[s.b].x}
-            y2={nodes[s.b].y}
-            stroke="#1D4343"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            pathLength={100}
-            style={{
-              animationDuration: `${s.dur}s`,
-              animationDelay: `${s.delay}s`,
-            }}
-          />
-        ))}
+        {/* Single active spark. The `key={tickIdx}` is load-bearing — it
+            forces React to remount the element every tick, which restarts
+            the CSS animation from frame 0 without needing JS animation. */}
+        <line
+          key={tickIdx}
+          className="structure-spark"
+          x1={nodes[a].x}
+          y1={nodes[a].y}
+          x2={nodes[b].x}
+          y2={nodes[b].y}
+          stroke="#1D4343"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          pathLength={100}
+        />
 
         {/* Static nodes. */}
         {nodes.map((n) => (
@@ -691,27 +685,22 @@ function StructureMap() {
       </svg>
 
       <style jsx>{`
-        /* Each spark sweeps a 30-unit visible segment from before the line
-           starts (offset 100) to past the end (offset -30). The "blank"
-           dasharray puts the entire 100-unit gap at the end, so only one
-           segment is ever visible per spark. */
+        /* Single sweep, runs once per remount. Slow + softer than before:
+             - 3.6s duration (was ~2.5s)
+             - peak opacity 0.75 (was 0.85)
+           A small rest gap (~0.4s) sits between the end of the sweep and
+           the next tick at 4s. */
         .structure-map :global(.structure-spark) {
           stroke-dasharray: 30 200;
           stroke-dashoffset: 100;
-          animation-name: sparkTravel;
-          animation-iteration-count: infinite;
-          animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+          opacity: 0;
+          animation: sparkTravel 3.6s cubic-bezier(0.4, 0, 0.6, 1) both;
         }
         @keyframes sparkTravel {
-          /* Hidden before the line — fully transparent. */
-          0%   { stroke-dashoffset: 100; opacity: 0; }
-          /* Quickly fade in as it enters. */
-          12%  { opacity: 0.85; }
-          /* Travel along the line. */
-          75%  { opacity: 0.85; }
-          /* Past the end — fade out so the trail dissolves. */
-          92%  { opacity: 0; }
-          100% { stroke-dashoffset: -130; opacity: 0; }
+          0%   { stroke-dashoffset: 100;  opacity: 0;    }
+          15%  {                          opacity: 0.75; }
+          82%  {                          opacity: 0.75; }
+          100% { stroke-dashoffset: -130; opacity: 0;    }
         }
         @media (prefers-reduced-motion: reduce) {
           .structure-map :global(.structure-spark) {
