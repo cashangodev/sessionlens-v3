@@ -270,7 +270,7 @@ export function LandingPage() {
           <CapabilityRow
             icon={FileSearch}
             title="Triple-vector case matching"
-            body="Match against 778 lived-experience archives using semantic, structural, and clinical-metadata vectors. Truly similar cases, not keyword matches."
+            body="Match against 10,000+ lived-experience archives using semantic, structural, and clinical-metadata vectors. Truly similar cases, not keyword matches."
           />
           <CapabilityRow
             icon={Stethoscope}
