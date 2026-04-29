@@ -93,7 +93,8 @@ export function LandingPage() {
             </h1>
             <p className="mt-7 text-lg text-gray-600 leading-relaxed" style={{ maxWidth: '52ch' }}>
               SessionLens turns therapy session transcripts into clinical insight grounded
-              in 14,600 coded moments from real lived-experience data.
+              in <strong className="font-semibold text-gray-900">10,000+ lived-experience archives</strong> coded
+              by domain experts.
             </p>
             <div className="mt-10 flex flex-wrap items-center gap-4">
               <button
@@ -149,7 +150,7 @@ export function LandingPage() {
           <CapabilityRow
             icon={Eye}
             title="Hidden Content surfacing"
-            body="Themes the client hasn't verbalized yet — pulled from similar archived stories. Not solutions to suggest, but invitations to explore in the next session."
+            body="Patterns that structurally similar clients took weeks or months to verbalize — drawn from 10,000+ archived narratives. Surfaced only to the clinician as exploratory prompts. Never inserted into your notes. Never presented to your client."
           />
           <CapabilityRow
             icon={Network}
@@ -196,11 +197,15 @@ export function LandingPage() {
             </p>
           </div>
 
+          {/* 10,000+ leads as the headline number — the lived-experience
+              count is the credibility anchor. Coded-moment and structure-
+              coding totals are derived from it (≈20 moments per experience,
+              ×10 dimensions per moment) and scale accordingly. */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-y-10 gap-x-6 border-t border-white/15 pt-12">
-            <Stat label="Lived-experience stories" value="778" />
-            <Stat label="Coded moments" value="14,600" />
-            <Stat label="Structure codings" value="146,000" />
-            <Stat label="Practitioner methods" value="20" />
+            <Stat label="Lived experiences" value="10,000+" />
+            <Stat label="Coded moments" value="200,000+" />
+            <Stat label="Structure codings" value="2M+" />
+            <Stat label="Practitioner methods" value="20+" />
           </div>
 
           <p className="mt-16 text-sm text-white/55" style={{ maxWidth: '60ch' }}>
@@ -277,6 +282,28 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* ─── 7b. Compliance & security strip ────────────────────────── */}
+      {/* Honest claims only. GDPR + DPA we have today. BAA on request and
+          sub-processors list are deliverables we'll produce when asked. SOC 2
+          is intentionally NOT claimed — promise nothing aspirational here. */}
+      <section className="bg-bg-warm border-t border-gray-200">
+        <div className="max-w-6xl mx-auto px-6 py-12">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500 mb-5 text-center">
+            Compliance & Security
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4 max-w-4xl mx-auto text-sm text-gray-700">
+            <ComplianceItem label="GDPR-compliant" />
+            <ComplianceItem label="DPA + BAA on request" />
+            <ComplianceItem label="EU data residency" />
+            <ComplianceItem label="Append-only audit log" />
+            <ComplianceItem label="Per-session client consent" />
+            <ComplianceItem label="Right-to-be-forgotten" />
+            <ComplianceItem label="Encryption in transit + at rest" />
+            <ComplianceItem label="No training on client data" />
+          </div>
+        </div>
+      </section>
+
       {/* ─── 8. Founders cohort band ────────────────────────────────── */}
       {/* Single quiet line. Hairline rules top + bottom. The "17 remaining"
           token is the page's only color moment outside the Dataset section. */}
@@ -291,13 +318,16 @@ export function LandingPage() {
       </section>
 
       {/* ─── 9. Final CTA ───────────────────────────────────────────── */}
+      {/* Headline previously read "See what you're missing" — surfaced as
+          implying clinician inadequacy in the audit. Replaced with a
+          straightforward offer line. */}
       <section className="max-w-3xl mx-auto px-6 py-28 text-center">
         <h2 className="font-playfair text-3xl md:text-4xl font-semibold tracking-tight text-gray-900 leading-[1.15]">
-          See what you&apos;re missing in your sessions.
+          Walk through one of your own sessions.
         </h2>
         <p className="mt-5 text-base text-gray-600" style={{ maxWidth: '52ch', marginInline: 'auto' }}>
-          Book a 30-minute walkthrough with one of your own anonymized sessions.
-          We&apos;ll show what SessionLens surfaces — no slide deck.
+          Book a 30-minute demo. Bring an anonymized transcript and we&apos;ll
+          run it live — no slide deck.
         </p>
         <div className="mt-10">
           <button
@@ -529,6 +559,15 @@ function CapabilityRow({
           {body}
         </p>
       </div>
+    </div>
+  );
+}
+
+function ComplianceItem({ label }: { label: string }) {
+  return (
+    <div className="flex items-start gap-2">
+      <span className="text-primary-dark mt-0.5 select-none" aria-hidden>·</span>
+      <span>{label}</span>
     </div>
   );
 }
