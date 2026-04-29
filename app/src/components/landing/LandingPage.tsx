@@ -103,12 +103,14 @@ export function LandingPage() {
               >
                 Request a demo
               </button>
-              <Link
-                href="/sign-in"
+              {/* Soft secondary CTA — anchors to the inline example below.
+                  Captures the 70% of visitors not ready for a sales call. */}
+              <a
+                href="#example"
                 className="text-sm font-medium text-gray-900 hover:text-primary-dark px-1 py-3"
               >
-                Sign in →
-              </Link>
+                See an example →
+              </a>
             </div>
             <p className="mt-12 text-xs text-gray-400">
               Founders cohort · Sign-in by invitation · GDPR-compliant
@@ -128,6 +130,114 @@ export function LandingPage() {
           <NumberLine n="10" label="phenomenological dimensions coded per session" />
           <NumberLine n="60s" label="from transcript paste to clinical insight" />
           <NumberLine n="Zero" label="training on your client data — ever" />
+        </div>
+      </section>
+
+      {/* ─── 3b. Example output — the page's product proof ─────────── */}
+      {/* Inline before/after card: a short anonymized exchange on the
+          left, the system's coded output on the right. The single most
+          important conversion asset on the page — the audit identified
+          "no product visual" as the #1 leak. Static, no animation. */}
+      <section id="example" className="bg-bg-warm">
+        <div className="max-w-6xl mx-auto px-6 py-28 lg:py-32 scroll-mt-20">
+          <div className="mb-14 max-w-3xl">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500 mb-4">
+              Example output
+            </p>
+            <h2 className="font-playfair text-3xl font-semibold tracking-tight text-gray-900">
+              From a 30-second exchange — to coded clinical insight.
+            </h2>
+            <p className="mt-3 text-base text-gray-600" style={{ maxWidth: '60ch' }}>
+              Anonymized session moment on the left. SessionLens output on the right.
+              Every claim ties back to the verbatim quote.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 border border-gray-200 bg-white rounded-md overflow-hidden">
+            {/* Transcript pane */}
+            <div className="p-7 border-b md:border-b-0 md:border-r border-gray-200">
+              <p className="text-[10px] uppercase tracking-[0.16em] text-gray-400 mb-4">
+                Transcript · Session #4 · CL-1042
+              </p>
+              <div className="space-y-4 text-sm leading-relaxed text-gray-800 font-mono">
+                <p>
+                  <span className="text-gray-400">CL:</span>{' '}
+                  I — I just don&apos;t know why I keep getting these headaches before our
+                  Sunday calls with my mother. They start Friday night.
+                </p>
+                <p>
+                  <span className="text-gray-400">DR:</span>{' '}
+                  You said &quot;I don&apos;t know why&quot; — but tell me what comes up if
+                  you sit with it for a moment.
+                </p>
+                <p>
+                  <span className="text-gray-400">CL:</span>{' '}
+                  Like a tightness in my chest. I keep telling myself it&apos;s nothing.
+                </p>
+              </div>
+            </div>
+
+            {/* Analysis pane */}
+            <div className="p-7 bg-bg-warm/50">
+              <p className="text-[10px] uppercase tracking-[0.16em] text-gray-400 mb-4">
+                SessionLens output
+              </p>
+
+              <div className="space-y-5">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.14em] text-gray-500 mb-2">
+                    Phenomenological tags
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      'Body · somatic anchor',
+                      'Emotion · anticipatory anxiety',
+                      'Social · family of origin',
+                      'Reflective · invitation',
+                      'Behaviour · suppression',
+                    ].map((t) => (
+                      <span
+                        key={t}
+                        className="text-[11px] text-gray-700 border border-gray-300 rounded px-2 py-0.5"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.14em] text-gray-500 mb-2">
+                    Hidden content cue
+                  </p>
+                  <p className="text-sm text-gray-800 leading-relaxed border-l-2 border-primary pl-3">
+                    Anniversary-effect somatization preceding family-of-origin contact —
+                    pattern present in <strong className="font-semibold">38 archived narratives</strong>.
+                    <span className="block mt-1 text-xs text-gray-500 italic">
+                      Surfaced for clinician only. Never inserted into notes.
+                    </span>
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.14em] text-gray-500 mb-2">
+                    SOAP excerpt — editable
+                  </p>
+                  <p className="text-sm text-gray-700 leading-relaxed">
+                    <strong>S:</strong> Pre-contact somatic distress (headache, chest tightness)
+                    Friday → Sunday. Verbal minimization of own bodily signal.
+                    <span className="block mt-1 text-xs text-gray-400">
+                      Tied to verbatim quote · Editable before export
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-6 text-xs text-gray-500 text-center">
+            Anonymized illustration. SessionLens never trains on your client data.
+          </p>
         </div>
       </section>
 
@@ -282,6 +392,63 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* ─── 7a. For clinics & group practices ─────────────────────── */}
+      {/* Honest interest-capture for multi-seat buyers. Team admin / SSO /
+          supervisor workflows are NOT shipped yet — copy reflects that.
+          Reserves the audience without overpromising. */}
+      <section className="bg-white border-t border-gray-200">
+        <div className="max-w-5xl mx-auto px-6 py-24">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-12 items-start">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500 mb-4">
+                For clinics &amp; group practices
+              </p>
+              <h2 className="font-playfair text-3xl font-semibold tracking-tight text-gray-900">
+                Building team features with our founders cohort.
+              </h2>
+              <p className="mt-5 text-base text-gray-600" style={{ maxWidth: '52ch' }}>
+                A coded phenomenological framework is the rare scaffolding that lets a
+                first-year clinician produce notes with the consistency of a 15-year
+                veteran. We&apos;re working with founders-cohort clinics on what that
+                looks like at scale.
+              </p>
+              <button
+                onClick={() => openDemo('landing-clinic')}
+                className="mt-8 text-sm font-medium border border-gray-300 text-gray-900 px-5 py-3 rounded-md hover:border-gray-900"
+              >
+                Talk to our clinic team
+              </button>
+            </div>
+
+            <ul className="space-y-5 md:pt-2 text-sm text-gray-700">
+              <li className="flex items-start gap-3">
+                <span className="text-primary-dark mt-px select-none">·</span>
+                <span>
+                  <strong className="font-semibold text-gray-900">Standardized note quality</strong>{' '}
+                  — every clinician&apos;s output mapped to the same 10 dimensions, so
+                  supervisors can review caseloads consistently.
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="text-primary-dark mt-px select-none">·</span>
+                <span>
+                  <strong className="font-semibold text-gray-900">Practice-wide outcome tracking</strong>{' '}
+                  — PHQ-9 / GAD-7 trends aggregated across your team, not just individual caseloads.
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="text-primary-dark mt-px select-none">·</span>
+                <span>
+                  <strong className="font-semibold text-gray-900">In-design with founders cohort</strong>{' '}
+                  — team admin, SSO, supervisor review workflows. Reserve early access
+                  for your team and shape what we build.
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
       {/* ─── 7b. Compliance & security strip ────────────────────────── */}
       {/* Honest claims only. GDPR + DPA we have today. BAA on request and
           sub-processors list are deliverables we'll produce when asked. SOC 2
@@ -341,13 +508,43 @@ export function LandingPage() {
 
       {/* ─── 10. Footer ─────────────────────────────────────────────── */}
       <footer className="border-t border-gray-200 bg-bg-warm">
-        <div className="max-w-6xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-3">
-          <p className="text-xs text-gray-500">
-            © {new Date().getFullYear()} SessionLens · Cashango Ltd
-          </p>
-          <p className="text-xs text-gray-400">
-            For licensed mental-health professionals · Clinical decision support — not a diagnostic tool
-          </p>
+        <div className="max-w-6xl mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-[1.4fr_1fr_1fr] gap-8 md:gap-12">
+          <div>
+            <p className="font-playfair text-lg font-semibold text-gray-900 mb-3">SessionLens</p>
+            <p className="text-sm text-gray-600 leading-relaxed" style={{ maxWidth: '40ch' }}>
+              Built by a team of psychotherapy researchers and ML engineers.
+              Cashango Ltd · EU.
+            </p>
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.16em] text-gray-500 mb-3">Product</p>
+            <ul className="space-y-2 text-sm text-gray-700">
+              <li><a href="#example" className="hover:text-primary-dark">Example output</a></li>
+              <li><a href="#pricing" className="hover:text-primary-dark">Pricing</a></li>
+              <li><Link href="/sign-in" className="hover:text-primary-dark">Sign in</Link></li>
+            </ul>
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.16em] text-gray-500 mb-3">Contact</p>
+            <ul className="space-y-2 text-sm text-gray-700">
+              <li>
+                <button onClick={() => openDemo('footer')} className="hover:text-primary-dark">
+                  Request a demo
+                </button>
+              </li>
+              <li><a href="mailto:contact@cashango.com" className="hover:text-primary-dark">contact@cashango.com</a></li>
+            </ul>
+          </div>
+        </div>
+        <div className="border-t border-gray-200">
+          <div className="max-w-6xl mx-auto px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-3">
+            <p className="text-xs text-gray-500">
+              © {new Date().getFullYear()} SessionLens · Cashango Ltd
+            </p>
+            <p className="text-xs text-gray-400">
+              For licensed mental-health professionals · Clinical decision support — not a diagnostic tool
+            </p>
+          </div>
         </div>
       </footer>
 
