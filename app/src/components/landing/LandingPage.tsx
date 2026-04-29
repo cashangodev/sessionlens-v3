@@ -346,23 +346,25 @@ export function LandingPage() {
 
 /**
  * "Structure map" — 10 nodes around a circle, faint connections.
- * The visual hint: this is a STRUCTURED tool, not a generic chatbot.
  *
- * Animation philosophy: clinical, not flashy. Two motion layers:
+ * Animation: a single bold teal segment travels through every node in
+ * sequence, weaving across the diagram via a star path (step-of-3 traversal).
+ * Each visible loop ends where it began, so the trace is continuous. Reads as
+ * "every dimension connects to every other dimension" — the literal claim of
+ * the framework, drawn in motion.
  *
- *   1. Each node breathes (opacity 1 → 0.55 → 1) on a slow 5s cycle,
- *      staggered by index so the ten nodes are out of phase. Reads as
- *      "the system is considering each dimension in turn" — not a marketing
- *      sparkle, more like a ventilator's slow rhythm or an EEG trace.
+ * Implementation:
+ *  - One <path> through all 10 nodes in star order (0→3→6→9→2→5→8→1→4→7→0).
+ *  - `pathLength="100"` normalizes the dasharray to percentages.
+ *  - `stroke-dasharray: 14 86` shows a 14% segment of the path; the rest is
+ *    invisible. Animating `stroke-dashoffset` from 0 → -100 sweeps that
+ *    segment around the loop.
+ *  - 9s linear loop. Slow enough to read as deliberate, fast enough that the
+ *    head clears the previous edge before reaching the next node.
  *
- *   2. The center dot ("the session") pulses gently — a single soft glow
- *      ring expands and fades on a 3.5s cycle. The page's only radiating
- *      element. Locates attention without demanding it.
- *
- * Edges, the outer ring, and node positions stay completely static. Half the
- * piece is still — that's why the breathing reads as calm rather than busy.
- *
- * `prefers-reduced-motion` collapses everything to the static state.
+ * Static layers stay: outer ring, the dim mesh of edges, all 10 nodes. Only
+ * the bold traveling segment moves. Reduced-motion users see the path fully
+ * drawn (no animation).
  */
 function StructureMap() {
   const cx = 220;
@@ -386,15 +388,25 @@ function StructureMap() {
     }
   }
 
+  // Hamiltonian-ish star traversal. Step of 3 visits every node exactly once
+  // for n=10 (since gcd(3,10)=1) and produces a 10/3-star-shape weave that
+  // crosses the diameter rather than hugging the rim — emphasizing
+  // interconnection across the diagram, not just along its edge.
+  const seq = [0, 3, 6, 9, 2, 5, 8, 1, 4, 7];
+  const pathD =
+    `M ${nodes[seq[0]].x} ${nodes[seq[0]].y} ` +
+    seq.slice(1).map((i) => `L ${nodes[i].x} ${nodes[i].y}`).join(' ') +
+    ` L ${nodes[seq[0]].x} ${nodes[seq[0]].y}`;
+
   return (
     <div className="structure-map w-full max-w-md ml-auto">
       <svg
         viewBox="0 0 440 440"
         className="w-full h-auto"
         role="img"
-        aria-label="Schematic of the 10 phenomenological dimensions arranged around a circle, showing how dimensions connect across a session."
+        aria-label="Schematic of the 10 phenomenological dimensions arranged around a circle. A teal line continuously traces connections between each dimension and three others across the diagram."
       >
-        {/* Static layer: outer ring + edges. */}
+        {/* Static layer: outer ring + dim edge mesh. */}
         <circle cx={cx} cy={cy} r={r} fill="none" stroke="#E2E8F0" strokeWidth="1" />
         {edges.map(([a, b], idx) => (
           <line
@@ -408,60 +420,50 @@ function StructureMap() {
           />
         ))}
 
-        {/* Center: a soft glow ring that expands + fades on a 3.5s loop,
-            plus the static center dot. The ring uses stroke (not fill) so
-            it doesn't overlap the connecting lines while expanding. */}
-        <circle
-          className="structure-pulse"
-          cx={cx}
-          cy={cy}
-          r="6"
+        {/* The traveling segment. A single bold teal stroke whose visible
+            portion (14% of the total path) sweeps around the loop. Drawn
+            UNDER the nodes so the dots stay clean as it passes through. */}
+        <path
+          className="structure-trace"
+          d={pathD}
           fill="none"
           stroke="#1D4343"
-          strokeWidth="1"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          pathLength={100}
         />
-        <circle cx={cx} cy={cy} r="3" fill="#1D4343" />
 
-        {/* Nodes — staggered slow breath. The animation-delay is set per node
-            via inline style so all ten share the same keyframes but step
-            through it offset, never aligning. */}
+        {/* Static nodes — solid teal, varying size to suggest centrality. */}
         {nodes.map((n) => (
           <circle
             key={n.i}
-            className="structure-node"
             cx={n.x}
             cy={n.y}
             r={n.i % 3 === 0 ? 7 : 5}
             fill="#1D4343"
-            style={{ animationDelay: `${n.i * 0.5}s` }}
           />
         ))}
+        {/* Center dot — the "session" itself. Static. */}
+        <circle cx={cx} cy={cy} r="3" fill="#1D4343" />
       </svg>
 
-      {/* Animations are scoped to .structure-map so they don't bleed elsewhere. */}
       <style jsx>{`
-        .structure-map :global(.structure-node) {
-          animation: nodeBreath 5s ease-in-out infinite;
-          transform-origin: center;
-          transform-box: fill-box;
+        .structure-map :global(.structure-trace) {
+          stroke-dasharray: 14 86;
+          stroke-dashoffset: 0;
+          animation: traceLoop 9s linear infinite;
         }
-        .structure-map :global(.structure-pulse) {
-          animation: centerPulse 3.5s ease-out infinite;
-          transform-origin: center;
-          transform-box: fill-box;
-          opacity: 0;
-        }
-        @keyframes nodeBreath {
-          0%, 100% { opacity: 1; }
-          50%      { opacity: 0.55; }
-        }
-        @keyframes centerPulse {
-          0%   { r: 4;  opacity: 0.6; }
-          100% { r: 28; opacity: 0;   }
+        @keyframes traceLoop {
+          from { stroke-dashoffset: 0;    }
+          to   { stroke-dashoffset: -100; }
         }
         @media (prefers-reduced-motion: reduce) {
-          .structure-map :global(.structure-node) { animation: none; }
-          .structure-map :global(.structure-pulse) { animation: none; opacity: 0; }
+          .structure-map :global(.structure-trace) {
+            animation: none;
+            stroke-dasharray: none;
+            stroke-opacity: 0.5;
+          }
         }
       `}</style>
     </div>
