@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Users } from 'lucide-react';
+import { UserButton } from '@clerk/nextjs';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,19 +13,14 @@ export const dynamic = 'force-dynamic';
  *   - text-sm hover states with color shift only — no bg tints, no transforms
  *   - same wordmark size + weight as the landing nav
  *
- * UserButton: lazy-imported so the dev/demo build (no Clerk keys) renders
- * a static avatar instead. When Clerk is configured, the real user avatar +
- * sign-out menu shows.
+ * UserButton: statically imported (the dynamic-require pattern fails in
+ * Next.js because UserButton is a Client Component and the import boundary
+ * needs to be visible at build time). Render-time conditional gates whether
+ * we mount it — when no Clerk key is set, fall back to a static badge.
  */
 const hasRealClerkKey =
   !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
   !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.includes('placeholder');
-
-let UserButton: React.ComponentType<{ afterSignOutUrl?: string }> | null = null;
-if (hasRealClerkKey) {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  UserButton = require('@clerk/nextjs').UserButton;
-}
 
 export default async function DashboardLayout({
   children,
@@ -59,7 +55,7 @@ export default async function DashboardLayout({
             >
               <Users className="w-4 h-4" strokeWidth={1.5} />
             </Link>
-            {UserButton ? (
+            {hasRealClerkKey ? (
               <UserButton afterSignOutUrl="/" />
             ) : (
               <div
