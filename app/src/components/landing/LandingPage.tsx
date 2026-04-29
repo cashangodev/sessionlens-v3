@@ -133,110 +133,81 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ─── 3b. Example output — the page's product proof ─────────── */}
-      {/* Inline before/after card: a short anonymized exchange on the
-          left, the system's coded output on the right. The single most
-          important conversion asset on the page — the audit identified
-          "no product visual" as the #1 leak. Static, no animation. */}
-      <section id="example" className="bg-bg-warm">
+      {/* ─── 3b. From one session — the deliverables showcase ─────── */}
+      {/* Replaces the previous lighter "example output" card. The earlier
+          version showed only 3 outputs, which underplayed the analysis depth.
+          This version maps the full set of 12 distinct deliverables produced
+          per session, organised into four output categories. Static layout. */}
+      <section id="example" className="bg-bg-warm border-t border-gray-200">
         <div className="max-w-6xl mx-auto px-6 py-28 lg:py-32 scroll-mt-20">
           <div className="mb-14 max-w-3xl">
             <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500 mb-4">
-              Example output
+              From one session
             </p>
             <h2 className="font-playfair text-3xl font-semibold tracking-tight text-gray-900">
-              From a 30-second exchange — to coded clinical insight.
+              Twelve outputs from a single transcript.
             </h2>
             <p className="mt-3 text-base text-gray-600" style={{ maxWidth: '60ch' }}>
-              Anonymized session moment on the left. Session Polaris output on the right.
-              Every claim ties back to the verbatim quote.
+              Paste a session, get the full set of clinical artifacts — structural
+              coding, risk surveillance, narrative analysis, and ready-to-edit
+              documentation. Every output ties back to a verbatim moment.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 border border-gray-200 bg-white rounded-md overflow-hidden">
-            {/* Transcript pane */}
-            <div className="p-7 border-b md:border-b-0 md:border-r border-gray-200">
-              <p className="text-[10px] uppercase tracking-[0.16em] text-gray-400 mb-4">
-                Transcript · Session #4 · CL-1042
-              </p>
-              <div className="space-y-4 text-sm leading-relaxed text-gray-800 font-mono">
-                <p>
-                  <span className="text-gray-400">CL:</span>{' '}
-                  I — I just don&apos;t know why I keep getting these headaches before our
-                  Sunday calls with my mother. They start Friday night.
-                </p>
-                <p>
-                  <span className="text-gray-400">DR:</span>{' '}
-                  You said &quot;I don&apos;t know why&quot; — but tell me what comes up if
-                  you sit with it for a moment.
-                </p>
-                <p>
-                  <span className="text-gray-400">CL:</span>{' '}
-                  Like a tightness in my chest. I keep telling myself it&apos;s nothing.
-                </p>
-              </div>
-            </div>
+          {/* Four-column structure → category → outputs.
+              On md+ this is a 4-column grid. On mobile each category stacks. */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-gray-200 border border-gray-200">
+            <DeliverableCategory
+              label="Structural"
+              description="How the session is organized phenomenologically."
+              items={[
+                { name: '10-dimension coding', detail: 'Body · Emotion · Cognitive · Reflective · Narrative · Social · Behaviour · Ecological · Normative · Prereflective' },
+                { name: 'Topic recurrence map', detail: 'Heatmap of which themes return across sessions, with verbatim moments per cell.' },
+                { name: 'Therapist intervention coding', detail: 'What you did, classified by approach — visible to you for self-supervision.' },
+              ]}
+            />
+            <DeliverableCategory
+              label="Risk &amp; surveillance"
+              description="What needs your attention, with severity and lineage."
+              items={[
+                { name: '16-category risk flags', detail: 'Suicidality, self-harm, abuse, substance use, regression, and 11 others — severity-scored.' },
+                { name: 'CBT distortion detection', detail: 'Verbatim cognitive patterns (catastrophizing, minimization, all-or-nothing) tied to client quotes.' },
+                { name: 'Suicidality flag handling', detail: 'PHQ-9 item 9 ≥ 1 triggers explicit clinical-follow-up indicator.' },
+              ]}
+            />
+            <DeliverableCategory
+              label="Pattern matching"
+              description="What this client looks like across the archive."
+              items={[
+                { name: 'Hidden Content cues', detail: 'Themes from 10,000+ similar narratives — invitations to explore, never inserted into notes.' },
+                { name: 'Triple-vector similar cases', detail: 'Top 3–5 archived cases by semantic + structural + clinical-metadata match.' },
+                { name: 'Practitioner method matches', detail: 'Therapeutic approaches (CBT, ACT, EMDR, IPT…) with demonstrated efficacy on similar structures.' },
+              ]}
+            />
+            <DeliverableCategory
+              label="Documentation"
+              description="What you actually export."
+              items={[
+                { name: 'SOAP / DAP notes', detail: 'Auto-drafted from analysis. Editable per section before export. Never silently regenerated.' },
+                { name: 'PHQ-9 / GAD-7 trends', detail: 'Validated scores tracked across sessions, charted automatically.' },
+                { name: 'Clinician PDF + patient summary', detail: 'Full report for your file. Patient-friendly version copy-able as email.' },
+              ]}
+            />
+          </div>
 
-            {/* Analysis pane */}
-            <div className="p-7 bg-bg-warm/50">
-              <p className="text-[10px] uppercase tracking-[0.16em] text-gray-400 mb-4">
-                Session Polaris output
-              </p>
-
-              <div className="space-y-5">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-gray-500 mb-2">
-                    Phenomenological tags
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[
-                      'Body · somatic anchor',
-                      'Emotion · anticipatory anxiety',
-                      'Social · family of origin',
-                      'Reflective · invitation',
-                      'Behaviour · suppression',
-                    ].map((t) => (
-                      <span
-                        key={t}
-                        className="text-[11px] text-gray-700 border border-gray-300 rounded px-2 py-0.5"
-                      >
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-gray-500 mb-2">
-                    Hidden content cue
-                  </p>
-                  <p className="text-sm text-gray-800 leading-relaxed border-l-2 border-primary pl-3">
-                    Anniversary-effect somatization preceding family-of-origin contact —
-                    pattern present in <strong className="font-semibold">38 archived narratives</strong>.
-                    <span className="block mt-1 text-xs text-gray-500 italic">
-                      Surfaced for clinician only. Never inserted into notes.
-                    </span>
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-gray-500 mb-2">
-                    SOAP excerpt — editable
-                  </p>
-                  <p className="text-sm text-gray-700 leading-relaxed">
-                    <strong>S:</strong> Pre-contact somatic distress (headache, chest tightness)
-                    Friday → Sunday. Verbal minimization of own bodily signal.
-                    <span className="block mt-1 text-xs text-gray-400">
-                      Tied to verbatim quote · Editable before export
-                    </span>
-                  </p>
-                </div>
-              </div>
+          {/* Cross-cutting commitments — the page-level promises that apply
+              to all 12 outputs above. Single quiet line, hairline border. */}
+          <div className="mt-px bg-white border border-t-0 border-gray-200 px-6 py-5">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-gray-600">
+              <span><strong className="text-gray-900 font-semibold">Lineage popovers</strong> · every claim ties to a verbatim quote</span>
+              <span><strong className="text-gray-900 font-semibold">Clinician sign-off</strong> · 1–100 risk score is yours alone</span>
+              <span><strong className="text-gray-900 font-semibold">Append-only audit</strong> · who saw what when</span>
+              <span><strong className="text-gray-900 font-semibold">Right-to-be-forgotten</strong> · one-click erasure</span>
             </div>
           </div>
 
-          <p className="mt-6 text-xs text-gray-500 text-center">
-            Anonymized illustration. Session Polaris never trains on your client data.
+          <p className="mt-8 text-xs text-gray-500 text-center">
+            Session Polaris never trains on your client data.
           </p>
         </div>
       </section>
@@ -388,63 +359,6 @@ export function LandingPage() {
               onClick={() => openDemo('landing-pricing-annual')}
               badge="Save ~16%"
             />
-          </div>
-        </div>
-      </section>
-
-      {/* ─── 7a. For clinics & group practices ─────────────────────── */}
-      {/* Honest interest-capture for multi-seat buyers. Team admin / SSO /
-          supervisor workflows are NOT shipped yet — copy reflects that.
-          Reserves the audience without overpromising. */}
-      <section className="bg-white border-t border-gray-200">
-        <div className="max-w-5xl mx-auto px-6 py-24">
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-12 items-start">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500 mb-4">
-                For clinics &amp; group practices
-              </p>
-              <h2 className="font-playfair text-3xl font-semibold tracking-tight text-gray-900">
-                Building team features with our founders cohort.
-              </h2>
-              <p className="mt-5 text-base text-gray-600" style={{ maxWidth: '52ch' }}>
-                A coded phenomenological framework is the rare scaffolding that lets a
-                first-year clinician produce notes with the consistency of a 15-year
-                veteran. We&apos;re working with founders-cohort clinics on what that
-                looks like at scale.
-              </p>
-              <button
-                onClick={() => openDemo('landing-clinic')}
-                className="mt-8 text-sm font-medium border border-gray-300 text-gray-900 px-5 py-3 rounded-md hover:border-gray-900"
-              >
-                Talk to our clinic team
-              </button>
-            </div>
-
-            <ul className="space-y-5 md:pt-2 text-sm text-gray-700">
-              <li className="flex items-start gap-3">
-                <span className="text-primary-dark mt-px select-none">·</span>
-                <span>
-                  <strong className="font-semibold text-gray-900">Standardized note quality</strong>{' '}
-                  — every clinician&apos;s output mapped to the same 10 dimensions, so
-                  supervisors can review caseloads consistently.
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-primary-dark mt-px select-none">·</span>
-                <span>
-                  <strong className="font-semibold text-gray-900">Practice-wide outcome tracking</strong>{' '}
-                  — PHQ-9 / GAD-7 trends aggregated across your team, not just individual caseloads.
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-primary-dark mt-px select-none">·</span>
-                <span>
-                  <strong className="font-semibold text-gray-900">In-design with founders cohort</strong>{' '}
-                  — team admin, SSO, supervisor review workflows. Reserve early access
-                  for your team and shape what we build.
-                </span>
-              </li>
-            </ul>
           </div>
         </div>
       </section>
@@ -745,6 +659,37 @@ function CapabilityRow({
           {body}
         </p>
       </div>
+    </div>
+  );
+}
+
+/**
+ * One column of the "From one session" deliverables grid. White surface,
+ * hairline-separated from neighbours via the parent's gap-px-on-gray-bg
+ * trick. Items are listed as small definition-list rows — title + one-line
+ * detail. No icons, no shadows, no hover transforms.
+ */
+function DeliverableCategory({
+  label,
+  description,
+  items,
+}: {
+  label: string;
+  description: string;
+  items: Array<{ name: string; detail: string }>;
+}) {
+  return (
+    <div className="bg-white p-7 flex flex-col">
+      <p className="text-[11px] uppercase tracking-[0.16em] text-gray-500 mb-2">{label}</p>
+      <p className="text-sm text-gray-700 mb-6 leading-snug">{description}</p>
+      <ul className="space-y-5 mt-auto">
+        {items.map((it) => (
+          <li key={it.name}>
+            <p className="text-sm font-semibold text-gray-900 leading-snug">{it.name}</p>
+            <p className="mt-1 text-xs text-gray-600 leading-relaxed">{it.detail}</p>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
