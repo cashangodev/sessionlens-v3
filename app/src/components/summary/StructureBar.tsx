@@ -74,7 +74,7 @@ export function StructureBar({ data, renderLabel }: StructureBarProps) {
             <div className="w-36 flex-shrink-0">{labelNode}</div>
             <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
               <div
-                className="h-full rounded-full transition-all duration-500"
+                className="h-full rounded-full"
                 style={{
                   width: `${Math.max(pct, 2)}%`,
                   backgroundColor: d.color,

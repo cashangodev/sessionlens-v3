@@ -13,7 +13,7 @@ export function Card({
   variant = 'default',
   onClick,
 }: CardProps) {
-  const baseStyles = 'bg-white rounded-xl border shadow-sm transition-all duration-200 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2';
+  const baseStyles = 'bg-white rounded-xl border   focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2';
 
   const variantStyles = {
     default: 'border-gray-200 hover:border-gray-300 focus-within:ring-primary',

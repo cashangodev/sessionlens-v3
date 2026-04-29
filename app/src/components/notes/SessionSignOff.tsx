@@ -153,7 +153,7 @@ export function SessionSignOff({ sessionId, doctorName, aiSnapshot }: SessionSig
       minute: '2-digit',
     });
     return (
-      <div className={`rounded-2xl border-2 ${band.soft} border-gray-200 overflow-hidden`}>
+      <div className={`rounded-md border-2 ${band.soft} border-gray-200 overflow-hidden`}>
         <div className="px-5 py-4 bg-white/60 border-b border-gray-200 flex items-start justify-between flex-wrap gap-3">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
@@ -254,7 +254,7 @@ export function SessionSignOff({ sessionId, doctorName, aiSnapshot }: SessionSig
 
   // ─── Sign-off form ───
   return (
-    <div className="rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50/40 overflow-hidden">
+    <div className="rounded-md border-2 border-dashed border-gray-300 bg-gray-50/40 overflow-hidden">
       <div className="px-5 py-4 bg-white border-b border-gray-200 flex items-start justify-between flex-wrap gap-3">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">

@@ -31,7 +31,7 @@ export default function BillingPage() {
       </div>
 
       {/* Current Plan Card */}
-      <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-2xl p-8 mb-12">
+      <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-md p-8 mb-12">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-bold text-slate-900">Current Plan</h2>
           <span className="px-4 py-1.5 bg-primary text-white text-xs font-semibold rounded-full">Free Trial</span>
@@ -90,7 +90,7 @@ export default function BillingPage() {
         </div>
 
         {/* Professional Plan - Highlighted */}
-        <div className="bg-white border-2 border-primary rounded-xl p-8 flex flex-col relative md:scale-105 md:z-10 shadow-sm">
+        <div className="bg-white border-2 border-primary rounded-xl p-8 flex flex-col relative md:scale-105 md:z-10">
           <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary text-white text-xs font-bold rounded-full">
             RECOMMENDED
           </div>

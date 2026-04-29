@@ -132,7 +132,7 @@ export function OnboardingTour({ hasSessions }: OnboardingTourProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div className="bg-white rounded-md w-full max-w-md overflow-hidden">
         {/* Header bar with progress dots + dismiss */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div className="flex items-center gap-1.5">
@@ -180,7 +180,7 @@ export function OnboardingTour({ hasSessions }: OnboardingTourProps) {
             )}
             <button
               onClick={current.action}
-              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-sm transition-all"
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark transition-all"
             >
               {isLast ? <Check className="w-4 h-4" /> : null}
               {current.cta}

@@ -48,7 +48,7 @@ export function InfoTooltip({ title, description, methodology, className = '' }:
           e.stopPropagation();
           setIsVisible(!isVisible);
         }}
-        className="w-5 h-5 rounded-full bg-gray-100 hover:bg-primary/10 flex items-center justify-center transition-all duration-200 group"
+        className="w-5 h-5 rounded-full bg-gray-100 hover:bg-primary/10 flex items-center justify-center group"
         aria-label={`Info: ${title}`}
       >
         <Info className="w-3 h-3 text-gray-400 group-hover:text-primary transition-colors" />
@@ -57,7 +57,7 @@ export function InfoTooltip({ title, description, methodology, className = '' }:
       {isVisible && (
         <div
           ref={tooltipRef}
-          className={`absolute z-50 ${positionClasses[position]} w-72 sm:w-80 bg-white rounded-xl border border-gray-200 shadow-lg p-4 animate-in fade-in duration-150`}
+          className={`absolute z-50 ${positionClasses[position]} w-72 sm:w-80 bg-white rounded-xl border border-gray-200  p-4 animate-in fade-in duration-150`}
           onMouseEnter={() => setIsVisible(true)}
           onMouseLeave={() => setIsVisible(false)}
         >

@@ -123,7 +123,7 @@ export function RemoveClientModal({ clientCode, sessionCount, onClose, onRemoved
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-md w-full max-w-2xl max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-start justify-between gap-4 p-6 border-b border-gray-100">
           <div className="flex items-start gap-3">

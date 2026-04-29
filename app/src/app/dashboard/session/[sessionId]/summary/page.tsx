@@ -145,7 +145,7 @@ function CollapsibleSection({
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
-    <div className="bg-white rounded-2xl border border-gray-200">
+    <div className="bg-white rounded-md border border-gray-200">
       <div className="w-full px-6 py-5 flex items-center justify-between hover:bg-gray-50 transition rounded-t-2xl">
         <button
           onClick={() => setIsOpen(!isOpen)}
@@ -676,7 +676,7 @@ function TopicsBarChart({
               </div>
               <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
                 <div
-                  className="h-full rounded-full transition-all duration-300"
+                  className="h-full rounded-full"
                   style={{ width: `${widthPct}%`, backgroundColor: color, opacity: isSelected ? 1 : 0.75 }}
                 />
               </div>
@@ -1176,7 +1176,7 @@ export default function SessionOverviewPage() {
                 onClick={(e) => { e.stopPropagation(); updateSummaryLength(opt); }}
                 className={`px-2.5 py-1 rounded-md font-medium capitalize transition ${
                   summaryLength === opt
-                    ? 'bg-white text-primary shadow-sm border border-gray-200'
+                    ? 'bg-white text-primary  border border-gray-200'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
                 aria-pressed={summaryLength === opt}
@@ -1723,7 +1723,7 @@ export default function SessionOverviewPage() {
                       <span className="text-xs text-gray-500">{move.count} ({Math.round(move.percentage)}%)</span>
                     </div>
                     <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${Math.max(move.percentage, 2)}%` }} />
+                      <div className="h-full bg-primary rounded-full" style={{ width: `${Math.max(move.percentage, 2)}%` }} />
                     </div>
                   </div>
                 );
@@ -1748,7 +1748,7 @@ export default function SessionOverviewPage() {
           shows the totals + severity pills and a "Re-record" button. The
           actual capture happens in the modal — this card is just the entry
           point so the workflow doesn't sprawl on the summary page. */}
-      <div className="bg-white rounded-2xl border border-gray-200 px-6 py-5 flex items-center justify-between gap-4 flex-wrap">
+      <div className="bg-white rounded-md border border-gray-200 px-6 py-5 flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h3 className="font-playfair text-lg font-bold text-gray-900 mb-1">Outcome Scores</h3>
           {existingOutcomes ? (
@@ -1804,7 +1804,7 @@ export default function SessionOverviewPage() {
       {/* 8. Notes & Export — collapsible like other sections. The header strip
           (title + tabs + toolbar) stays visible by default; the per-section
           editor cards only render when expanded. */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-md border border-gray-200 overflow-hidden">
         <div className="px-6 py-5">
           <div className="flex items-start justify-between gap-3 mb-1">
             <h3 className="font-playfair text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -1837,7 +1837,7 @@ export default function SessionOverviewPage() {
               onClick={() => setActiveNoteType('soap')}
               className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
                 activeNoteType === 'soap'
-                  ? 'bg-white text-primary shadow-sm'
+                  ? 'bg-white text-primary '
                   : 'text-gray-500 hover:text-gray-700'
               }`}
               aria-pressed={activeNoteType === 'soap'}
@@ -1851,7 +1851,7 @@ export default function SessionOverviewPage() {
               onClick={() => setActiveNoteType('dap')}
               className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
                 activeNoteType === 'dap'
-                  ? 'bg-white text-primary shadow-sm'
+                  ? 'bg-white text-primary '
                   : 'text-gray-500 hover:text-gray-700'
               }`}
               aria-pressed={activeNoteType === 'dap'}

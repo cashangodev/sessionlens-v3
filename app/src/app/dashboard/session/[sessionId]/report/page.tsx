@@ -685,7 +685,7 @@ export default function ReportPage() {
 
       {/* Toast */}
       {toast && (
-        <div className="fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3 bg-white border border-gray-200 rounded-xl shadow-lg animate-in slide-in-from-top duration-300">
+        <div className="fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3 bg-white border border-gray-200 rounded-xl animate-in slide-in-from-top duration-300">
           <Check className="w-5 h-5 text-primary" />
           <div>
             <p className="text-sm font-medium text-gray-900">{toast.title}</p>
@@ -703,9 +703,9 @@ export default function ReportPage() {
               if (editingPatient) handleCancelPatientEdit();
               setActiveView('clinician');
             }}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium  ${
               activeView === 'clinician'
-                ? 'bg-white text-primary shadow-sm'
+                ? 'bg-white text-primary '
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -718,9 +718,9 @@ export default function ReportPage() {
               if (editingPatient) handleCancelPatientEdit();
               setActiveView('patient');
             }}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium  ${
               activeView === 'patient'
-                ? 'bg-white text-primary shadow-sm'
+                ? 'bg-white text-primary '
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >

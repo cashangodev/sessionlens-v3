@@ -108,7 +108,7 @@ export default function CalendarPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendar Grid */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-6">
+        <div className="lg:col-span-2 bg-white rounded-md border border-gray-200 p-6">
           {/* Month Navigation */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -170,7 +170,7 @@ export default function CalendarPage() {
                   className={`
                     relative h-16 flex flex-col items-center justify-start pt-2 rounded-lg transition-all duration-150
                     ${isSelected
-                      ? 'bg-primary text-white shadow-md'
+                      ? 'bg-primary text-white '
                       : isToday
                         ? 'bg-primary/10 text-primary font-bold'
                         : 'hover:bg-gray-50 text-gray-700'
@@ -202,7 +202,7 @@ export default function CalendarPage() {
         </div>
 
         {/* Day Detail Panel */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+        <div className="bg-white rounded-md border border-gray-200 p-6">
           {selectedDate ? (
             <>
               <h3 className="font-semibold text-gray-900 mb-1">
@@ -222,7 +222,7 @@ export default function CalendarPage() {
                     <Link
                       key={session.id}
                       href={`/dashboard/session/${session.id}/summary`}
-                      className="block p-4 rounded-xl border border-gray-200 hover:border-primary/30 hover:shadow-sm transition-all"
+                      className="block p-4 rounded-xl border border-gray-200 hover:border-primary/30 hover: transition-all"
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-mono text-sm font-semibold text-gray-900">

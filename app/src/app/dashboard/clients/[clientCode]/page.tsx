@@ -259,7 +259,7 @@ export default function ClientDetailPage() {
           <ArrowLeft className="w-4 h-4" />
           Back to Clients
         </Link>
-        <div className="text-center py-16 bg-white rounded-2xl border border-gray-200">
+        <div className="text-center py-16 bg-white rounded-md border border-gray-200">
           <UserCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-bold text-gray-900 mb-2">Client Not Found</h3>
           <p className="text-gray-500 text-sm mb-6">
@@ -294,7 +294,7 @@ export default function ClientDetailPage() {
       {/* Client Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+          <div className="w-14 h-14 rounded-md bg-primary/10 flex items-center justify-center">
             <UserCircle className="w-8 h-8 text-primary" />
           </div>
           <div>
@@ -346,7 +346,7 @@ export default function ClientDetailPage() {
             {showOverflowMenu && (
               <div
                 role="menu"
-                className="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-30"
+                className="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-xl overflow-hidden z-30"
               >
                 <button
                   role="menuitem"
@@ -393,7 +393,7 @@ export default function ClientDetailPage() {
       </div>
 
       {/* Client Profile — View / Edit Mode */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-8 space-y-5">
+      <div className="bg-white rounded-md border border-gray-200 p-6 mb-8 space-y-5">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-gray-900 flex items-center gap-2">
             <FileText className="w-4 h-4 text-primary" />
@@ -612,7 +612,7 @@ export default function ClientDetailPage() {
       </div>
 
       {/* PHQ-9 / GAD-7 Outcome Measures */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-8">
+      <div className="bg-white rounded-md border border-gray-200 p-6 mb-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold text-gray-900 flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-primary" />
@@ -917,7 +917,7 @@ export default function ClientDetailPage() {
                     </span>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-primary group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-primary transition-all flex-shrink-0" />
               </Link>
             ))}
           </div>

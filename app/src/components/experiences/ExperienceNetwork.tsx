@@ -242,7 +242,7 @@ export function ExperienceNetwork({ data }: ExperienceNetworkProps) {
 
       {/* Hover tooltip */}
       {hoveredNode && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 min-w-[260px] max-w-[360px] text-left pointer-events-none">
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-white border border-gray-200 rounded-xl px-4 py-3 min-w-[260px] max-w-[360px] text-left pointer-events-none">
           <div className="flex items-center gap-2 mb-1">
             <span
               className="w-3 h-3 rounded-full flex-shrink-0"

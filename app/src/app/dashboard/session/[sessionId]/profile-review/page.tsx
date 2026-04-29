@@ -477,7 +477,7 @@ export default function ProfileReviewPage() {
           </button>
           <button
             onClick={handleConfirmProfile}
-            className="flex-1 px-8 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2"
+            className="flex-1 px-8 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark hover: flex items-center justify-center gap-2"
           >
             <Check className="w-5 h-5" />
             Confirm Profile & View Analysis

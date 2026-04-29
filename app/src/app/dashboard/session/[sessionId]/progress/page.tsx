@@ -197,7 +197,7 @@ export default function ProgressPage() {
 
       {/* Progress Summary */}
       {hasEnoughRealData && progressSummary && (
-        <div className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 rounded-2xl p-6 md:p-8 border border-primary/10">
+        <div className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 rounded-md p-6 md:p-8 border border-primary/10">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <div className="flex items-center gap-2 mb-2">

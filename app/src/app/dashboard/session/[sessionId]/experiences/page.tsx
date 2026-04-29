@@ -233,7 +233,7 @@ function CollapsibleSection({
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
-    <div className="bg-white rounded-2xl border border-gray-200">
+    <div className="bg-white rounded-md border border-gray-200">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full px-6 py-5 flex items-center justify-between hover:bg-gray-50 transition rounded-t-2xl"
@@ -488,7 +488,7 @@ export default function ExperiencesPage() {
         </div>
 
         {rankedPractitioners.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center mt-4">
+          <div className="bg-white rounded-md border border-gray-200 p-8 text-center mt-4">
             <Users className="w-8 h-8 text-gray-300 mx-auto mb-3" />
             <p className="font-medium text-gray-700 mb-1">No practitioner matches yet</p>
             <p className="text-sm text-gray-500">The matching engine did not find practitioner data for this session.</p>
@@ -505,7 +505,7 @@ export default function ExperiencesPage() {
               return (
                 <div
                   key={matchKey}
-                  className={`bg-white rounded-2xl border transition-all duration-200 ${isExpanded ? 'border-primary/30 shadow-lg ring-1 ring-primary/10' : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'}`}
+                  className={`bg-white rounded-md border  ${isExpanded ? 'border-primary/30  ring-1 ring-primary/10' : 'border-gray-200 hover:border-gray-300 hover:'}`}
                 >
                   {/* Teaser (always visible) */}
                   <button
@@ -672,7 +672,7 @@ export default function ExperiencesPage() {
       {/* ════════════════════════════════════════════════════════════ */}
       {networkData.stats.totalMoments > 0 && (
         <section>
-          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-md border border-gray-200 overflow-hidden">
             {/* Header */}
             <div className="p-6 sm:p-7 border-b border-gray-100">
               <div className="flex items-start gap-3">
@@ -778,7 +778,7 @@ export default function ExperiencesPage() {
             small correlation-factor badges so the same icon doesn't carry
             two different meanings on the same page. */}
         {realCases.length > 0 && analysis.analysisStatus !== 'mock' && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-4">
+          <div className="bg-white rounded-md border border-gray-200 p-6 mb-4">
             <div className="flex items-start gap-3 mb-4">
               <Search className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div className="flex-1">
@@ -818,9 +818,9 @@ export default function ExperiencesPage() {
                   return (
                     <article
                       key={entry.id}
-                      className={`relative rounded-2xl border-2 overflow-hidden transition-all ${
+                      className={`relative rounded-md border-2 overflow-hidden transition-all ${
                         isPinned
-                          ? 'border-primary/30 bg-primary/[0.02] shadow-sm'
+                          ? 'border-primary/30 bg-primary/[0.02] '
                           : 'border-amber-200/70 bg-white hover:border-amber-300'
                       }`}
                     >
@@ -834,7 +834,7 @@ export default function ExperiencesPage() {
                       {/* HEADER: hero metric + theme + type badge */}
                       <div className="pl-5 pr-5 pt-5 pb-4 flex items-start gap-4 border-b border-gray-100">
                         {/* Big % box — hero visual weight */}
-                        <div className="flex-shrink-0 flex flex-col items-center justify-center w-20 h-20 rounded-2xl bg-amber-50 border border-amber-200">
+                        <div className="flex-shrink-0 flex flex-col items-center justify-center w-20 h-20 rounded-md bg-amber-50 border border-amber-200">
                           <p className="text-2xl font-bold text-amber-700 font-mono leading-none">
                             {entry.percentage}<span className="text-sm">%</span>
                           </p>
@@ -954,7 +954,7 @@ export default function ExperiencesPage() {
 
             {/* Floating toast for pin actions */}
             {probeToast && (
-              <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white text-sm rounded-lg shadow-xl animate-in fade-in slide-in-from-bottom-2 duration-200">
+              <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white text-sm rounded-lg animate-in fade-in slide-in-from-bottom-2 duration-200">
                 <Pin className="w-4 h-4 text-primary" />
                 {probeToast}
               </div>
@@ -992,7 +992,7 @@ export default function ExperiencesPage() {
         </div>
 
         {realCases.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center mt-4">
+          <div className="bg-white rounded-md border border-gray-200 p-8 text-center mt-4">
             <Users className="w-8 h-8 text-gray-300 mx-auto mb-3" />
             <p className="font-medium text-gray-700 mb-1">No matched cases</p>
             <p className="text-sm text-gray-500">No cases above the similarity threshold were found.</p>
@@ -1017,7 +1017,7 @@ export default function ExperiencesPage() {
               return (
                 <div
                   key={caseKey}
-                  className={`bg-white rounded-2xl border transition-all duration-200 ${isExpanded ? 'border-primary/30 shadow-md' : 'border-gray-200 hover:border-gray-300'}`}
+                  className={`bg-white rounded-md border  ${isExpanded ? 'border-primary/30 ' : 'border-gray-200 hover:border-gray-300'}`}
                 >
                   {/* Teaser */}
                   <button

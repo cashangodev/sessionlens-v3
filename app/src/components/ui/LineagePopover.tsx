@@ -214,7 +214,7 @@ export function LineagePopover({
           <div
             ref={popoverRef}
             onClick={(e) => e.stopPropagation()}
-            className={`absolute z-50 ${positionClasses[position]} w-[22rem] max-w-md bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden animate-in fade-in duration-150`}
+            className={`absolute z-50 ${positionClasses[position]} w-[22rem] max-w-md bg-white rounded-xl border border-gray-200  overflow-hidden animate-in fade-in duration-150`}
           >
             {renderPopoverBody()}
           </div>
@@ -244,7 +244,7 @@ export function LineagePopover({
         <div
           ref={popoverRef}
           onClick={(e) => e.stopPropagation()}
-          className={`absolute z-50 ${positionClasses[position]} w-[22rem] max-w-md bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden animate-in fade-in duration-150`}
+          className={`absolute z-50 ${positionClasses[position]} w-[22rem] max-w-md bg-white rounded-xl border border-gray-200  overflow-hidden animate-in fade-in duration-150`}
         >
           {renderPopoverBody()}
         </div>

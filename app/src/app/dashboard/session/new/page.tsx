@@ -1010,7 +1010,7 @@ export default function NewSessionPage() {
             </div>
           </div>
 
-          <button onClick={handleClientContinue} disabled={!activeClientCode.trim()} className="px-8 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">Continue</button>
+          <button onClick={handleClientContinue} disabled={!activeClientCode.trim()} className="px-8 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark hover: disabled:opacity-50 disabled:cursor-not-allowed">Continue</button>
         </div>
       )}
 
@@ -1023,7 +1023,7 @@ export default function NewSessionPage() {
           </p>
 
           {/* Client Info Card */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6 space-y-4">
+          <div className="bg-white rounded-md border border-gray-200 p-6 mb-6 space-y-4">
             {/* Header row */}
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -1239,7 +1239,7 @@ export default function NewSessionPage() {
               </p>
               <div className="space-y-2">
                 {previousSessions.map((session) => (
-                  <Link key={session.id} href={`/dashboard/session/${session.id}/summary`} className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-200 hover:border-primary/30 hover:shadow-sm transition-all group">
+                  <Link key={session.id} href={`/dashboard/session/${session.id}/summary`} className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-200 hover:border-primary/30 hover: transition-all group">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center"><span className="font-mono text-xs font-bold text-primary">#{session.sessionNumber}</span></div>
                       <div>
@@ -1257,7 +1257,7 @@ export default function NewSessionPage() {
           {/* Actions */}
           <div className="flex gap-4">
             <button onClick={() => setStep('client')} className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all">Back</button>
-            <button onClick={() => setStep('input')} className="flex-1 px-8 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-sm hover:shadow-md transition-all duration-200">
+            <button onClick={() => setStep('input')} className="flex-1 px-8 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark hover:">
               Start Session #{sessionNumber}
             </button>
           </div>
@@ -1283,7 +1283,7 @@ export default function NewSessionPage() {
             {isLiveSession && (
               <button
                 onClick={() => setActiveTab('record')}
-                className={`px-5 py-3 border-b-2 transition-all duration-200 font-semibold text-sm flex items-center gap-2 ${
+                className={`px-5 py-3 border-b-2  font-semibold text-sm flex items-center gap-2 ${
                   activeTab === 'record'
                     ? 'text-red-600 border-red-500'
                     : 'text-gray-500 border-transparent hover:text-red-500 hover:border-red-300'
@@ -1295,7 +1295,7 @@ export default function NewSessionPage() {
             )}
             <button
               onClick={() => setActiveTab('upload')}
-              className={`px-5 py-3 border-b-2 transition-all duration-200 font-semibold text-sm flex items-center gap-2 ${
+              className={`px-5 py-3 border-b-2  font-semibold text-sm flex items-center gap-2 ${
                 activeTab === 'upload'
                   ? 'text-primary border-primary'
                   : 'text-gray-500 border-transparent hover:text-primary hover:border-primary/30'
@@ -1306,7 +1306,7 @@ export default function NewSessionPage() {
             </button>
             <button
               onClick={() => setActiveTab('paste')}
-              className={`px-5 py-3 border-b-2 transition-all duration-200 font-semibold text-sm flex items-center gap-2 ${
+              className={`px-5 py-3 border-b-2  font-semibold text-sm flex items-center gap-2 ${
                 activeTab === 'paste'
                   ? 'text-primary border-primary'
                   : 'text-gray-500 border-transparent hover:text-primary hover:border-primary/30'
@@ -1334,7 +1334,7 @@ export default function NewSessionPage() {
                           onClick={() => setRecordMode('mic')}
                           className={`flex-1 flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
                             recordMode === 'mic'
-                              ? 'border-primary bg-primary/5 shadow-sm'
+                              ? 'border-primary bg-primary/5 '
                               : 'border-gray-200 hover:border-gray-300 bg-white'
                           }`}
                         >
@@ -1352,7 +1352,7 @@ export default function NewSessionPage() {
                           onClick={() => setRecordMode('system')}
                           className={`flex-1 flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
                             recordMode === 'system'
-                              ? 'border-blue-500 bg-blue-50/50 shadow-sm'
+                              ? 'border-blue-500 bg-blue-50/50 '
                               : 'border-gray-200 hover:border-gray-300 bg-white'
                           }`}
                         >
@@ -1377,7 +1377,7 @@ export default function NewSessionPage() {
                         <div className="flex flex-col items-center gap-5">
                           <button
                             onClick={startMicTest}
-                            className={`w-24 h-24 rounded-full shadow-sm hover:shadow-md hover:scale-105 flex items-center justify-center transition-all duration-200 group ${
+                            className={`w-24 h-24 rounded-full  hover: hover:scale-105 flex items-center justify-center  group ${
                               recordMode === 'system'
                                 ? 'bg-blue-600 hover:bg-blue-700'
                                 : 'bg-primary hover:bg-primary-dark'
@@ -1513,7 +1513,7 @@ export default function NewSessionPage() {
                             <button
                               onClick={startRecording}
                               disabled={!micTestPassed}
-                              className="flex items-center gap-2 px-8 py-3 bg-red-500 hover:bg-red-600 rounded-xl font-semibold text-sm text-white transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-500"
+                              className="flex items-center gap-2 px-8 py-3 bg-red-500 hover:bg-red-600 rounded-xl font-semibold text-sm text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-500"
                             >
                               <Mic className="w-4 h-4" />
                               Start Recording
@@ -1572,10 +1572,10 @@ export default function NewSessionPage() {
 
                           {/* Controls */}
                           <div className="flex items-center gap-4">
-                            <button onClick={pauseRecording} className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl font-semibold text-sm text-gray-700 transition-colors shadow-sm">
+                            <button onClick={pauseRecording} className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl font-semibold text-sm text-gray-700 transition-colors">
                               <Pause className="w-4 h-4" />Pause
                             </button>
-                            <button onClick={stopRecording} className="flex items-center gap-2 px-6 py-3 bg-gray-900 hover:bg-gray-800 rounded-xl font-semibold text-sm text-white transition-colors shadow-sm">
+                            <button onClick={stopRecording} className="flex items-center gap-2 px-6 py-3 bg-gray-900 hover:bg-gray-800 rounded-xl font-semibold text-sm text-white transition-colors">
                               <Square className="w-4 h-4" />End Session
                             </button>
                           </div>
@@ -1596,7 +1596,7 @@ export default function NewSessionPage() {
                           </div>
                           <p className="text-xs text-gray-400">Recording is paused. No audio is being captured.</p>
                           <div className="flex items-center gap-4">
-                            <button onClick={resumeRecording} className="flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark rounded-xl font-semibold text-sm text-white transition-colors shadow-sm">
+                            <button onClick={resumeRecording} className="flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark rounded-xl font-semibold text-sm text-white transition-colors">
                               <Play className="w-4 h-4" />Resume
                             </button>
                             <button onClick={stopRecording} className="flex items-center gap-2 px-6 py-3 bg-gray-900 hover:bg-gray-800 rounded-xl font-semibold text-sm text-white transition-colors">
@@ -1609,7 +1609,7 @@ export default function NewSessionPage() {
 
                     {/* DONE STATE — with double-confirm restart */}
                     {recordingState === 'done' && recordedBlob && (
-                      <div className="bg-white border border-primary/30 rounded-xl p-6 shadow-sm">
+                      <div className="bg-white border border-primary/30 rounded-xl p-6">
                         <div className="flex items-start gap-4">
                           <div className="w-14 h-14 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
                             <CheckCircle2 className="w-7 h-7 text-emerald-600" />
@@ -1660,14 +1660,14 @@ export default function NewSessionPage() {
                     <>
                       <div className="mb-8">
                         <label className="block text-sm font-semibold text-gray-900 mb-3">Treatment Goals (optional)</label>
-                        <input type="text" value={treatmentGoals} onChange={(e) => setTreatmentGoals(e.target.value)} placeholder="e.g., Reduce anxiety, improve workplace confidence, process past experiences" className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus:shadow-md transition-all duration-200" />
+                        <input type="text" value={treatmentGoals} onChange={(e) => setTreatmentGoals(e.target.value)} placeholder="e.g., Reduce anxiety, improve workplace confidence, process past experiences" className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus:" />
                       </div>
                       <div className="mb-10">
                         <label className="block text-sm font-semibold text-gray-900 mb-3">Session Number</label>
                         <div className="flex items-center gap-4">
-                          <button onClick={() => setSessionNumber(Math.max(1, sessionNumber - 1))} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200">−</button>
-                          <input type="number" value={sessionNumber} onChange={(e) => setSessionNumber(Math.max(1, parseInt(e.target.value) || 1))} className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200" min="1" />
-                          <button onClick={() => setSessionNumber(sessionNumber + 1)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200">+</button>
+                          <button onClick={() => setSessionNumber(Math.max(1, sessionNumber - 1))} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400">−</button>
+                          <input type="number" value={sessionNumber} onChange={(e) => setSessionNumber(Math.max(1, parseInt(e.target.value) || 1))} className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" min="1" />
+                          <button onClick={() => setSessionNumber(sessionNumber + 1)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400">+</button>
                         </div>
                       </div>
                     </>
@@ -1678,7 +1678,7 @@ export default function NewSessionPage() {
                     <button
                       onClick={handleRecordingAnalyze}
                       disabled={isAnalyzing || !recordedBlob}
-                      className="w-full px-6 py-3.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="w-full px-6 py-3.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark hover: disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       {isAnalyzing ? <><Loader2 className="w-5 h-5 animate-spin" />Analyzing...</> : 'Analyze Session'}
                     </button>
@@ -1697,7 +1697,7 @@ export default function NewSessionPage() {
                       <div
                         onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
                         onClick={() => audioInputRef.current?.click()}
-                        className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all duration-200 ${isDragOver ? 'border-primary bg-primary/5 scale-[1.01]' : 'border-gray-300 bg-gray-50 hover:bg-gray-100 hover:border-gray-400'}`}
+                        className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer  ${isDragOver ? 'border-primary bg-primary/5 scale-[1.01]' : 'border-gray-300 bg-gray-50 hover:bg-gray-100 hover:border-gray-400'}`}
                       >
                         <div className="flex flex-col items-center gap-3">
                           <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isDragOver ? 'bg-primary/20' : 'bg-primary/10'}`}>
@@ -1716,7 +1716,7 @@ export default function NewSessionPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="bg-white border border-primary/30 rounded-xl p-6 shadow-sm">
+                      <div className="bg-white border border-primary/30 rounded-xl p-6">
                         <div className="flex items-start gap-4">
                           <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0"><FileAudio className="w-7 h-7 text-primary" /></div>
                           <div className="flex-1 min-w-0">
@@ -1739,14 +1739,14 @@ export default function NewSessionPage() {
 
                   <div className="mb-8">
                     <label className="block text-sm font-semibold text-gray-900 mb-3">Treatment Goals (optional)</label>
-                    <input type="text" value={treatmentGoals} onChange={(e) => setTreatmentGoals(e.target.value)} placeholder="e.g., Reduce anxiety, improve workplace confidence, process past experiences" className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus:shadow-md transition-all duration-200" />
+                    <input type="text" value={treatmentGoals} onChange={(e) => setTreatmentGoals(e.target.value)} placeholder="e.g., Reduce anxiety, improve workplace confidence, process past experiences" className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus:" />
                   </div>
                   <div className="mb-10">
                     <label className="block text-sm font-semibold text-gray-900 mb-3">Session Number</label>
                     <div className="flex items-center gap-4">
-                      <button onClick={() => setSessionNumber(Math.max(1, sessionNumber - 1))} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200">−</button>
-                      <input type="number" value={sessionNumber} onChange={(e) => setSessionNumber(Math.max(1, parseInt(e.target.value) || 1))} className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200" min="1" />
-                      <button onClick={() => setSessionNumber(sessionNumber + 1)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200">+</button>
+                      <button onClick={() => setSessionNumber(Math.max(1, sessionNumber - 1))} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400">−</button>
+                      <input type="number" value={sessionNumber} onChange={(e) => setSessionNumber(Math.max(1, parseInt(e.target.value) || 1))} className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" min="1" />
+                      <button onClick={() => setSessionNumber(sessionNumber + 1)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400">+</button>
                     </div>
                   </div>
 
@@ -1786,7 +1786,7 @@ export default function NewSessionPage() {
                     </div>
                   </div>
 
-                  <button onClick={handleAudioAnalyze} disabled={isAnalyzing || !audioFile || !consentGiven} className="w-full px-6 py-3.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                  <button onClick={handleAudioAnalyze} disabled={isAnalyzing || !audioFile || !consentGiven} className="w-full px-6 py-3.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark hover: disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                     {isAnalyzing ? (
                       uploadPercent !== null && uploadPercent < 100
                         ? <><Loader2 className="w-5 h-5 animate-spin" />Uploading… {uploadPercent}%</>
@@ -1801,7 +1801,7 @@ export default function NewSessionPage() {
                     <div className="mt-3 space-y-2">
                       <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-primary transition-all duration-200"
+                          className="h-full bg-primary"
                           style={{ width: `${uploadPercent}%` }}
                         />
                       </div>
@@ -1897,7 +1897,7 @@ export default function NewSessionPage() {
 
                         <div>
                           <label className="block text-sm font-semibold text-gray-900 mb-3">Paste Multiple Transcripts</label>
-                          <textarea ref={bulkRef} value={bulkTranscripts} onChange={(e) => setBulkTranscripts(e.target.value)} placeholder={"Paste multiple session transcripts separated by '---' on a new line.\n\nExample:\n[Session 1 transcript...]\n---\n[Session 2 transcript...]\n---\n[Session 3 transcript...]"} className="w-full min-h-[200px] p-4 border border-gray-300 rounded-xl font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus:shadow-md resize-none transition-all duration-200" />
+                          <textarea ref={bulkRef} value={bulkTranscripts} onChange={(e) => setBulkTranscripts(e.target.value)} placeholder={"Paste multiple session transcripts separated by '---' on a new line.\n\nExample:\n[Session 1 transcript...]\n---\n[Session 2 transcript...]\n---\n[Session 3 transcript...]"} className="w-full min-h-[200px] p-4 border border-gray-300 rounded-xl font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus: resize-none" />
                           <p className="text-gray-500 text-xs mt-2 font-mono">{bulkTranscripts.length} characters</p>
                         </div>
 
@@ -1909,7 +1909,7 @@ export default function NewSessionPage() {
                           <p className="text-sm text-amber-900">Each session will be analyzed separately and linked to <span className="font-mono font-semibold">{activeClientCode}</span>.</p>
                         </div>
 
-                        <button onClick={handleBulkAnalyze} disabled={isBulkAnalyzing || (bulkAudioFiles.length === 0 && !bulkTranscripts.trim())} className="w-full px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:shadow-none flex items-center justify-center gap-2">
+                        <button onClick={handleBulkAnalyze} disabled={isBulkAnalyzing || (bulkAudioFiles.length === 0 && !bulkTranscripts.trim())} className="w-full px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:shadow-none flex items-center justify-center gap-2">
                           {isBulkAnalyzing ? <><Loader2 className="w-5 h-5 animate-spin" />Analyzing...</> : 'Analyze All Sessions'}
                           {(bulkAudioFiles.length > 0 || bulkTranscripts.trim()) && (
                             <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full">
@@ -1929,20 +1929,20 @@ export default function NewSessionPage() {
                 <>
                   <div className="mb-8">
                     <label className="block text-sm font-semibold text-gray-900 mb-3">Session Transcript</label>
-                    <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} placeholder="Paste your therapy session transcript here. Include therapist and client dialogue..." className="w-full min-h-[400px] p-4 border border-gray-300 rounded-xl font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus:shadow-md resize-none transition-all duration-200" />
+                    <textarea ref={textareaRef} value={transcript} onChange={(e) => setTranscript(e.target.value)} placeholder="Paste your therapy session transcript here. Include therapist and client dialogue..." className="w-full min-h-[400px] p-4 border border-gray-300 rounded-xl font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus: resize-none" />
                     <p className="text-gray-500 text-xs mt-2 font-mono">{transcript.length} characters</p>
                   </div>
 
                   <div className="mb-8">
                     <label className="block text-sm font-semibold text-gray-900 mb-3">Treatment Goals (optional)</label>
-                    <input type="text" value={treatmentGoals} onChange={(e) => setTreatmentGoals(e.target.value)} placeholder="e.g., Reduce anxiety, improve workplace confidence, process past experiences" className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus:shadow-md transition-all duration-200" />
+                    <input type="text" value={treatmentGoals} onChange={(e) => setTreatmentGoals(e.target.value)} placeholder="e.g., Reduce anxiety, improve workplace confidence, process past experiences" className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus:" />
                   </div>
                   <div className="mb-10">
                     <label className="block text-sm font-semibold text-gray-900 mb-3">Session Number</label>
                     <div className="flex items-center gap-4">
-                      <button onClick={() => setSessionNumber(Math.max(1, sessionNumber - 1))} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200">−</button>
-                      <input type="number" value={sessionNumber} onChange={(e) => setSessionNumber(Math.max(1, parseInt(e.target.value) || 1))} className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200" min="1" />
-                      <button onClick={() => setSessionNumber(sessionNumber + 1)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200">+</button>
+                      <button onClick={() => setSessionNumber(Math.max(1, sessionNumber - 1))} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400">−</button>
+                      <input type="number" value={sessionNumber} onChange={(e) => setSessionNumber(Math.max(1, parseInt(e.target.value) || 1))} className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" min="1" />
+                      <button onClick={() => setSessionNumber(sessionNumber + 1)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400">+</button>
                     </div>
                   </div>
 
@@ -1986,8 +1986,8 @@ export default function NewSessionPage() {
                   </div>
 
                   <div className="flex gap-4 mb-12">
-                    <button onClick={handleLoadDemo} disabled={isAnalyzing} className="px-6 py-3 border-2 border-gray-300 text-gray-900 rounded-xl font-semibold hover:border-primary hover:bg-primary/5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">Load Demo Session</button>
-                    <button onClick={handleAnalyze} disabled={isAnalyzing || !transcript.trim() || !consentGiven} className="flex-1 px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    <button onClick={handleLoadDemo} disabled={isAnalyzing} className="px-6 py-3 border-2 border-gray-300 text-gray-900 rounded-xl font-semibold hover:border-primary hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed">Load Demo Session</button>
+                    <button onClick={handleAnalyze} disabled={isAnalyzing || !transcript.trim() || !consentGiven} className="flex-1 px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark hover: disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                       {isAnalyzing ? <><Loader2 className="w-5 h-5 animate-spin" />Analyzing...</> : 'Analyze Session'}
                     </button>
                   </div>
@@ -2096,7 +2096,7 @@ export default function NewSessionPage() {
       {/* Single Analysis Progress Overlay */}
       {isAnalyzing && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-12 max-w-md w-full mx-4 shadow-2xl">
+          <div className="bg-white rounded-xl p-12 max-w-md w-full mx-4">
             <div className="text-center">
               <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-8">
                 <Loader2 className="w-10 h-10 text-primary animate-spin" />
@@ -2104,7 +2104,7 @@ export default function NewSessionPage() {
               <h3 className="font-playfair text-3xl font-bold text-gray-900 mb-6">Analyzing Session</h3>
               <p className="text-gray-600 mb-10 font-medium min-h-7 text-sm leading-relaxed">{currentStages[currentStage] || 'Processing...'}</p>
               <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                <div className="bg-gradient-to-r from-primary to-primary-light h-full transition-all duration-500" style={{ width: `${((currentStage + 1) / currentStages.length) * 100}%` }} />
+                <div className="bg-gradient-to-r from-primary to-primary-light h-full" style={{ width: `${((currentStage + 1) / currentStages.length) * 100}%` }} />
               </div>
             </div>
           </div>
@@ -2114,7 +2114,7 @@ export default function NewSessionPage() {
       {/* Bulk Analysis Progress Overlay */}
       {isBulkAnalyzing && !bulkComplete && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-10 max-w-lg w-full mx-4 shadow-2xl">
+          <div className="bg-white rounded-md p-10 max-w-lg w-full mx-4">
             <div className="text-center">
               <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Loader2 className="w-10 h-10 text-primary animate-spin" />
@@ -2137,7 +2137,7 @@ export default function NewSessionPage() {
                     <span>{Math.round(((bulkCurrentStage + 1) / bulkStages.length) * 100)}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                    <div className="bg-primary h-full transition-all duration-500 rounded-full" style={{ width: `${((bulkCurrentStage + 1) / bulkStages.length) * 100}%` }} />
+                    <div className="bg-primary h-full rounded-full" style={{ width: `${((bulkCurrentStage + 1) / bulkStages.length) * 100}%` }} />
                   </div>
                 </div>
                 <div>
@@ -2146,7 +2146,7 @@ export default function NewSessionPage() {
                     <span>{Math.round(((bulkCurrentIndex) / bulkTotal) * 100)}%</span>
                   </div>
                   <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                    <div className="bg-gradient-to-r from-primary to-emerald-500 h-full transition-all duration-500 rounded-full" style={{ width: `${((bulkCurrentIndex) / bulkTotal) * 100}%` }} />
+                    <div className="bg-gradient-to-r from-primary to-emerald-500 h-full rounded-full" style={{ width: `${((bulkCurrentIndex) / bulkTotal) * 100}%` }} />
                   </div>
                 </div>
               </div>
@@ -2160,7 +2160,7 @@ export default function NewSessionPage() {
                       i < bulkCurrentIndex
                         ? 'bg-emerald-100 text-emerald-700'
                         : i === bulkCurrentIndex
-                          ? 'bg-primary text-white scale-110 shadow-md'
+                          ? 'bg-primary text-white scale-110 '
                           : 'bg-gray-100 text-gray-400'
                     }`}
                   >
@@ -2176,7 +2176,7 @@ export default function NewSessionPage() {
       {/* Bulk Analysis Complete Overlay */}
       {isBulkAnalyzing && bulkComplete && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-10 max-w-lg w-full mx-4 shadow-2xl">
+          <div className="bg-white rounded-md p-10 max-w-lg w-full mx-4">
             <div className="text-center mb-8">
               <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
                 <CheckCircle2 className="w-10 h-10 text-emerald-600" />
@@ -2225,7 +2225,7 @@ export default function NewSessionPage() {
               </button>
               <Link
                 href={`/dashboard/clients/${encodeURIComponent(activeClientCode)}`}
-                className="flex-1 px-5 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark shadow-sm transition-all text-sm text-center"
+                className="flex-1 px-5 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark transition-all text-sm text-center"
               >
                 View Client Profile →
               </Link>
