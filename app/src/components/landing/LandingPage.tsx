@@ -347,24 +347,26 @@ export function LandingPage() {
 /**
  * "Structure map" — 10 nodes around a circle, faint connections.
  *
- * Animation: a single bold teal segment travels through every node in
- * sequence, weaving across the diagram via a star path (step-of-3 traversal).
- * Each visible loop ends where it began, so the trace is continuous. Reads as
- * "every dimension connects to every other dimension" — the literal claim of
- * the framework, drawn in motion.
+ * Animation: short, soft sparks that travel between non-adjacent node pairs.
+ * Multiple sparks fire continuously on staggered, prime-ish timings — they
+ * never sync, so the eye sees different connections lighting up moment to
+ * moment. Reads as "the system is finding interconnections across the
+ * client's experience," not as a marching pattern.
  *
- * Implementation:
- *  - One <path> through all 10 nodes in star order (0→3→6→9→2→5→8→1→4→7→0).
- *  - `pathLength="100"` normalizes the dasharray to percentages.
- *  - `stroke-dasharray: 14 86` shows a 14% segment of the path; the rest is
- *    invisible. Animating `stroke-dashoffset` from 0 → -100 sweeps that
- *    segment around the loop.
- *  - 9s linear loop. Slow enough to read as deliberate, fast enough that the
- *    head clears the previous edge before reaching the next node.
+ * Each spark:
+ *  - is a single <line> between two nodes, normalized to pathLength=100
+ *  - has a 30% visible dasharray segment that slides from "before A" to
+ *    "after B", giving a brief swept-in/swept-out trail
+ *  - varies in duration and start delay so the set never aligns
  *
- * Static layers stay: outer ring, the dim mesh of edges, all 10 nodes. Only
- * the bold traveling segment moves. Reduced-motion users see the path fully
- * drawn (no animation).
+ * Pairs were hand-picked to skip immediate neighbors — every spark crosses
+ * meaningfully across the diagram (long diagonals + medium chords), no
+ * rim-hugging. Symmetry is intentionally broken — the set isn't rotationally
+ * uniform, which keeps the visual feel asymmetric/organic instead of
+ * geometric.
+ *
+ * Static layers stay: outer ring, dim mesh, all 10 nodes. The sparks float
+ * over them. `prefers-reduced-motion` collapses everything to fully static.
  */
 function StructureMap() {
   const cx = 220;
@@ -388,15 +390,21 @@ function StructureMap() {
     }
   }
 
-  // Hamiltonian-ish star traversal. Step of 3 visits every node exactly once
-  // for n=10 (since gcd(3,10)=1) and produces a 10/3-star-shape weave that
-  // crosses the diameter rather than hugging the rim — emphasizing
-  // interconnection across the diagram, not just along its edge.
-  const seq = [0, 3, 6, 9, 2, 5, 8, 1, 4, 7];
-  const pathD =
-    `M ${nodes[seq[0]].x} ${nodes[seq[0]].y} ` +
-    seq.slice(1).map((i) => `L ${nodes[i].x} ${nodes[i].y}`).join(' ') +
-    ` L ${nodes[seq[0]].x} ${nodes[seq[0]].y}`;
+  // Spark connections. Each {a, b} pair is a single firing. Durations and
+  // delays use prime-ish values so the set never repeats — the eye reads
+  // this as random even though it's deterministic.
+  const sparks: Array<{ a: number; b: number; dur: number; delay: number }> = [
+    { a: 0, b: 5, dur: 2.6, delay: 0    },
+    { a: 1, b: 6, dur: 2.3, delay: 0.7  },
+    { a: 3, b: 8, dur: 2.9, delay: 1.4  },
+    { a: 7, b: 2, dur: 2.4, delay: 0.3  },
+    { a: 4, b: 9, dur: 2.7, delay: 1.9  },
+    { a: 6, b: 1, dur: 2.5, delay: 2.4  },
+    { a: 8, b: 3, dur: 2.8, delay: 1.1  },
+    { a: 0, b: 7, dur: 2.2, delay: 2.1  },
+    { a: 2, b: 9, dur: 3.1, delay: 0.9  },
+    { a: 5, b: 0, dur: 2.6, delay: 1.6  },
+  ];
 
   return (
     <div className="structure-map w-full max-w-md ml-auto">
@@ -404,7 +412,7 @@ function StructureMap() {
         viewBox="0 0 440 440"
         className="w-full h-auto"
         role="img"
-        aria-label="Schematic of the 10 phenomenological dimensions arranged around a circle. A teal line continuously traces connections between each dimension and three others across the diagram."
+        aria-label="Schematic of the 10 phenomenological dimensions arranged around a circle, with short connections briefly lighting up between dimensions across the diagram."
       >
         {/* Static layer: outer ring + dim edge mesh. */}
         <circle cx={cx} cy={cy} r={r} fill="none" stroke="#E2E8F0" strokeWidth="1" />
@@ -420,21 +428,28 @@ function StructureMap() {
           />
         ))}
 
-        {/* The traveling segment. A single bold teal stroke whose visible
-            portion (14% of the total path) sweeps around the loop. Drawn
-            UNDER the nodes so the dots stay clean as it passes through. */}
-        <path
-          className="structure-trace"
-          d={pathD}
-          fill="none"
-          stroke="#1D4343"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          pathLength={100}
-        />
+        {/* Spark layer — each line is invisible at rest; the animation
+            sweeps a 30% visible segment from one end to the other. */}
+        {sparks.map((s, idx) => (
+          <line
+            key={idx}
+            className="structure-spark"
+            x1={nodes[s.a].x}
+            y1={nodes[s.a].y}
+            x2={nodes[s.b].x}
+            y2={nodes[s.b].y}
+            stroke="#1D4343"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            pathLength={100}
+            style={{
+              animationDuration: `${s.dur}s`,
+              animationDelay: `${s.delay}s`,
+            }}
+          />
+        ))}
 
-        {/* Static nodes — solid teal, varying size to suggest centrality. */}
+        {/* Static nodes. */}
         {nodes.map((n) => (
           <circle
             key={n.i}
@@ -449,20 +464,33 @@ function StructureMap() {
       </svg>
 
       <style jsx>{`
-        .structure-map :global(.structure-trace) {
-          stroke-dasharray: 14 86;
-          stroke-dashoffset: 0;
-          animation: traceLoop 9s linear infinite;
+        /* Each spark sweeps a 30-unit visible segment from before the line
+           starts (offset 100) to past the end (offset -30). The "blank"
+           dasharray puts the entire 100-unit gap at the end, so only one
+           segment is ever visible per spark. */
+        .structure-map :global(.structure-spark) {
+          stroke-dasharray: 30 200;
+          stroke-dashoffset: 100;
+          animation-name: sparkTravel;
+          animation-iteration-count: infinite;
+          animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
         }
-        @keyframes traceLoop {
-          from { stroke-dashoffset: 0;    }
-          to   { stroke-dashoffset: -100; }
+        @keyframes sparkTravel {
+          /* Hidden before the line — fully transparent. */
+          0%   { stroke-dashoffset: 100; opacity: 0; }
+          /* Quickly fade in as it enters. */
+          12%  { opacity: 0.85; }
+          /* Travel along the line. */
+          75%  { opacity: 0.85; }
+          /* Past the end — fade out so the trail dissolves. */
+          92%  { opacity: 0; }
+          100% { stroke-dashoffset: -130; opacity: 0; }
         }
         @media (prefers-reduced-motion: reduce) {
-          .structure-map :global(.structure-trace) {
+          .structure-map :global(.structure-spark) {
             animation: none;
             stroke-dasharray: none;
-            stroke-opacity: 0.5;
+            opacity: 0;
           }
         }
       `}</style>
