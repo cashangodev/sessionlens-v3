@@ -345,10 +345,24 @@ export function LandingPage() {
 /* ─── Sub-components ─────────────────────────────────────────────── */
 
 /**
- * Tiny static "structure map" — 10 nodes around a circle, faint connections,
- * no animation, no labels. The visual hint: this is a STRUCTURED tool, not a
- * generic chatbot. Ten dimensions = ten dots. The viewer doesn't need to
- * decode it — just register that it's a system, not a vibe.
+ * "Structure map" — 10 nodes around a circle, faint connections.
+ * The visual hint: this is a STRUCTURED tool, not a generic chatbot.
+ *
+ * Animation philosophy: clinical, not flashy. Two motion layers:
+ *
+ *   1. Each node breathes (opacity 1 → 0.55 → 1) on a slow 5s cycle,
+ *      staggered by index so the ten nodes are out of phase. Reads as
+ *      "the system is considering each dimension in turn" — not a marketing
+ *      sparkle, more like a ventilator's slow rhythm or an EEG trace.
+ *
+ *   2. The center dot ("the session") pulses gently — a single soft glow
+ *      ring expands and fades on a 3.5s cycle. The page's only radiating
+ *      element. Locates attention without demanding it.
+ *
+ * Edges, the outer ring, and node positions stay completely static. Half the
+ * piece is still — that's why the breathing reads as calm rather than busy.
+ *
+ * `prefers-reduced-motion` collapses everything to the static state.
  */
 function StructureMap() {
   const cx = 220;
@@ -373,35 +387,84 @@ function StructureMap() {
   }
 
   return (
-    <svg
-      viewBox="0 0 440 440"
-      className="w-full h-auto max-w-md ml-auto"
-      role="img"
-      aria-label="Schematic of the 10 phenomenological dimensions arranged around a circle, showing how dimensions connect across a session."
-    >
-      {/* Faint outer ring */}
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#E2E8F0" strokeWidth="1" />
-      {/* Edges */}
-      {edges.map(([a, b], idx) => (
-        <line
-          key={idx}
-          x1={nodes[a].x}
-          y1={nodes[a].y}
-          x2={nodes[b].x}
-          y2={nodes[b].y}
-          stroke="#CBD5E1"
-          strokeWidth="0.6"
+    <div className="structure-map w-full max-w-md ml-auto">
+      <svg
+        viewBox="0 0 440 440"
+        className="w-full h-auto"
+        role="img"
+        aria-label="Schematic of the 10 phenomenological dimensions arranged around a circle, showing how dimensions connect across a session."
+      >
+        {/* Static layer: outer ring + edges. */}
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#E2E8F0" strokeWidth="1" />
+        {edges.map(([a, b], idx) => (
+          <line
+            key={idx}
+            x1={nodes[a].x}
+            y1={nodes[a].y}
+            x2={nodes[b].x}
+            y2={nodes[b].y}
+            stroke="#CBD5E1"
+            strokeWidth="0.6"
+          />
+        ))}
+
+        {/* Center: a soft glow ring that expands + fades on a 3.5s loop,
+            plus the static center dot. The ring uses stroke (not fill) so
+            it doesn't overlap the connecting lines while expanding. */}
+        <circle
+          className="structure-pulse"
+          cx={cx}
+          cy={cy}
+          r="6"
+          fill="none"
+          stroke="#1D4343"
+          strokeWidth="1"
         />
-      ))}
-      {/* Nodes — solid teal, varying size to suggest centrality without animating */}
-      {nodes.map((n) => (
-        <g key={n.i}>
-          <circle cx={n.x} cy={n.y} r={n.i % 3 === 0 ? 7 : 5} fill="#1D4343" />
-        </g>
-      ))}
-      {/* Center dot — the "session" itself */}
-      <circle cx={cx} cy={cy} r="3" fill="#1D4343" />
-    </svg>
+        <circle cx={cx} cy={cy} r="3" fill="#1D4343" />
+
+        {/* Nodes — staggered slow breath. The animation-delay is set per node
+            via inline style so all ten share the same keyframes but step
+            through it offset, never aligning. */}
+        {nodes.map((n) => (
+          <circle
+            key={n.i}
+            className="structure-node"
+            cx={n.x}
+            cy={n.y}
+            r={n.i % 3 === 0 ? 7 : 5}
+            fill="#1D4343"
+            style={{ animationDelay: `${n.i * 0.5}s` }}
+          />
+        ))}
+      </svg>
+
+      {/* Animations are scoped to .structure-map so they don't bleed elsewhere. */}
+      <style jsx>{`
+        .structure-map :global(.structure-node) {
+          animation: nodeBreath 5s ease-in-out infinite;
+          transform-origin: center;
+          transform-box: fill-box;
+        }
+        .structure-map :global(.structure-pulse) {
+          animation: centerPulse 3.5s ease-out infinite;
+          transform-origin: center;
+          transform-box: fill-box;
+          opacity: 0;
+        }
+        @keyframes nodeBreath {
+          0%, 100% { opacity: 1; }
+          50%      { opacity: 0.55; }
+        }
+        @keyframes centerPulse {
+          0%   { r: 4;  opacity: 0.6; }
+          100% { r: 28; opacity: 0;   }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .structure-map :global(.structure-node) { animation: none; }
+          .structure-map :global(.structure-pulse) { animation: none; opacity: 0; }
+        }
+      `}</style>
+    </div>
   );
 }
 
