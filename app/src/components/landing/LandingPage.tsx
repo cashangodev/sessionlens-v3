@@ -56,7 +56,7 @@ export function LandingPage() {
       {/* ─── 1. Sticky top nav ──────────────────────────────────────── */}
       <header className="border-b border-gray-200 bg-bg-warm/80 backdrop-blur sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <span className="font-playfair text-xl font-semibold tracking-tight">SessionLens</span>
+          <span className="font-playfair text-xl font-semibold tracking-tight">Session Polaris</span>
           <div className="flex items-center gap-1">
             <Link
               href="/sign-in"
@@ -92,7 +92,7 @@ export function LandingPage() {
               of every session.
             </h1>
             <p className="mt-7 text-lg text-gray-600 leading-relaxed" style={{ maxWidth: '52ch' }}>
-              SessionLens turns therapy session transcripts into clinical insight grounded
+              Session Polaris turns therapy session transcripts into clinical insight grounded
               in <strong className="font-semibold text-gray-900">10,000+ lived-experience archives</strong> coded
               by domain experts.
             </p>
@@ -148,7 +148,7 @@ export function LandingPage() {
               From a 30-second exchange — to coded clinical insight.
             </h2>
             <p className="mt-3 text-base text-gray-600" style={{ maxWidth: '60ch' }}>
-              Anonymized session moment on the left. SessionLens output on the right.
+              Anonymized session moment on the left. Session Polaris output on the right.
               Every claim ties back to the verbatim quote.
             </p>
           </div>
@@ -180,7 +180,7 @@ export function LandingPage() {
             {/* Analysis pane */}
             <div className="p-7 bg-bg-warm/50">
               <p className="text-[10px] uppercase tracking-[0.16em] text-gray-400 mb-4">
-                SessionLens output
+                Session Polaris output
               </p>
 
               <div className="space-y-5">
@@ -236,7 +236,7 @@ export function LandingPage() {
           </div>
 
           <p className="mt-6 text-xs text-gray-500 text-center">
-            Anonymized illustration. SessionLens never trains on your client data.
+            Anonymized illustration. Session Polaris never trains on your client data.
           </p>
         </div>
       </section>
@@ -302,7 +302,7 @@ export function LandingPage() {
             </h2>
             <p className="mt-5 text-base text-white/70" style={{ maxWidth: '60ch' }}>
               Other tools train on public chat logs and call-center transcripts.
-              SessionLens matches against a curated archive of mental-health narratives
+              Session Polaris matches against a curated archive of mental-health narratives
               coded by domain experts.
             </p>
           </div>
@@ -510,7 +510,7 @@ export function LandingPage() {
       <footer className="border-t border-gray-200 bg-bg-warm">
         <div className="max-w-6xl mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-[1.4fr_1fr_1fr] gap-8 md:gap-12">
           <div>
-            <p className="font-playfair text-lg font-semibold text-gray-900 mb-3">SessionLens</p>
+            <p className="font-playfair text-lg font-semibold text-gray-900 mb-3">Session Polaris</p>
             <p className="text-sm text-gray-600 leading-relaxed" style={{ maxWidth: '40ch' }}>
               Built by a team of psychotherapy researchers and ML engineers.
               Cashango Ltd · EU.
@@ -539,7 +539,7 @@ export function LandingPage() {
         <div className="border-t border-gray-200">
           <div className="max-w-6xl mx-auto px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-3">
             <p className="text-xs text-gray-500">
-              © {new Date().getFullYear()} SessionLens · Cashango Ltd
+              © {new Date().getFullYear()} Session Polaris · Cashango Ltd
             </p>
             <p className="text-xs text-gray-400">
               For licensed mental-health professionals · Clinical decision support — not a diagnostic tool

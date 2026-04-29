@@ -2013,7 +2013,7 @@ export default function NewSessionPage() {
                   <li className="flex items-start gap-2.5">
                     <Eye className="w-4 h-4 text-success/80 flex-shrink-0 mt-0.5" />
                     <span className="text-gray-700 leading-relaxed">
-                      <span className="font-semibold text-gray-900">Anonymous codes only.</span> Real names never enter SessionLens — your client dictionary stays with you.
+                      <span className="font-semibold text-gray-900">Anonymous codes only.</span> Real names never enter Session Polaris — your client dictionary stays with you.
                     </span>
                   </li>
                   <li className="flex items-start gap-2.5">

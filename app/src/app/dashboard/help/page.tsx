@@ -11,7 +11,7 @@ export default function HelpPage() {
     {
       question: 'How do I add a new session?',
       answer:
-        'Navigate to the Dashboard and click the "New Session" button. Select an existing client or create a new one, then upload your session transcript or fill in the session notes manually. SessionLens will automatically analyze the content.',
+        'Navigate to the Dashboard and click the "New Session" button. Select an existing client or create a new one, then upload your session transcript or fill in the session notes manually. Session Polaris will automatically analyze the content.',
     },
     {
       question: 'What is the learning mode and how does it help?',
@@ -21,7 +21,7 @@ export default function HelpPage() {
     {
       question: 'Can I export my session data?',
       answer:
-        'Yes. Go to Settings > Privacy & Security > "Export all my data". SessionLens will prepare a comprehensive export of all your session data in a standard format, and you\'ll receive it via email.',
+        'Yes. Go to Settings > Privacy & Security > "Export all my data". Session Polaris will prepare a comprehensive export of all your session data in a standard format, and you\'ll receive it via email.',
     },
     {
       question: 'What EHR integrations are available?',
@@ -49,7 +49,7 @@ export default function HelpPage() {
 
       <div className="mb-12">
         <h1 className="text-3xl font-bold text-slate-900 mb-2">Help & Support</h1>
-        <p className="text-slate-600">Find answers to common questions and learn how to use SessionLens</p>
+        <p className="text-slate-600">Find answers to common questions and learn how to use Session Polaris</p>
       </div>
 
       {/* Getting Started Card */}
@@ -61,7 +61,7 @@ export default function HelpPage() {
           <div className="flex-1">
             <h2 className="text-xl font-bold text-slate-900 mb-2">Getting Started</h2>
             <p className="text-slate-700 mb-4">
-              SessionLens helps you analyze your therapy sessions in minutes. Upload a session transcript, choose your analysis framework
+              Session Polaris helps you analyze your therapy sessions in minutes. Upload a session transcript, choose your analysis framework
               (SOAP, DAP), and get instant insights on clinical patterns, risk signals, and client outcomes. Use our Learning Mode to compare your
               practice with peers and identify growth areas. Start with the Dashboard and navigate to "New Session" to begin your first analysis.
             </p>
@@ -109,7 +109,7 @@ export default function HelpPage() {
           <div className="flex-1">
             <h2 className="text-xl font-bold text-slate-900 mb-2">Contact Support</h2>
             <p className="text-slate-600 mb-4">
-              Need help? Our support team is here to assist you with any questions about SessionLens.
+              Need help? Our support team is here to assist you with any questions about Session Polaris.
             </p>
             <a
               href="mailto:support@sessionlens.app"

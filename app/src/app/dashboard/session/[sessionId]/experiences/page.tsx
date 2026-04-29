@@ -459,8 +459,8 @@ export default function ExperiencesPage() {
                 title="Solution Matching Engine"
                 description={
                   corpusStats
-                    ? `For a given client presentation, SessionLens retrieves similar cases from a dataset of ${corpusStats.livedExperiences.toLocaleString()} lived experiences using semantic vector matching. It then surfaces the interventions and approaches that produced the strongest outcomes across those matches.`
-                    : 'For a given client presentation, SessionLens retrieves similar cases from the lived-experience archive using semantic vector matching. It then surfaces the interventions and approaches that produced the strongest outcomes across those matches.'
+                    ? `For a given client presentation, Session Polaris retrieves similar cases from a dataset of ${corpusStats.livedExperiences.toLocaleString()} lived experiences using semantic vector matching. It then surfaces the interventions and approaches that produced the strongest outcomes across those matches.`
+                    : 'For a given client presentation, Session Polaris retrieves similar cases from the lived-experience archive using semantic vector matching. It then surfaces the interventions and approaches that produced the strongest outcomes across those matches.'
                 }
                 methodology="3-layer matching: (1) Semantic — OpenAI text-embedding-3-small embeddings searched via pgvector cosine similarity, (2) Structural — 10-dimension phenomenological profile alignment, (3) Metadata — valence, intensity, and category overlap scoring. Results are re-ranked by composite score."
               />

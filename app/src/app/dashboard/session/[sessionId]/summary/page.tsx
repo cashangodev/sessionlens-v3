@@ -1396,7 +1396,7 @@ export default function SessionOverviewPage() {
         tooltip={
           <InfoTooltip
             title="Risk Detection System"
-            description="SessionLens uses a 4-layer risk detection algorithm: (1) keyword scanning, (2) negation analysis, (3) temporal context, and (4) semantic context evaluation. Each flag is cross-validated against clinical risk taxonomies."
+            description="Session Polaris uses a 4-layer risk detection algorithm: (1) keyword scanning, (2) negation analysis, (3) temporal context, and (4) semantic context evaluation. Each flag is cross-validated against clinical risk taxonomies."
             methodology="4-layer algorithm: lexical → negation-aware → temporal → contextual. Covers 16 clinical and social risk categories."
           />
         }

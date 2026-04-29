@@ -68,7 +68,7 @@ export function OnboardingTour({ hasSessions }: OnboardingTourProps) {
   const steps = [
     {
       icon: Sparkles,
-      title: 'Welcome to SessionLens',
+      title: 'Welcome to Session Polaris',
       body: (
         <>
           You’re about to turn therapy session transcripts into structured

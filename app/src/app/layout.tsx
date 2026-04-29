@@ -11,7 +11,7 @@ const hasRealClerkKey =
   !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.includes("placeholder");
 
 export const metadata: Metadata = {
-  title: "SessionLens — AI Clinical Decision Support",
+  title: "Session Polaris — AI Clinical Decision Support",
   description:
     "AI-powered therapy session analysis using phenomenological structure coding",
 };

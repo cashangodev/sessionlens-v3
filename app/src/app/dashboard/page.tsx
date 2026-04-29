@@ -126,7 +126,7 @@ export default function HomePage() {
               <Brain className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h2 className="font-playfair text-2xl font-bold text-gray-900 mb-2">Welcome to SessionLens</h2>
+              <h2 className="font-playfair text-2xl font-bold text-gray-900 mb-2">Welcome to Session Polaris</h2>
               <p className="text-secondary leading-relaxed">
                 Analyze therapy sessions using AI-powered phenomenological coding. Paste a transcript,
                 and get instant insights on emotional structures, risk signals, and evidence-based recommendations.

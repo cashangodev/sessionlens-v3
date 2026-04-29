@@ -15,7 +15,7 @@ export default async function DashboardLayout({
       <header className="bg-white/95 border-b border-gray-200/60 px-6 py-4 flex items-center justify-between sticky top-0 z-40 backdrop-blur-sm">
         <div className="flex items-center gap-6">
           <Link href="/dashboard" className="flex items-center gap-2 group">
-            <h1 className="font-playfair text-2xl font-bold text-primary-dark group-hover:text-primary transition-colors tracking-tight">SessionLens</h1>
+            <h1 className="font-playfair text-2xl font-bold text-primary-dark group-hover:text-primary transition-colors tracking-tight">Session Polaris</h1>
           </Link>
           <nav className="hidden sm:flex items-center gap-1">
             <Link

@@ -188,7 +188,7 @@ export function SessionSignOff({ sessionId, doctorName, aiSnapshot }: SessionSig
                 Clinician-assigned risk
                 <InfoTooltip
                   title="Clinician-assigned risk score"
-                  description="A 1–100 score the practitioner sets at the end of each session, reflecting their own clinical judgment about the client's current risk picture. This is the ONLY authoritative risk score in SessionLens — the AI never assigns a risk verdict."
+                  description="A 1–100 score the practitioner sets at the end of each session, reflecting their own clinical judgment about the client's current risk picture. This is the ONLY authoritative risk score in Session Polaris — the AI never assigns a risk verdict."
                   methodology="Bands: 1–30 = Low, 31–65 = Moderate, 66–100 = Elevated. The clinician may set any value; the bands are visual anchors, not categorical labels. The optional rationale is captured alongside for the audit trail."
                 />
               </p>
@@ -266,7 +266,7 @@ export function SessionSignOff({ sessionId, doctorName, aiSnapshot }: SessionSig
               <InfoTooltip
                 title="Why sign-off matters"
                 description="Sign-off draws the line between AI-generated draft content and clinician judgment. Once signed, the session record is locked, the clinician's risk score becomes the authoritative one, and the audit trail records who reviewed what and when."
-                methodology="At sign-off, SessionLens captures: doctor name, timestamp, the clinician-assigned risk score (1–100), the optional rationale, and a snapshot of which AI signals existed at that moment so any later mismatch can be reviewed. Currently persisted to localStorage — Supabase persistence is the next iteration."
+                methodology="At sign-off, Session Polaris captures: doctor name, timestamp, the clinician-assigned risk score (1–100), the optional rationale, and a snapshot of which AI signals existed at that moment so any later mismatch can be reviewed. Currently persisted to localStorage — Supabase persistence is the next iteration."
               />
             </p>
             <p className="text-xs text-gray-500 mt-0.5">

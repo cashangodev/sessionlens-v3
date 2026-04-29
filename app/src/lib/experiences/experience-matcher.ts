@@ -280,7 +280,7 @@ export function buildExperiencesAnalysis(
     matchedCases,
     treatmentApproaches,
     meta: {
-      analysisModel: 'SessionLens Phenomenological Engine v3.0 (local)',
+      analysisModel: 'Session Polaris Phenomenological Engine v3.0 (local)',
       analysisVersion: '3.0.0-mvp',
       generatedAt: new Date().toISOString(),
     },
