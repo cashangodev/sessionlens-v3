@@ -62,6 +62,41 @@ function formatTime(seconds: number): string {
   return `${m}:${s}`;
 }
 
+/**
+ * Read the actual audio duration from a Blob via HTMLAudioElement metadata.
+ * This is the source of truth for "how long is this recording" on resume —
+ * wall-clock time since startedAt is misleading when there's been a gap.
+ *
+ * Returns 0 if the blob can't be parsed (browser unable to read the
+ * container, or the recording was crashed mid-flight without a finalizer).
+ * Caller can fall back to a wall-clock estimate in that case.
+ */
+async function readAudioDurationSeconds(blob: Blob): Promise<number> {
+  if (typeof window === 'undefined' || !blob.size) return 0;
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio();
+    let settled = false;
+    const finish = (sec: number) => {
+      if (settled) return;
+      settled = true;
+      URL.revokeObjectURL(url);
+      resolve(Number.isFinite(sec) && sec > 0 ? Math.round(sec) : 0);
+    };
+    audio.preload = 'metadata';
+    audio.addEventListener('loadedmetadata', () => finish(audio.duration));
+    audio.addEventListener('error', () => finish(0));
+    // Some browsers report Infinity for WebM/Opus duration until the file
+    // is fully scanned. Force a seek to the end to coerce the real value.
+    audio.addEventListener('durationchange', () => {
+      if (Number.isFinite(audio.duration) && audio.duration > 0) finish(audio.duration);
+    });
+    audio.src = url;
+    // Hard timeout in case neither event fires (rare browser quirks).
+    setTimeout(() => finish(0), 4000);
+  });
+}
+
 export default function NewSessionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -260,7 +295,22 @@ export default function NewSessionPage() {
   const [micTestPassed, setMicTestPassed] = useState(false);
   const [showRestartConfirm, setShowRestartConfirm] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  // Chunks for the CURRENT MediaRecorder session only. Each session produces
+  // exactly one valid WebM/Opus container; chunks are flushed into a complete
+  // Blob via onstop and pushed to `segmentsRef` below.
   const audioChunksRef = useRef<Blob[]>([]);
+  // Finalized recording segments — one Blob per MediaRecorder session.
+  // Segments survive a stop-then-continue cycle so the doctor can keep
+  // adding to the recording. Each segment is independently valid; for
+  // analysis we send each to Whisper separately and concatenate the
+  // transcripts (byte-concat'd WebM files don't reliably play or
+  // transcribe as one).
+  const segmentsRef = useRef<Blob[]>([]);
+  // Computed total recorded duration across all segments. Updated after
+  // each segment is finalized using the audio element metadata, so the
+  // timer reflects ACTUAL audio duration rather than wall-clock since
+  // the recording started.
+  const segmentsTotalDurationRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const displayStreamRef = useRef<MediaStream | null>(null);
@@ -591,20 +641,19 @@ export default function NewSessionPage() {
     );
     mediaRecorderRef.current = mediaRecorder;
 
-    // Continuation path: a previous recording was loaded from IDB and the
-    // user clicked "Continue" in the resume banner. Preserve the historical
-    // chunks (already in audioChunksRef) and reuse the existing IDB id so
-    // new chunks append to the same session. Otherwise fresh recording —
-    // reset everything and open a new IDB session.
-    const continuing = isResumingRecordingRef.current && audioChunksRef.current.length > 0;
-    if (!continuing) {
-      audioChunksRef.current = [];
+    // Continuation path: previous segments already exist (either loaded
+    // from IDB after a tab crash, or finalized via "Continue from done").
+    // Each MediaRecorder session is its OWN segment with its own valid
+    // WebM container — we don't try to byte-concat them. `audioChunksRef`
+    // is per-session, so reset it; `segmentsRef` carries the prior takes.
+    const continuing = segmentsRef.current.length > 0;
+    audioChunksRef.current = [];
 
-      // Discard ANY pre-existing unfinished recordings before starting a
-      // fresh one. The doctor explicitly chose "new recording" (not
-      // continue), so the orphans are no longer wanted. This also
-      // guarantees the resume banner only ever surfaces ONE recording —
-      // the one currently being made.
+    if (!continuing) {
+      // Fresh recording — discard ANY pre-existing unfinished recordings
+      // first. The doctor explicitly chose "new recording" (not continue),
+      // so the orphans are no longer wanted. Guarantees the resume banner
+      // only ever surfaces the one recording currently being made.
       try {
         const stale = await listOpenRecordings();
         for (const m of stale) {
@@ -618,10 +667,11 @@ export default function NewSessionPage() {
 
       const recordingId = newRecordingId();
       recordingIdRef.current = recordingId;
+      segmentsTotalDurationRef.current = 0;
       // Await openRecording so the meta row exists BEFORE the first chunk
-      // tries to append. Without the await, a slow IDB write could let the
-      // first ondataavailable fire with no parent meta — chunks then exist
-      // as orphans and the resume banner never finds them.
+      // tries to append. Without the await, a slow IDB write could let
+      // the first ondataavailable fire with no parent meta — chunks then
+      // exist as orphans and the resume banner never finds them.
       try {
         await openRecording({
           id: recordingId,
@@ -637,15 +687,14 @@ export default function NewSessionPage() {
         recordingIdRef.current = null;
       }
     }
-    // else: keep existing recordingIdRef + audioChunksRef intact
+    // else: segmentsRef holds prior takes; recordingIdRef stays the same
 
     mediaRecorder.ondataavailable = (e) => {
       if (e.data.size > 0) {
         audioChunksRef.current.push(e.data);
-        // Mirror to IDB for crash recovery. Fire-and-forget by design (we
-        // can't slow the recorder waiting on disk) — but log failures so
-        // they don't disappear. If many of these fire, the IDB store is
-        // misconfigured and the resume banner won't have data to show.
+        // Mirror to IDB for crash recovery. Fire-and-forget by design.
+        // Failures are logged so they don't disappear; if many fire, the
+        // IDB store is broken and the resume banner won't have data.
         const id = recordingIdRef.current;
         if (id) appendChunk(id, e.data).catch((err) => {
           console.error('[recording] appendChunk failed:', err);
@@ -653,12 +702,45 @@ export default function NewSessionPage() {
       }
     };
 
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(audioChunksRef.current, { type: mimeTypeRef.current });
-      setRecordedBlob(blob);
+    mediaRecorder.onstop = async () => {
+      // Finalize this MediaRecorder session as ONE valid WebM segment.
+      // Push it to the segments list so future continues can add more
+      // takes without breaking what we already have.
+      if (audioChunksRef.current.length > 0) {
+        const segment = new Blob(audioChunksRef.current, { type: mimeTypeRef.current });
+        segmentsRef.current.push(segment);
+        audioChunksRef.current = [];
+
+        // Update the wall-clock-independent total duration. Reading the
+        // segment's metadata is best-effort — fall back to the wall-clock
+        // delta if the browser refuses to report duration.
+        try {
+          const segDur = await readAudioDurationSeconds(segment);
+          if (segDur > 0) {
+            segmentsTotalDurationRef.current += segDur;
+          }
+        } catch {
+          /* ignore — fall back to existing recordingSeconds */
+        }
+      }
+
+      // The combined preview is only used for "do we have audio?" gating —
+      // it's the LAST segment so the audio element actually plays. The
+      // analyze step iterates segmentsRef directly (one Whisper call per
+      // segment) so the user never loses earlier takes.
+      const preview = segmentsRef.current[segmentsRef.current.length - 1] || null;
+      setRecordedBlob(preview);
       if (recordedUrl) URL.revokeObjectURL(recordedUrl);
-      setRecordedUrl(URL.createObjectURL(blob));
-      // Stop all tracks
+      setRecordedUrl(preview ? URL.createObjectURL(preview) : null);
+
+      // If we have a reliable total from metadata, surface it. Otherwise
+      // keep whatever the timer accumulated (close enough).
+      if (segmentsTotalDurationRef.current > 0) {
+        setRecordingSeconds(segmentsTotalDurationRef.current);
+      }
+
+      // Stop tracks. If the user clicks Continue from the done state we
+      // re-acquire fresh tracks via mic-test — same UX as crash recovery.
       stream.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
       if (displayStreamRef.current) {
@@ -666,8 +748,8 @@ export default function NewSessionPage() {
         displayStreamRef.current = null;
       }
       // The IDB recording stays around until the analyze flow successfully
-      // uploads the audio (or the user explicitly discards). That's the
-      // hand-off point for the resume banner.
+      // uploads (or the user explicitly discards). That's the hand-off
+      // point for the resume banner.
     };
 
     mediaRecorder.start(1000);
@@ -744,11 +826,21 @@ export default function NewSessionPage() {
       setShowRestartConfirm(true);
       return;
     }
-    // Second click — actually reset
+    // Second click — actually reset. Throw away every segment, every chunk,
+    // and the IDB recording row. Caller is responsible for navigating away
+    // or letting the user start a new mic-test.
     if (recordedUrl) URL.revokeObjectURL(recordedUrl);
     setRecordedBlob(null);
     setRecordedUrl(null);
     setRecordingSeconds(0);
+    segmentsRef.current = [];
+    audioChunksRef.current = [];
+    segmentsTotalDurationRef.current = 0;
+    if (recordingIdRef.current) {
+      void discardRecording(recordingIdRef.current).catch(() => {});
+      recordingIdRef.current = null;
+    }
+    setIsResumingRecording(false);
     recordingStateRef.current = 'idle';
     setRecordingState('idle');
     setMicError('');
@@ -788,8 +880,30 @@ export default function NewSessionPage() {
     try {
       const stages = ANALYSIS_STAGES_AUDIO;
       setCurrentStage(0);
-      const file = new File([recordedBlob], `recording-${Date.now()}.webm`, { type: 'audio/webm' });
-      const { transcript: transcribedText } = await transcribeAudio(file);
+
+      // Transcribe each segment independently and concatenate the transcripts.
+      // Critical for multi-take recordings: byte-concat'd WebM files don't
+      // play or transcribe reliably as a single file because each segment
+      // has its own EBML header. Sending one Whisper call per segment keeps
+      // every take intact in the final transcript.
+      const segments = segmentsRef.current.length > 0
+        ? segmentsRef.current
+        : [recordedBlob]; // fallback if a path skipped segmentsRef
+      const transcripts: string[] = [];
+      for (let i = 0; i < segments.length; i++) {
+        const seg = segments[i];
+        const file = new File(
+          [seg],
+          `recording-${Date.now()}-seg${i + 1}.webm`,
+          { type: 'audio/webm' },
+        );
+        const { transcript } = await transcribeAudio(file);
+        if (transcript && transcript.trim()) transcripts.push(transcript.trim());
+      }
+      // Join segments with a blank line so segment boundaries are visible
+      // in the raw transcript (helpful for debugging; analysis treats it
+      // as ordinary paragraph breaks).
+      const transcribedText = transcripts.join('\n\n');
 
       for (let i = 1; i < stages.length; i++) {
         setCurrentStage(i);
@@ -848,9 +962,12 @@ export default function NewSessionPage() {
         setResumableRecordings((rs) => rs.filter((r) => r.id !== meta.id));
         return null;
       }
-      // Pre-load chunks into memory so a NEW MediaRecorder run can append to
-      // them. The historical blob goes in as a single combined chunk.
-      audioChunksRef.current = [blob];
+
+      // Treat the historical recording as ONE finalized segment. New
+      // takes from a Continue click will become additional segments —
+      // each independently valid and independently transcribable.
+      segmentsRef.current = [blob];
+      audioChunksRef.current = [];
       recordingIdRef.current = meta.id;
       mimeTypeRef.current = meta.mimeType;
       if (meta.recordMode) setRecordMode(meta.recordMode);
@@ -859,7 +976,15 @@ export default function NewSessionPage() {
       if (meta.sessionTime) setSessionTime(meta.sessionTime);
       setActiveTab('record');
       setResumableRecordings((rs) => rs.filter((r) => r.id !== meta.id));
-      const durationSeconds = Math.max(1, Math.round((Date.now() - meta.startedAt) / 1000));
+
+      // Prefer ACTUAL audio duration over wall-clock — wall-clock balloons
+      // by the time the user spent away from the tab and is misleading.
+      // Fall back to wall-clock if metadata can't be read (rare).
+      let durationSeconds = await readAudioDurationSeconds(blob);
+      if (durationSeconds === 0) {
+        durationSeconds = Math.max(1, Math.round((Date.now() - meta.startedAt) / 1000));
+      }
+      segmentsTotalDurationRef.current = durationSeconds;
       return { blob, durationSeconds };
     },
     [],
@@ -891,7 +1016,8 @@ export default function NewSessionPage() {
   );
 
   // "Use what's there" — load chunks and finalize as-is, no further capture.
-  // Same end state as if the user had stopped recording normally.
+  // The restored blob becomes the only segment; analyze sends just this
+  // one to Whisper.
   const handleFinalizeResumable = useCallback(
     async (meta: RecordingMeta) => {
       try {
@@ -909,6 +1035,20 @@ export default function NewSessionPage() {
     },
     [recordedUrl, restoreRecordingFromIdb],
   );
+
+  // Continue from the DONE state — user already finished a recording but
+  // wants to capture more (e.g. client said something after stopping).
+  // Drops back to idle/mic-test; segmentsRef carries the existing takes
+  // forward, and the next stop will push another segment.
+  const handleContinueFromDone = useCallback(() => {
+    if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+    setRecordedBlob(null);
+    setRecordedUrl(null);
+    setRecordingState('idle');
+    recordingStateRef.current = 'idle';
+    setIsResumingRecording(true);
+    // recordingSeconds stays — the timer will continue from total duration
+  }, [recordedUrl]);
 
   // Auto-trigger when arriving via the dashboard banner with
   // ?resume=<id>&action=continue|finalize. Looks up the meta in IDB,
@@ -1991,20 +2131,43 @@ export default function NewSessionPage() {
                             <CheckCircle2 className="w-7 h-7 text-emerald-600" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-gray-900">Session Recording Complete</p>
+                            <p className="font-semibold text-gray-900">
+                              Session Recording Complete
+                              {segmentsRef.current.length > 1 && (
+                                <span className="ml-2 text-xs font-medium text-gray-500">
+                                  · {segmentsRef.current.length} segments
+                                </span>
+                              )}
+                            </p>
                             <div className="flex items-center gap-4 mt-1.5 text-sm text-gray-500">
                               <span>{formatTime(recordingSeconds)}</span>
                               <span className="text-gray-300">|</span>
                               <span>{formatFileSize(recordedBlob.size)}</span>
+                              {segmentsRef.current.length > 1 && (
+                                <span className="text-xs text-gray-400">
+                                  (preview: latest segment)
+                                </span>
+                              )}
                             </div>
                             {recordedUrl && (
                               <audio controls src={recordedUrl} className="mt-3 w-full h-10" />
                             )}
-                            <div className="mt-3 flex items-center gap-2">
+                            <div className="mt-3 flex items-center gap-2 flex-wrap">
                               <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
                                 <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
                                 Ready to analyze
                               </span>
+                              {/* Doctor's escape hatch — client said one more
+                                  thing after we stopped, or a brief silence
+                                  was misread as the end. Single click drops
+                                  back to mic-test, next stop adds another
+                                  segment. */}
+                              <button
+                                onClick={handleContinueFromDone}
+                                className="text-xs font-medium text-primary-dark hover:text-primary px-2.5 py-1 rounded-full border border-primary-dark/30 hover:border-primary-dark"
+                              >
+                                + Continue recording
+                              </button>
                             </div>
                           </div>
                           <div className="flex-shrink-0">
