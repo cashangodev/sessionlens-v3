@@ -282,17 +282,15 @@ export default function NewSessionPage() {
   const isResumingRecordingRef = useRef(false);
   useEffect(() => { isResumingRecordingRef.current = isResumingRecording; }, [isResumingRecording]);
 
-  // Shared hook reads IDB once on mount and surfaces any in-flight
-  // recordings to the resume banner.
-  const { recordings: resumableRecordings, refresh: refreshResumables } =
+  // Shared hook reads IDB once on mount and returns AT MOST ONE recording —
+  // the most recent in-flight one. The resume UI on this page only appears
+  // when the user navigated here directly (not via dashboard's resume CTA).
+  const { recording: resumableRecording, refresh: refreshResumables } =
     useResumableRecordings();
-  // Mutator helper that mirrors the local-state filtering done previously,
-  // so the existing handlers (Continue / Use as-is / Discard) keep working
-  // without restructuring.
-  const setResumableRecordings = (
-    fn: (rs: RecordingMeta[]) => RecordingMeta[],
-  ) => {
-    void fn; // local filtering is now driven by `refreshResumables` below
+  // Local mutator stub — older handlers used a setState call to remove a
+  // discarded recording from the list. Now we just refresh from IDB.
+  const setResumableRecordings = (_fn: (rs: RecordingMeta[]) => RecordingMeta[]) => {
+    void _fn;
     refreshResumables();
   };
 
@@ -1267,51 +1265,50 @@ export default function NewSessionPage() {
       {/* Resume banner on this page — only shown if the user navigated here
           directly (not via the dashboard's resume CTA, which already passed
           the choice through `?resume=&action=`). Once the user has acted via
-          URL params or is mid-recording, hide this. */}
-      {resumableRecordings.length > 0 && recordingState === 'idle' && !isResumingRecording && !resumeIdParam && (
-        <div className="mb-8 border border-amber-200 bg-amber-50 rounded-md p-4">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-amber-700 mb-2">
-            Unfinished recording
-          </p>
-          {resumableRecordings.map((r) => {
-            const minutes = Math.max(1, Math.round((Date.now() - r.startedAt) / 60000));
-            return (
-              <div key={r.id} className="flex items-center justify-between gap-4 flex-wrap">
-                <div>
-                  <p className="text-sm text-gray-900">
-                    A recording from{' '}
-                    <span className="font-mono">{r.clientCode || '—'}</span> ·{' '}
-                    started ~{minutes} min{minutes === 1 ? '' : 's'} ago is saved locally.
-                  </p>
-                  <p className="text-xs text-gray-600 mt-0.5">
-                    Continue capturing where you left off, finalize what&apos;s already there, or discard.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleDiscardResumable(r)}
-                    className="text-xs text-gray-600 hover:text-gray-900 px-3 py-2"
-                  >
-                    Discard
-                  </button>
-                  <button
-                    onClick={() => handleFinalizeResumable(r)}
-                    className="text-xs font-medium border border-amber-300 text-amber-900 px-3 py-2 rounded-md hover:border-amber-500"
-                  >
-                    Use as-is
-                  </button>
-                  <button
-                    onClick={() => handleContinueResumable(r)}
-                    className="text-xs font-medium bg-primary-dark text-white px-3 py-2 rounded-md hover:bg-primary"
-                  >
-                    Continue recording
-                  </button>
-                </div>
+          URL params or is mid-recording, hide this. Single recording only. */}
+      {resumableRecording && recordingState === 'idle' && !isResumingRecording && !resumeIdParam && (() => {
+        const r = resumableRecording;
+        const minutes = Math.max(1, Math.round((Date.now() - r.startedAt) / 60000));
+        return (
+          <div className="mb-8 border border-amber-200 bg-amber-50 rounded-md p-4">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-amber-700 mb-2">
+              Unfinished recording
+            </p>
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <p className="text-sm text-gray-900">
+                  Session for{' '}
+                  <span className="font-mono">{r.clientCode || '—'}</span> ·{' '}
+                  started ~{minutes} min{minutes === 1 ? '' : 's'} ago. Saved on this device.
+                </p>
+                <p className="text-xs text-gray-600 mt-0.5">
+                  Continue where you left off, finalize what you already have, or discard.
+                </p>
               </div>
-            );
-          })}
-        </div>
-      )}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleDiscardResumable(r)}
+                  className="text-xs text-gray-600 hover:text-gray-900 px-3 py-2"
+                >
+                  Discard
+                </button>
+                <button
+                  onClick={() => handleFinalizeResumable(r)}
+                  className="text-xs font-medium border border-amber-300 text-amber-900 px-3 py-2 rounded-md hover:border-amber-500"
+                >
+                  Use as-is
+                </button>
+                <button
+                  onClick={() => handleContinueResumable(r)}
+                  className="text-xs font-medium bg-primary-dark text-white px-3 py-2 rounded-md hover:bg-primary"
+                >
+                  Continue recording
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* "Continuing previous recording" notice — shows once the user has
           clicked Continue but hasn't started capturing again yet. Tells them
