@@ -265,6 +265,14 @@ export default function NewSessionPage() {
   // it set, the resume banner will surface it on next page load.
   const recordingIdRef = useRef<string | null>(null);
   const [resumableRecordings, setResumableRecordings] = useState<RecordingMeta[]>([]);
+  // True between the moment the user clicks "Continue" in the resume banner
+  // and the next time recording stops. Used to: (a) preserve audioChunksRef
+  // across startRecording, (b) preserve the recordingSeconds offset, (c)
+  // reuse the existing IDB recording id so new chunks append to the same
+  // session, (d) display a notice to the user explaining the continuation.
+  const [isResumingRecording, setIsResumingRecording] = useState(false);
+  const isResumingRecordingRef = useRef(false);
+  useEffect(() => { isResumingRecordingRef.current = isResumingRecording; }, [isResumingRecording]);
 
   // On mount, surface any unfinished recordings the user can resume.
   // Filtered to the last 24 hours so we don't dredge up ancient orphans.
@@ -576,26 +584,30 @@ export default function NewSessionPage() {
       mimeType ? { mimeType, audioBitsPerSecond: 32000 } : { audioBitsPerSecond: 32000 },
     );
     mediaRecorderRef.current = mediaRecorder;
-    audioChunksRef.current = [];
 
-    // Open an IndexedDB recording session so each chunk is durable —
-    // a tab crash mid-recording can be recovered via the resume banner
-    // on next page load. IDB write failures are non-fatal: the in-memory
-    // path still captures the chunk.
-    const recordingId = newRecordingId();
-    recordingIdRef.current = recordingId;
-    void openRecording({
-      id: recordingId,
-      startedAt: Date.now(),
-      mimeType: mimeTypeRef.current,
-      clientCode: activeClientCode,
-      sessionDate,
-      sessionTime,
-      recordMode,
-    }).catch(() => {
-      // IDB unavailable (private mode / quota / disabled) — keep going
-      recordingIdRef.current = null;
-    });
+    // Continuation path: a previous recording was loaded from IDB and the
+    // user clicked "Continue" in the resume banner. Preserve the historical
+    // chunks (already in audioChunksRef) and reuse the existing IDB id so
+    // new chunks append to the same session. Otherwise fresh recording —
+    // reset everything and open a new IDB session.
+    const continuing = isResumingRecordingRef.current && audioChunksRef.current.length > 0;
+    if (!continuing) {
+      audioChunksRef.current = [];
+      const recordingId = newRecordingId();
+      recordingIdRef.current = recordingId;
+      void openRecording({
+        id: recordingId,
+        startedAt: Date.now(),
+        mimeType: mimeTypeRef.current,
+        clientCode: activeClientCode,
+        sessionDate,
+        sessionTime,
+        recordMode,
+      }).catch(() => {
+        recordingIdRef.current = null;
+      });
+    }
+    // else: keep existing recordingIdRef + audioChunksRef intact
 
     mediaRecorder.ondataavailable = (e) => {
       if (e.data.size > 0) {
@@ -626,7 +638,12 @@ export default function NewSessionPage() {
     mediaRecorder.start(1000);
     recordingStateRef.current = 'recording';
     setRecordingState('recording');
-    setRecordingSeconds(0);
+    // Continuation: keep the existing recordingSeconds (carried over from
+    // the resumed session). Fresh recording: start at 0.
+    if (!continuing) setRecordingSeconds(0);
+    // Once recording resumes, clear the resume flag — subsequent stops
+    // and restarts behave as normal.
+    setIsResumingRecording(false);
 
     timerRef.current = setInterval(() => {
       setRecordingSeconds((s) => s + 1);
@@ -783,37 +800,79 @@ export default function NewSessionPage() {
     }
   };
 
-  // Resume an unfinished recording from IndexedDB.
-  // Reconstructs the merged Blob from stored chunks and drops the user
-  // straight into the "preview / analyze" state, just as if they had
-  // finished recording fresh.
-  const handleResumeRecording = useCallback(
+  // Helper used by both resume-flows below. Loads the meta + chunks from IDB,
+  // restores the in-memory state (chunks ref, recording id, mime type), and
+  // sets the form fields we captured when the recording started (client,
+  // mode, date/time). Returns the reconstructed blob OR null if the IDB row
+  // had no chunks (in which case it's auto-cleaned).
+  const restoreRecordingFromIdb = useCallback(
+    async (meta: RecordingMeta): Promise<{ blob: Blob; durationSeconds: number } | null> => {
+      const blob = await finalizeRecording(meta.id, meta.mimeType);
+      if (!blob) {
+        await discardRecording(meta.id).catch(() => {});
+        setResumableRecordings((rs) => rs.filter((r) => r.id !== meta.id));
+        return null;
+      }
+      // Pre-load chunks into memory so a NEW MediaRecorder run can append to
+      // them. The historical blob goes in as a single combined chunk.
+      audioChunksRef.current = [blob];
+      recordingIdRef.current = meta.id;
+      mimeTypeRef.current = meta.mimeType;
+      if (meta.recordMode) setRecordMode(meta.recordMode);
+      if (meta.clientCode) setClientCode(meta.clientCode);
+      if (meta.sessionDate) setSessionDate(meta.sessionDate);
+      if (meta.sessionTime) setSessionTime(meta.sessionTime);
+      setActiveTab('record');
+      setResumableRecordings((rs) => rs.filter((r) => r.id !== meta.id));
+      const durationSeconds = Math.max(1, Math.round((Date.now() - meta.startedAt) / 1000));
+      return { blob, durationSeconds };
+    },
+    [],
+  );
+
+  // "Continue recording" — load chunks back into memory and drop the user
+  // into the idle/record state. They click the regular Start button to
+  // re-grant audio access, then the new MediaRecorder run APPENDS chunks
+  // to the existing audioChunksRef and continues persisting under the same
+  // IDB recording id. The previous duration carries over on the timer.
+  const handleContinueResumable = useCallback(
     async (meta: RecordingMeta) => {
       try {
-        const blob = await finalizeRecording(meta.id, meta.mimeType);
-        if (!blob) {
-          // Empty — clean up the stale row
-          await discardRecording(meta.id).catch(() => {});
-          setResumableRecordings((rs) => rs.filter((r) => r.id !== meta.id));
-          return;
-        }
-        recordingIdRef.current = meta.id;
-        mimeTypeRef.current = meta.mimeType;
-        setRecordedBlob(blob);
-        if (recordedUrl) URL.revokeObjectURL(recordedUrl);
-        setRecordedUrl(URL.createObjectURL(blob));
-        setRecordingState('done');
-        recordingStateRef.current = 'done';
-        setRecordingSeconds(Math.round((Date.now() - meta.startedAt) / 1000));
-        if (meta.recordMode) setRecordMode(meta.recordMode);
-        if (meta.clientCode) setClientCode(meta.clientCode);
-        setActiveTab('record');
-        setResumableRecordings((rs) => rs.filter((r) => r.id !== meta.id));
+        const restored = await restoreRecordingFromIdb(meta);
+        if (!restored) return;
+        // Stay in idle so the user can click the mic test button — the
+        // browser requires a user gesture before re-prompting for audio.
+        setRecordingSeconds(restored.durationSeconds);
+        setRecordingState('idle');
+        recordingStateRef.current = 'idle';
+        // Reveal the resume notice — read by the JSX to show a "continuing
+        // from prior session" hint above the start button.
+        setIsResumingRecording(true);
       } catch (e) {
-        console.error('Failed to resume recording:', e);
+        console.error('Failed to load recording for continuation:', e);
       }
     },
-    [recordedUrl],
+    [restoreRecordingFromIdb],
+  );
+
+  // "Use what's there" — load chunks and finalize as-is, no further capture.
+  // Same end state as if the user had stopped recording normally.
+  const handleFinalizeResumable = useCallback(
+    async (meta: RecordingMeta) => {
+      try {
+        const restored = await restoreRecordingFromIdb(meta);
+        if (!restored) return;
+        setRecordedBlob(restored.blob);
+        if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+        setRecordedUrl(URL.createObjectURL(restored.blob));
+        setRecordingState('done');
+        recordingStateRef.current = 'done';
+        setRecordingSeconds(restored.durationSeconds);
+      } catch (e) {
+        console.error('Failed to finalize unfinished recording:', e);
+      }
+    },
+    [recordedUrl, restoreRecordingFromIdb],
   );
 
   const handleDiscardResumable = useCallback(async (meta: RecordingMeta) => {
@@ -1130,8 +1189,13 @@ export default function NewSessionPage() {
       </div>
 
       {/* Resume banner — surfaces unfinished recordings the user can pick up.
-          Hidden when the user is already in an active recording session. */}
-      {resumableRecordings.length > 0 && recordingState === 'idle' && (
+          Three actions:
+            • Continue recording — re-grants audio access, new chunks append
+              to the existing IDB session and the in-memory chunks ref.
+            • Use as-is — finalizes what was captured, skips further capture.
+            • Discard — deletes the IDB rows.
+          Hidden once the user is mid-recording or has already resumed. */}
+      {resumableRecordings.length > 0 && recordingState === 'idle' && !isResumingRecording && (
         <div className="mb-8 border border-amber-200 bg-amber-50 rounded-md p-4">
           <p className="text-[11px] uppercase tracking-[0.18em] text-amber-700 mb-2">
             Unfinished recording
@@ -1147,7 +1211,7 @@ export default function NewSessionPage() {
                     started ~{minutes} min{minutes === 1 ? '' : 's'} ago is saved locally.
                   </p>
                   <p className="text-xs text-gray-600 mt-0.5">
-                    Resume to preview and analyze, or discard if it&apos;s no longer needed.
+                    Continue capturing where you left off, finalize what&apos;s already there, or discard.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1158,15 +1222,52 @@ export default function NewSessionPage() {
                     Discard
                   </button>
                   <button
-                    onClick={() => handleResumeRecording(r)}
+                    onClick={() => handleFinalizeResumable(r)}
+                    className="text-xs font-medium border border-amber-300 text-amber-900 px-3 py-2 rounded-md hover:border-amber-500"
+                  >
+                    Use as-is
+                  </button>
+                  <button
+                    onClick={() => handleContinueResumable(r)}
                     className="text-xs font-medium bg-primary-dark text-white px-3 py-2 rounded-md hover:bg-primary"
                   >
-                    Resume
+                    Continue recording
                   </button>
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* "Continuing previous recording" notice — shows once the user has
+          clicked Continue but hasn't started capturing again yet. Tells them
+          how much time is preserved and what happens next. */}
+      {isResumingRecording && recordingState === 'idle' && (
+        <div className="mb-8 border border-primary-dark/20 bg-bg-warm rounded-md p-4 flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-primary-dark mb-1">
+              Continuing previous recording
+            </p>
+            <p className="text-sm text-gray-700">
+              {Math.floor(recordingSeconds / 60)}:{String(recordingSeconds % 60).padStart(2, '0')} already captured.
+              Click the record button below to re-grant audio access and continue.
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              // Bail out of resume flow — discard the in-memory chunks and
+              // start fresh. The IDB row stays (resume banner will show again
+              // on next page load) — that's intentional, no data lost.
+              audioChunksRef.current = [];
+              recordingIdRef.current = null;
+              setRecordingSeconds(0);
+              setIsResumingRecording(false);
+            }}
+            className="text-xs text-gray-600 hover:text-gray-900 px-3 py-2"
+          >
+            Cancel
+          </button>
         </div>
       )}
 
