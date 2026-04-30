@@ -502,12 +502,23 @@ export default function NewSessionPage() {
     setMicTestPassed(false);
     try {
       if (recordMode === 'system') {
-        // System audio capture for video calls (Zoom/Teams/Meet)
-        // getDisplayMedia captures system/tab audio
+        // System audio capture for video calls (Zoom/Teams/Meet).
+        //
+        // BUG-FIX (Apr 2026): we previously passed `video: false`. Chrome
+        // (and per the spec, all implementations) reject this with
+        // `NotSupportedError: Not supported` — `getDisplayMedia` REQUIRES a
+        // video track in the request. The workaround is: ask for video, then
+        // immediately stop the video track and only keep the audio track.
+        // The picker dialog still shows the "Share tab audio" checkbox the
+        // user must tick.
         const displayStream = await navigator.mediaDevices.getDisplayMedia({
           audio: true,
-          video: false, // We only need audio, not video
+          video: true,
         });
+
+        // Stop the video track right away — we only care about audio. This
+        // also removes the green "screen-sharing" outline some OSes draw.
+        displayStream.getVideoTracks().forEach((t) => t.stop());
 
         // Check if audio track was actually shared
         const audioTracks = displayStream.getAudioTracks();
