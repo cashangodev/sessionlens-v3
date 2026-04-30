@@ -6,6 +6,15 @@ import Link from 'next/link';
 import { DEMO_TRANSCRIPT } from '@/lib/analysis/demo-transcript';
 import { transcribeAudio, formatFileSize, estimateDuration, ACCEPTED_AUDIO_TYPES, MAX_FILE_SIZE_BYTES } from '@/lib/analysis/mock-transcription';
 import { useApi } from '@/hooks/use-api';
+import {
+  appendChunk,
+  discardRecording,
+  finalizeRecording,
+  listOpenRecordings,
+  newRecordingId,
+  openRecording,
+  type RecordingMeta,
+} from '@/lib/recording/chunk-store';
 
 interface ClientInfo {
   clientCode: string;
@@ -191,6 +200,48 @@ export default function NewSessionPage() {
   // ─── Recording state ───
   type RecordMode = 'mic' | 'system';
   const [recordMode, setRecordMode] = useState<RecordMode>('mic');
+
+  // Video Call mode requires getDisplayMedia({ audio: true }), which is
+  // only reliably implemented on Chromium-family desktop browsers. Safari,
+  // Firefox, and mobile Chrome all fail in different ways — sometimes the
+  // call succeeds but the audio track is silent, sometimes it errors with
+  // a generic NotAllowedError. We check capability + UA at mount and
+  // disable the Video Call tile (with a tooltip explaining why) when not
+  // supported, instead of letting the user click into a broken flow.
+  const [videoCallSupported, setVideoCallSupported] = useState(true);
+  const [videoCallUnsupportedReason, setVideoCallUnsupportedReason] = useState<string>('');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const ua = window.navigator.userAgent;
+    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(ua);
+    const isFirefox = /Firefox\//.test(ua);
+    const isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(ua);
+    // Chromium-family desktop = Chrome, Edge, Brave, Opera, Vivaldi, Arc.
+    // Edge UA contains "Edg/", Chrome contains "Chrome/" without "Edg/".
+    const isChromium = /Chrome\/|Edg\//.test(ua) && !isMobile;
+    const hasGetDisplayMedia =
+      typeof navigator !== 'undefined' &&
+      !!navigator.mediaDevices &&
+      typeof navigator.mediaDevices.getDisplayMedia === 'function';
+
+    if (!hasGetDisplayMedia) {
+      setVideoCallSupported(false);
+      setVideoCallUnsupportedReason('Your browser doesn’t support screen-audio capture.');
+    } else if (isMobile) {
+      setVideoCallSupported(false);
+      setVideoCallUnsupportedReason('Video Call recording requires a desktop browser.');
+    } else if (isSafari) {
+      setVideoCallSupported(false);
+      setVideoCallUnsupportedReason('Safari doesn’t support tab-audio capture. Use Chrome or Edge on desktop.');
+    } else if (isFirefox) {
+      setVideoCallSupported(false);
+      setVideoCallUnsupportedReason('Firefox tab-audio capture is unreliable. Use Chrome or Edge on desktop.');
+    } else if (!isChromium) {
+      setVideoCallSupported(false);
+      setVideoCallUnsupportedReason('Use Chrome or Edge on desktop for Video Call recording.');
+    }
+  }, []);
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
@@ -209,6 +260,25 @@ export default function NewSessionPage() {
   const recordingStateRef = useRef<RecordingState>('idle');
   const audioContextRef = useRef<AudioContext | null>(null);
   const mimeTypeRef = useRef<string>('audio/webm');
+  // IndexedDB recording id for the current take. Set when recording starts,
+  // cleared on successful upload or explicit discard. If a tab crash leaves
+  // it set, the resume banner will surface it on next page load.
+  const recordingIdRef = useRef<string | null>(null);
+  const [resumableRecordings, setResumableRecordings] = useState<RecordingMeta[]>([]);
+
+  // On mount, surface any unfinished recordings the user can resume.
+  // Filtered to the last 24 hours so we don't dredge up ancient orphans.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    listOpenRecordings()
+      .then((all) => {
+        const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+        setResumableRecordings(all.filter((r) => r.startedAt >= cutoff));
+      })
+      .catch(() => {
+        // IDB unavailable (private mode, quota) — silently skip resume UI
+      });
+  }, []);
 
   // When date changes: if no longer live, switch away from record tab
   useEffect(() => {
@@ -372,32 +442,34 @@ export default function NewSessionPage() {
         audioContextRef.current = audioContext;
         const destination = audioContext.createMediaStreamDestination();
 
+        // Build the analyser FIRST so we can fan both source nodes into it
+        // alongside the destination. AudioNode.connect() supports multiple
+        // outputs from a single node, so each source feeds both the
+        // recording destination AND the analyser without any duplication.
+        //
+        // BUG-FIX (Apr 2026): previously the analyser was connected only to
+        // the screen-share source. During mic-test the call typically hasn't
+        // started yet — nobody's talking on Zoom/Teams — so the meter sat
+        // at 0 and the test never passed. Routing the mic into the analyser
+        // too means the therapist saying "test" lights the meter immediately,
+        // matching how the in-person mode behaves.
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        analyserRef.current = analyser;
+
         const displaySource = audioContext.createMediaStreamSource(displayStream);
         displaySource.connect(destination);
+        displaySource.connect(analyser);
 
         if (micStream) {
           const micSource = audioContext.createMediaStreamSource(micStream);
           micSource.connect(destination);
+          micSource.connect(analyser);
           streamRef.current = micStream; // Keep ref for cleanup
         }
 
-        // The merged stream is what we'll record
-        const mergedStream = destination.stream;
-
-        // Use merged stream as the "recording stream" — store in a way startRecording can use it
-        // We'll temporarily store it in streamRef if no mic, or create a combined ref
-        if (!micStream) {
-          streamRef.current = mergedStream;
-        } else {
-          // Replace streamRef with merged stream for recording
-          streamRef.current = mergedStream;
-        }
-
-        // Set up analyser on merged stream
-        const analyser = audioContext.createAnalyser();
-        analyser.fftSize = 256;
-        displaySource.connect(analyser);
-        analyserRef.current = analyser;
+        // The merged stream is what we'll record (system + mic).
+        streamRef.current = destination.stream;
 
         // Handle user stopping screen share via browser UI
         displayStream.getAudioTracks()[0].onended = () => {
@@ -494,12 +566,44 @@ export default function NewSessionPage() {
     const mimeType = getMimeType();
     mimeTypeRef.current = mimeType || 'audio/webm';
 
-    const mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+    // 32 kbps Opus is plenty for speech-to-text and keeps a 60-minute
+    // recording at ~14 MB — well under Whisper's 25 MB upload cap. Default
+    // WebM/Opus runs ~96–128 kbps which can blow the cap on a 50-min session.
+    // For non-Opus codecs (audio/mp4 on Safari) we still pass the bitrate;
+    // browsers ignore unsupported hints rather than erroring.
+    const mediaRecorder = new MediaRecorder(
+      stream,
+      mimeType ? { mimeType, audioBitsPerSecond: 32000 } : { audioBitsPerSecond: 32000 },
+    );
     mediaRecorderRef.current = mediaRecorder;
     audioChunksRef.current = [];
 
+    // Open an IndexedDB recording session so each chunk is durable —
+    // a tab crash mid-recording can be recovered via the resume banner
+    // on next page load. IDB write failures are non-fatal: the in-memory
+    // path still captures the chunk.
+    const recordingId = newRecordingId();
+    recordingIdRef.current = recordingId;
+    void openRecording({
+      id: recordingId,
+      startedAt: Date.now(),
+      mimeType: mimeTypeRef.current,
+      clientCode: activeClientCode,
+      sessionDate,
+      sessionTime,
+      recordMode,
+    }).catch(() => {
+      // IDB unavailable (private mode / quota / disabled) — keep going
+      recordingIdRef.current = null;
+    });
+
     mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      if (e.data.size > 0) {
+        audioChunksRef.current.push(e.data);
+        // Mirror to IDB for crash recovery. Fire-and-forget.
+        const id = recordingIdRef.current;
+        if (id) appendChunk(id, e.data).catch(() => {});
+      }
     };
 
     mediaRecorder.onstop = () => {
@@ -514,6 +618,9 @@ export default function NewSessionPage() {
         displayStreamRef.current.getTracks().forEach((t) => t.stop());
         displayStreamRef.current = null;
       }
+      // The IDB recording stays around until the analyze flow successfully
+      // uploads the audio (or the user explicitly discards). That's the
+      // hand-off point for the resume banner.
     };
 
     mediaRecorder.start(1000);
@@ -659,6 +766,15 @@ export default function NewSessionPage() {
       const analyzeRes = await fetch(`/api/sessions/${sessionId}/analyze`, { method: 'POST' });
       if (!analyzeRes.ok) throw new Error('Analysis failed');
 
+      // Successful upload — discard the IDB recording so it doesn't appear
+      // in the resume banner next time. Failure to discard is non-fatal:
+      // worst case the user sees a stale resume option.
+      const id = recordingIdRef.current;
+      if (id) {
+        recordingIdRef.current = null;
+        void discardRecording(id).catch(() => {});
+      }
+
       await finishAndRoute(sessionId);
     } catch (error) {
       console.error('Analysis failed:', error);
@@ -666,6 +782,44 @@ export default function NewSessionPage() {
       setIsAnalyzing(false);
     }
   };
+
+  // Resume an unfinished recording from IndexedDB.
+  // Reconstructs the merged Blob from stored chunks and drops the user
+  // straight into the "preview / analyze" state, just as if they had
+  // finished recording fresh.
+  const handleResumeRecording = useCallback(
+    async (meta: RecordingMeta) => {
+      try {
+        const blob = await finalizeRecording(meta.id, meta.mimeType);
+        if (!blob) {
+          // Empty — clean up the stale row
+          await discardRecording(meta.id).catch(() => {});
+          setResumableRecordings((rs) => rs.filter((r) => r.id !== meta.id));
+          return;
+        }
+        recordingIdRef.current = meta.id;
+        mimeTypeRef.current = meta.mimeType;
+        setRecordedBlob(blob);
+        if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+        setRecordedUrl(URL.createObjectURL(blob));
+        setRecordingState('done');
+        recordingStateRef.current = 'done';
+        setRecordingSeconds(Math.round((Date.now() - meta.startedAt) / 1000));
+        if (meta.recordMode) setRecordMode(meta.recordMode);
+        if (meta.clientCode) setClientCode(meta.clientCode);
+        setActiveTab('record');
+        setResumableRecordings((rs) => rs.filter((r) => r.id !== meta.id));
+      } catch (e) {
+        console.error('Failed to resume recording:', e);
+      }
+    },
+    [recordedUrl],
+  );
+
+  const handleDiscardResumable = useCallback(async (meta: RecordingMeta) => {
+    await discardRecording(meta.id).catch(() => {});
+    setResumableRecordings((rs) => rs.filter((r) => r.id !== meta.id));
+  }, []);
 
   // ─── Audio upload handlers ───
   const validateAudioFile = useCallback((file: File): string | null => {
@@ -974,6 +1128,47 @@ export default function NewSessionPage() {
         <ChevronRight className="w-4 h-4 text-gray-300" />
         <StepBadge number={3} label="Session" active={step === 'input'} completed={false} />
       </div>
+
+      {/* Resume banner — surfaces unfinished recordings the user can pick up.
+          Hidden when the user is already in an active recording session. */}
+      {resumableRecordings.length > 0 && recordingState === 'idle' && (
+        <div className="mb-8 border border-amber-200 bg-amber-50 rounded-md p-4">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-amber-700 mb-2">
+            Unfinished recording
+          </p>
+          {resumableRecordings.map((r) => {
+            const minutes = Math.max(1, Math.round((Date.now() - r.startedAt) / 60000));
+            return (
+              <div key={r.id} className="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <p className="text-sm text-gray-900">
+                    A recording from{' '}
+                    <span className="font-mono">{r.clientCode || '—'}</span> ·{' '}
+                    started ~{minutes} min{minutes === 1 ? '' : 's'} ago is saved locally.
+                  </p>
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    Resume to preview and analyze, or discard if it&apos;s no longer needed.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleDiscardResumable(r)}
+                    className="text-xs text-gray-600 hover:text-gray-900 px-3 py-2"
+                  >
+                    Discard
+                  </button>
+                  <button
+                    onClick={() => handleResumeRecording(r)}
+                    className="text-xs font-medium bg-primary-dark text-white px-3 py-2 rounded-md hover:bg-primary"
+                  >
+                    Resume
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* ============ STEP 1: CLIENT SELECTION ============ */}
       {step === 'client' && (
@@ -1349,21 +1544,31 @@ export default function NewSessionPage() {
                           </div>
                         </button>
                         <button
-                          onClick={() => setRecordMode('system')}
+                          onClick={() => videoCallSupported && setRecordMode('system')}
+                          disabled={!videoCallSupported}
+                          title={videoCallSupported ? undefined : videoCallUnsupportedReason}
+                          aria-disabled={!videoCallSupported}
                           className={`flex-1 flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
-                            recordMode === 'system'
-                              ? 'border-blue-500 bg-blue-50/50 '
-                              : 'border-gray-200 hover:border-gray-300 bg-white'
+                            !videoCallSupported
+                              ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
+                              : recordMode === 'system'
+                                ? 'border-blue-500 bg-blue-50/50 '
+                                : 'border-gray-200 hover:border-gray-300 bg-white'
                           }`}
                         >
                           <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                            recordMode === 'system' ? 'bg-blue-100' : 'bg-gray-100'
+                            !videoCallSupported ? 'bg-gray-100' : recordMode === 'system' ? 'bg-blue-100' : 'bg-gray-100'
                           }`}>
-                            <Monitor className={`w-5 h-5 ${recordMode === 'system' ? 'text-blue-600' : 'text-gray-400'}`} />
+                            <Monitor className={`w-5 h-5 ${!videoCallSupported ? 'text-gray-400' : recordMode === 'system' ? 'text-blue-600' : 'text-gray-400'}`} />
                           </div>
                           <div className="text-left">
-                            <p className={`text-sm font-semibold ${recordMode === 'system' ? 'text-blue-600' : 'text-gray-700'}`}>Video Call</p>
-                            <p className="text-xs text-gray-500">Zoom, Teams, Meet</p>
+                            <p className={`text-sm font-semibold ${!videoCallSupported ? 'text-gray-500' : recordMode === 'system' ? 'text-blue-600' : 'text-gray-700'}`}>
+                              Video Call
+                              {!videoCallSupported && <span className="ml-1 text-[10px] font-medium text-gray-400">· Chrome / Edge only</span>}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {videoCallSupported ? 'Zoom, Teams, Meet' : videoCallUnsupportedReason}
+                            </p>
                           </div>
                         </button>
                       </div>
