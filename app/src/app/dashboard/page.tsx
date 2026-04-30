@@ -6,6 +6,7 @@ import { ArrowRight, Search, Users, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useApi } from '@/hooks/use-api';
 import { useResumableRecordings } from '@/hooks/use-resumable-recordings';
+import { discardRecording } from '@/lib/recording/chunk-store';
 // OnboardingTour temporarily removed — UX is imperfect, will re-introduce in v1.1.
 // import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 
@@ -41,10 +42,10 @@ export default function HomePage() {
 
   const { data: sessionsData, loading: sessionsLoading } = useApi<{ sessions: SessionSummary[] }>('/api/sessions');
   const { data: clientsData } = useApi<{ clients: { clientCode: string }[] }>('/api/clients');
-  // Surface any in-flight recordings (tab crash, sign-out, refresh during
-  // capture). Banner appears at the top so the user spots it before
-  // anything else.
-  const { recordings: resumableRecordings } = useResumableRecordings();
+  // Surface the most recent in-flight recording (tab crash, sign-out,
+  // refresh during capture). Banner appears at the top so the user spots
+  // it before anything else. Capped at one — see the hook docs.
+  const { recording: resumable, refresh: refreshResumable } = useResumableRecordings();
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -66,37 +67,57 @@ export default function HomePage() {
   return (
     <div className="max-w-5xl mx-auto">
       {/* ─── Resume banner ─────────────────────────────────────────── */}
-      {/* Surfaces unfinished recordings (e.g. tab closed during capture).
-          Clicking through navigates to /dashboard/session/new where the
-          full Continue / Use as-is / Discard handlers live. */}
-      {resumableRecordings.length > 0 && (
+      {/* Surfaces the single most recent in-flight recording. All three
+          actions live here on the dashboard — clicking any of them passes
+          the intent through to /dashboard/session/new via URL params, so
+          the user picks once and lands directly in the right state without
+          re-prompting or re-selecting the client. */}
+      {resumable && (
         <div className="mb-8 border border-amber-200 bg-amber-50 rounded-md p-4">
           <p className="text-[11px] uppercase tracking-[0.18em] text-amber-700 mb-2">
             Unfinished recording
           </p>
-          {resumableRecordings.map((r) => {
+          {(() => {
+            const r = resumable;
             const minutes = Math.max(1, Math.round((Date.now() - r.startedAt) / 60000));
             return (
-              <div key={r.id} className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div>
                   <p className="text-sm text-gray-900">
-                    A recording from{' '}
+                    Session for{' '}
                     <span className="font-mono">{r.clientCode || '—'}</span> ·{' '}
-                    started ~{minutes} min{minutes === 1 ? '' : 's'} ago is saved on this device.
+                    started ~{minutes} min{minutes === 1 ? '' : 's'} ago. Saved on this device.
                   </p>
                   <p className="text-xs text-gray-600 mt-0.5">
-                    Open the new-session page to continue capturing, finalize as-is, or discard.
+                    Continue where you left off, finalize what you already have, or discard.
                   </p>
                 </div>
-                <Link
-                  href="/dashboard/session/new"
-                  className="text-xs font-medium bg-primary-dark text-white px-3 py-2 rounded-md hover:bg-primary"
-                >
-                  Open new session
-                </Link>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={async () => {
+                      await discardRecording(r.id).catch(() => {});
+                      refreshResumable();
+                    }}
+                    className="text-xs text-gray-600 hover:text-gray-900 px-3 py-2"
+                  >
+                    Discard
+                  </button>
+                  <Link
+                    href={`/dashboard/session/new?resume=${encodeURIComponent(r.id)}&action=finalize`}
+                    className="text-xs font-medium border border-amber-300 text-amber-900 px-3 py-2 rounded-md hover:border-amber-500"
+                  >
+                    Use as-is
+                  </Link>
+                  <Link
+                    href={`/dashboard/session/new?resume=${encodeURIComponent(r.id)}&action=continue`}
+                    className="text-xs font-medium bg-primary-dark text-white px-3 py-2 rounded-md hover:bg-primary"
+                  >
+                    Continue session
+                  </Link>
+                </div>
               </div>
             );
-          })}
+          })()}
         </div>
       )}
 

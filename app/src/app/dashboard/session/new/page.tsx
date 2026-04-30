@@ -10,6 +10,7 @@ import {
   appendChunk,
   discardRecording,
   finalizeRecording,
+  listOpenRecordings,
   newRecordingId,
   openRecording,
   type RecordingMeta,
@@ -66,9 +67,17 @@ export default function NewSessionPage() {
   const searchParams = useSearchParams();
   const prefillDate = searchParams.get('date') || '';
   const prefillClient = searchParams.get('client') || '';
+  // Resume params from the dashboard banner. Presence of `resume` means
+  // we should auto-load that IDB recording and skip the client/profile
+  // wizard. `action` decides whether to keep capturing or finalize as-is.
+  const resumeIdParam = searchParams.get('resume');
+  const resumeActionParam = searchParams.get('action'); // 'continue' | 'finalize'
 
-  // Step flow — skip to input if client is pre-filled
-  const [step, setStep] = useState<Step>(prefillClient ? 'input' : 'client');
+  // Step flow — skip to input if client is pre-filled, OR if we're
+  // resuming a recording (the client + date are already in the IDB meta).
+  const [step, setStep] = useState<Step>(
+    prefillClient || resumeIdParam ? 'input' : 'client',
+  );
 
   // Client selection
   const [clientCode, setClientCode] = useState(prefillClient);
@@ -592,6 +601,23 @@ export default function NewSessionPage() {
     const continuing = isResumingRecordingRef.current && audioChunksRef.current.length > 0;
     if (!continuing) {
       audioChunksRef.current = [];
+
+      // Discard ANY pre-existing unfinished recordings before starting a
+      // fresh one. The doctor explicitly chose "new recording" (not
+      // continue), so the orphans are no longer wanted. This also
+      // guarantees the resume banner only ever surfaces ONE recording —
+      // the one currently being made.
+      try {
+        const stale = await listOpenRecordings();
+        for (const m of stale) {
+          await discardRecording(m.id).catch((err) => {
+            console.error('[recording] discard stale failed:', err);
+          });
+        }
+      } catch (err) {
+        console.error('[recording] listOpenRecordings (stale sweep) failed:', err);
+      }
+
       const recordingId = newRecordingId();
       recordingIdRef.current = recordingId;
       // Await openRecording so the meta row exists BEFORE the first chunk
@@ -885,6 +911,45 @@ export default function NewSessionPage() {
     },
     [recordedUrl, restoreRecordingFromIdb],
   );
+
+  // Auto-trigger when arriving via the dashboard banner with
+  // ?resume=<id>&action=continue|finalize. Looks up the meta in IDB,
+  // dispatches to the right handler, then strips the params from the URL
+  // so a refresh doesn't re-trigger. Runs once.
+  const resumeAutoRunRef = useRef(false);
+  useEffect(() => {
+    if (resumeAutoRunRef.current) return;
+    if (!resumeIdParam) return;
+    resumeAutoRunRef.current = true;
+    let cancelled = false;
+    (async () => {
+      try {
+        const all = await listOpenRecordings();
+        const meta = all.find((m) => m.id === resumeIdParam);
+        if (cancelled || !meta) return;
+        if (resumeActionParam === 'finalize') {
+          await handleFinalizeResumable(meta);
+        } else {
+          // Default: continue
+          await handleContinueResumable(meta);
+        }
+        // Strip the params so a reload doesn't re-trigger
+        if (typeof window !== 'undefined') {
+          const url = new URL(window.location.href);
+          url.searchParams.delete('resume');
+          url.searchParams.delete('action');
+          router.replace(url.pathname + (url.search || ''));
+        }
+      } catch (err) {
+        console.error('[resume-auto] failed:', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // We only want this to run once on mount — params are read from URL.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleDiscardResumable = useCallback(async (meta: RecordingMeta) => {
     await discardRecording(meta.id).catch(() => {});
@@ -1199,14 +1264,11 @@ export default function NewSessionPage() {
         <StepBadge number={3} label="Session" active={step === 'input'} completed={false} />
       </div>
 
-      {/* Resume banner — surfaces unfinished recordings the user can pick up.
-          Three actions:
-            • Continue recording — re-grants audio access, new chunks append
-              to the existing IDB session and the in-memory chunks ref.
-            • Use as-is — finalizes what was captured, skips further capture.
-            • Discard — deletes the IDB rows.
-          Hidden once the user is mid-recording or has already resumed. */}
-      {resumableRecordings.length > 0 && recordingState === 'idle' && !isResumingRecording && (
+      {/* Resume banner on this page — only shown if the user navigated here
+          directly (not via the dashboard's resume CTA, which already passed
+          the choice through `?resume=&action=`). Once the user has acted via
+          URL params or is mid-recording, hide this. */}
+      {resumableRecordings.length > 0 && recordingState === 'idle' && !isResumingRecording && !resumeIdParam && (
         <div className="mb-8 border border-amber-200 bg-amber-50 rounded-md p-4">
           <p className="text-[11px] uppercase tracking-[0.18em] text-amber-700 mb-2">
             Unfinished recording
