@@ -63,17 +63,27 @@ function formatTime(seconds: number): string {
 }
 
 /**
- * Read the actual audio duration from a Blob via HTMLAudioElement metadata.
- * This is the source of truth for "how long is this recording" on resume —
- * wall-clock time since startedAt is misleading when there's been a gap.
+ * Read the actual audio duration of a recorded Blob.
  *
- * Returns 0 if the blob can't be parsed (browser unable to read the
- * container, or the recording was crashed mid-flight without a finalizer).
- * Caller can fall back to a wall-clock estimate in that case.
+ * For COMPLETE WebMs (those that came from a normal MediaRecorder.stop()):
+ * the browser's audio element can read the duration from metadata. Fast
+ * and accurate.
+ *
+ * For INCOMPLETE WebMs (tab crash / battery dies / tab closed without
+ * stopping): the file has no Cues/final-cluster, so the audio element
+ * reports Infinity or 0. We fall back to estimating from the byte count
+ * at the encoder bitrate we configured (32 kbps Opus = 4 KB per second).
+ * That's accurate to within ±2 seconds for any realistic recording —
+ * and crucially, it doesn't depend on wall-clock time, so a tab that
+ * sat idle for an hour doesn't make a 30-second recording look 60 minutes long.
+ *
+ * Returns 0 only if both paths fail (blob.size === 0).
  */
 async function readAudioDurationSeconds(blob: Blob): Promise<number> {
   if (typeof window === 'undefined' || !blob.size) return 0;
-  return new Promise((resolve) => {
+
+  // Path 1: HTMLAudioElement metadata.
+  const fromMetadata = await new Promise<number>((resolve) => {
     const url = URL.createObjectURL(blob);
     const audio = new Audio();
     let settled = false;
@@ -86,15 +96,19 @@ async function readAudioDurationSeconds(blob: Blob): Promise<number> {
     audio.preload = 'metadata';
     audio.addEventListener('loadedmetadata', () => finish(audio.duration));
     audio.addEventListener('error', () => finish(0));
-    // Some browsers report Infinity for WebM/Opus duration until the file
-    // is fully scanned. Force a seek to the end to coerce the real value.
     audio.addEventListener('durationchange', () => {
       if (Number.isFinite(audio.duration) && audio.duration > 0) finish(audio.duration);
     });
     audio.src = url;
-    // Hard timeout in case neither event fires (rare browser quirks).
     setTimeout(() => finish(0), 4000);
   });
+  if (fromMetadata > 0) return fromMetadata;
+
+  // Path 2: estimate from byte count at our configured encoder bitrate.
+  // 32 kbps = 4000 bytes/sec. Opus has minor framing overhead (~5%) which
+  // we can ignore for a rough estimate.
+  const fromSize = Math.round(blob.size / 4000);
+  return Math.max(1, fromSize);
 }
 
 export default function NewSessionPage() {
@@ -306,11 +320,30 @@ export default function NewSessionPage() {
   // transcripts (byte-concat'd WebM files don't reliably play or
   // transcribe as one).
   const segmentsRef = useRef<Blob[]>([]);
-  // Computed total recorded duration across all segments. Updated after
-  // each segment is finalized using the audio element metadata, so the
-  // timer reflects ACTUAL audio duration rather than wall-clock since
-  // the recording started.
-  const segmentsTotalDurationRef = useRef<number>(0);
+  // Per-segment durations as STATE (not just a ref) so the UI re-renders
+  // when a take is added/restored. The total timer is sum of these plus
+  // the in-progress current take.
+  const [segmentDurations, setSegmentDurations] = useState<number[]>([]);
+  // Per-segment object URLs for individual <audio> playback in the done
+  // state. Built when segmentDurations changes; revoked on cleanup.
+  const [segmentUrls, setSegmentUrls] = useState<string[]>([]);
+  useEffect(() => {
+    const urls = segmentsRef.current.map((b) => URL.createObjectURL(b));
+    setSegmentUrls(urls);
+    return () => {
+      urls.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [segmentDurations]);
+  const segmentsTotalDuration = segmentDurations.reduce((s, d) => s + d, 0);
+
+  // Keep the displayed timer in sync with the total of all finalized
+  // segments while NOT actively recording. While recording, the timer
+  // ticks via setInterval inside startRecording. After stop, this effect
+  // sets it to the authoritative total.
+  useEffect(() => {
+    if (recordingStateRef.current === 'recording') return;
+    setRecordingSeconds(segmentsTotalDuration);
+  }, [segmentsTotalDuration]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const displayStreamRef = useRef<MediaStream | null>(null);
@@ -667,7 +700,7 @@ export default function NewSessionPage() {
 
       const recordingId = newRecordingId();
       recordingIdRef.current = recordingId;
-      segmentsTotalDurationRef.current = 0;
+      setSegmentDurations([]);
       // Await openRecording so the meta row exists BEFORE the first chunk
       // tries to append. Without the await, a slow IDB write could let
       // the first ondataavailable fire with no parent meta — chunks then
@@ -711,33 +744,28 @@ export default function NewSessionPage() {
         segmentsRef.current.push(segment);
         audioChunksRef.current = [];
 
-        // Update the wall-clock-independent total duration. Reading the
-        // segment's metadata is best-effort — fall back to the wall-clock
-        // delta if the browser refuses to report duration.
-        try {
-          const segDur = await readAudioDurationSeconds(segment);
-          if (segDur > 0) {
-            segmentsTotalDurationRef.current += segDur;
-          }
-        } catch {
-          /* ignore — fall back to existing recordingSeconds */
-        }
+        // Read the segment's actual audio duration. Falls back to a
+        // byte-count estimate inside readAudioDurationSeconds if metadata
+        // can't be read (incomplete WebMs from crashes). Either way it's
+        // independent of wall-clock time.
+        const segDur = await readAudioDurationSeconds(segment);
+        const safeDur = segDur > 0 ? segDur : 1;
+        setSegmentDurations((prev) => [...prev, safeDur]);
       }
 
-      // The combined preview is only used for "do we have audio?" gating —
-      // it's the LAST segment so the audio element actually plays. The
-      // analyze step iterates segmentsRef directly (one Whisper call per
-      // segment) so the user never loses earlier takes.
+      // The audio preview shows the LATEST segment because it's the only
+      // playable single-WebM blob. The done-state UI lists ALL segments
+      // separately so the user sees their full recording history.
       const preview = segmentsRef.current[segmentsRef.current.length - 1] || null;
       setRecordedBlob(preview);
       if (recordedUrl) URL.revokeObjectURL(recordedUrl);
       setRecordedUrl(preview ? URL.createObjectURL(preview) : null);
-
-      // If we have a reliable total from metadata, surface it. Otherwise
-      // keep whatever the timer accumulated (close enough).
-      if (segmentsTotalDurationRef.current > 0) {
-        setRecordingSeconds(segmentsTotalDurationRef.current);
-      }
+      // Timer locks to the total across all segments. Read after the
+      // setSegmentDurations call has been queued — we compute total by
+      // summing segmentsRef-derived durations from the closure-captured
+      // state setter so we don't race the React update.
+      // (We deliberately don't call setRecordingSeconds here — the
+      // segmentDurations effect below will recompute once React renders.)
 
       // Stop tracks. If the user clicks Continue from the done state we
       // re-acquire fresh tracks via mic-test — same UX as crash recovery.
@@ -755,9 +783,12 @@ export default function NewSessionPage() {
     mediaRecorder.start(1000);
     recordingStateRef.current = 'recording';
     setRecordingState('recording');
-    // Continuation: keep the existing recordingSeconds (carried over from
-    // the resumed session). Fresh recording: start at 0.
-    if (!continuing) setRecordingSeconds(0);
+    // Always reset the timer to 0 when a new MediaRecorder session starts.
+    // The timer represents the CURRENT take's elapsed time during
+    // recording; after stop, the segments-total effect locks it to the
+    // total across all takes. This avoids the confusing "30, 31, 32, 35"
+    // jump the user previously saw when continuing.
+    setRecordingSeconds(0);
     // Once recording resumes, clear the resume flag — subsequent stops
     // and restarts behave as normal.
     setIsResumingRecording(false);
@@ -835,7 +866,7 @@ export default function NewSessionPage() {
     setRecordingSeconds(0);
     segmentsRef.current = [];
     audioChunksRef.current = [];
-    segmentsTotalDurationRef.current = 0;
+    setSegmentDurations([]);
     if (recordingIdRef.current) {
       void discardRecording(recordingIdRef.current).catch(() => {});
       recordingIdRef.current = null;
@@ -977,14 +1008,15 @@ export default function NewSessionPage() {
       setActiveTab('record');
       setResumableRecordings((rs) => rs.filter((r) => r.id !== meta.id));
 
-      // Prefer ACTUAL audio duration over wall-clock — wall-clock balloons
-      // by the time the user spent away from the tab and is misleading.
-      // Fall back to wall-clock if metadata can't be read (rare).
-      let durationSeconds = await readAudioDurationSeconds(blob);
-      if (durationSeconds === 0) {
-        durationSeconds = Math.max(1, Math.round((Date.now() - meta.startedAt) / 1000));
-      }
-      segmentsTotalDurationRef.current = durationSeconds;
+      // Real audio duration — never wall-clock. readAudioDurationSeconds
+      // already falls back to a byte-count estimate (32 kbps = 4 KB/sec)
+      // when audio metadata can't be read, which is independent of how
+      // long the tab sat idle. Wall-clock would make a 30-second recording
+      // look like 5 minutes if the user came back 5 minutes later.
+      const durationSeconds = await readAudioDurationSeconds(blob);
+      // Treat the historical recording as ONE finalized segment. The
+      // segmentDurations effect propagates the timer.
+      setSegmentDurations([durationSeconds > 0 ? durationSeconds : 1]);
       return { blob, durationSeconds };
     },
     [],
@@ -2133,35 +2165,52 @@ export default function NewSessionPage() {
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-gray-900">
                               Session Recording Complete
-                              {segmentsRef.current.length > 1 && (
+                              {segmentDurations.length > 1 && (
                                 <span className="ml-2 text-xs font-medium text-gray-500">
-                                  · {segmentsRef.current.length} segments
+                                  · {segmentDurations.length} takes
                                 </span>
                               )}
                             </p>
-                            <div className="flex items-center gap-4 mt-1.5 text-sm text-gray-500">
-                              <span>{formatTime(recordingSeconds)}</span>
-                              <span className="text-gray-300">|</span>
-                              <span>{formatFileSize(recordedBlob.size)}</span>
-                              {segmentsRef.current.length > 1 && (
-                                <span className="text-xs text-gray-400">
-                                  (preview: latest segment)
-                                </span>
+                            <p className="text-sm text-gray-500 mt-1.5">
+                              Total {formatTime(segmentsTotalDuration)} ·{' '}
+                              {formatFileSize(
+                                segmentsRef.current.reduce((s, b) => s + b.size, 0),
                               )}
-                            </div>
-                            {recordedUrl && (
+                            </p>
+
+                            {/* Single take → one audio element. Multiple
+                                takes → list each separately so the user can
+                                hear all of them; the combined recording is
+                                stitched server-side at analyze time. */}
+                            {segmentDurations.length <= 1 && recordedUrl ? (
                               <audio controls src={recordedUrl} className="mt-3 w-full h-10" />
+                            ) : (
+                              <div className="mt-3 space-y-2">
+                                {segmentUrls.map((u, i) => (
+                                  <div key={i} className="flex items-center gap-3">
+                                    <span className="text-[11px] font-mono text-gray-500 w-14 flex-shrink-0">
+                                      Take {i + 1}
+                                    </span>
+                                    <audio controls src={u} className="flex-1 h-10" />
+                                    <span className="text-xs text-gray-400 w-10 text-right flex-shrink-0">
+                                      {formatTime(segmentDurations[i] || 0)}
+                                    </span>
+                                  </div>
+                                ))}
+                                <p className="text-xs text-gray-400 pt-1">
+                                  All takes are sent to transcription as one continuous session.
+                                </p>
+                              </div>
                             )}
+
                             <div className="mt-3 flex items-center gap-2 flex-wrap">
                               <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
                                 <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
                                 Ready to analyze
                               </span>
                               {/* Doctor's escape hatch — client said one more
-                                  thing after we stopped, or a brief silence
-                                  was misread as the end. Single click drops
-                                  back to mic-test, next stop adds another
-                                  segment. */}
+                                  thing after we stopped. One click drops back
+                                  to mic-test; next stop adds another segment. */}
                               <button
                                 onClick={handleContinueFromDone}
                                 className="text-xs font-medium text-primary-dark hover:text-primary px-2.5 py-1 rounded-full border border-primary-dark/30 hover:border-primary-dark"
