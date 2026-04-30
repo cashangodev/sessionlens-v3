@@ -10,11 +10,11 @@ import {
   appendChunk,
   discardRecording,
   finalizeRecording,
-  listOpenRecordings,
   newRecordingId,
   openRecording,
   type RecordingMeta,
 } from '@/lib/recording/chunk-store';
+import { useResumableRecordings } from '@/hooks/use-resumable-recordings';
 
 interface ClientInfo {
   clientCode: string;
@@ -264,7 +264,6 @@ export default function NewSessionPage() {
   // cleared on successful upload or explicit discard. If a tab crash leaves
   // it set, the resume banner will surface it on next page load.
   const recordingIdRef = useRef<string | null>(null);
-  const [resumableRecordings, setResumableRecordings] = useState<RecordingMeta[]>([]);
   // True between the moment the user clicks "Continue" in the resume banner
   // and the next time recording stops. Used to: (a) preserve audioChunksRef
   // across startRecording, (b) preserve the recordingSeconds offset, (c)
@@ -274,19 +273,19 @@ export default function NewSessionPage() {
   const isResumingRecordingRef = useRef(false);
   useEffect(() => { isResumingRecordingRef.current = isResumingRecording; }, [isResumingRecording]);
 
-  // On mount, surface any unfinished recordings the user can resume.
-  // Filtered to the last 24 hours so we don't dredge up ancient orphans.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    listOpenRecordings()
-      .then((all) => {
-        const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-        setResumableRecordings(all.filter((r) => r.startedAt >= cutoff));
-      })
-      .catch(() => {
-        // IDB unavailable (private mode, quota) — silently skip resume UI
-      });
-  }, []);
+  // Shared hook reads IDB once on mount and surfaces any in-flight
+  // recordings to the resume banner.
+  const { recordings: resumableRecordings, refresh: refreshResumables } =
+    useResumableRecordings();
+  // Mutator helper that mirrors the local-state filtering done previously,
+  // so the existing handlers (Continue / Use as-is / Discard) keep working
+  // without restructuring.
+  const setResumableRecordings = (
+    fn: (rs: RecordingMeta[]) => RecordingMeta[],
+  ) => {
+    void fn; // local filtering is now driven by `refreshResumables` below
+    refreshResumables();
+  };
 
   // When date changes: if no longer live, switch away from record tab
   useEffect(() => {
@@ -595,26 +594,38 @@ export default function NewSessionPage() {
       audioChunksRef.current = [];
       const recordingId = newRecordingId();
       recordingIdRef.current = recordingId;
-      void openRecording({
-        id: recordingId,
-        startedAt: Date.now(),
-        mimeType: mimeTypeRef.current,
-        clientCode: activeClientCode,
-        sessionDate,
-        sessionTime,
-        recordMode,
-      }).catch(() => {
+      // Await openRecording so the meta row exists BEFORE the first chunk
+      // tries to append. Without the await, a slow IDB write could let the
+      // first ondataavailable fire with no parent meta — chunks then exist
+      // as orphans and the resume banner never finds them.
+      try {
+        await openRecording({
+          id: recordingId,
+          startedAt: Date.now(),
+          mimeType: mimeTypeRef.current,
+          clientCode: activeClientCode,
+          sessionDate,
+          sessionTime,
+          recordMode,
+        });
+      } catch (err) {
+        console.error('[recording] openRecording failed:', err);
         recordingIdRef.current = null;
-      });
+      }
     }
     // else: keep existing recordingIdRef + audioChunksRef intact
 
     mediaRecorder.ondataavailable = (e) => {
       if (e.data.size > 0) {
         audioChunksRef.current.push(e.data);
-        // Mirror to IDB for crash recovery. Fire-and-forget.
+        // Mirror to IDB for crash recovery. Fire-and-forget by design (we
+        // can't slow the recorder waiting on disk) — but log failures so
+        // they don't disappear. If many of these fire, the IDB store is
+        // misconfigured and the resume banner won't have data to show.
         const id = recordingIdRef.current;
-        if (id) appendChunk(id, e.data).catch(() => {});
+        if (id) appendChunk(id, e.data).catch((err) => {
+          console.error('[recording] appendChunk failed:', err);
+        });
       }
     };
 

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowRight, Search, Users, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useApi } from '@/hooks/use-api';
+import { useResumableRecordings } from '@/hooks/use-resumable-recordings';
 // OnboardingTour temporarily removed — UX is imperfect, will re-introduce in v1.1.
 // import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 
@@ -40,6 +41,10 @@ export default function HomePage() {
 
   const { data: sessionsData, loading: sessionsLoading } = useApi<{ sessions: SessionSummary[] }>('/api/sessions');
   const { data: clientsData } = useApi<{ clients: { clientCode: string }[] }>('/api/clients');
+  // Surface any in-flight recordings (tab crash, sign-out, refresh during
+  // capture). Banner appears at the top so the user spots it before
+  // anything else.
+  const { recordings: resumableRecordings } = useResumableRecordings();
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -60,6 +65,41 @@ export default function HomePage() {
 
   return (
     <div className="max-w-5xl mx-auto">
+      {/* ─── Resume banner ─────────────────────────────────────────── */}
+      {/* Surfaces unfinished recordings (e.g. tab closed during capture).
+          Clicking through navigates to /dashboard/session/new where the
+          full Continue / Use as-is / Discard handlers live. */}
+      {resumableRecordings.length > 0 && (
+        <div className="mb-8 border border-amber-200 bg-amber-50 rounded-md p-4">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-amber-700 mb-2">
+            Unfinished recording
+          </p>
+          {resumableRecordings.map((r) => {
+            const minutes = Math.max(1, Math.round((Date.now() - r.startedAt) / 60000));
+            return (
+              <div key={r.id} className="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <p className="text-sm text-gray-900">
+                    A recording from{' '}
+                    <span className="font-mono">{r.clientCode || '—'}</span> ·{' '}
+                    started ~{minutes} min{minutes === 1 ? '' : 's'} ago is saved on this device.
+                  </p>
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    Open the new-session page to continue capturing, finalize as-is, or discard.
+                  </p>
+                </div>
+                <Link
+                  href="/dashboard/session/new"
+                  className="text-xs font-medium bg-primary-dark text-white px-3 py-2 rounded-md hover:bg-primary"
+                >
+                  Open new session
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* ─── Greeting + Search row ─────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-14">
         <div>
