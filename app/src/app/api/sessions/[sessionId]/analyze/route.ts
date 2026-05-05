@@ -16,17 +16,21 @@ export async function POST(
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
   const { sessionId } = await params;
+  // TEMP DIAGNOSTIC: stage + error are surfaced in the JSON response so we
+  // can see WHERE the pipeline dies without chasing collapsed Vercel logs.
+  // Revert to the generic message once we've isolated the failure.
+  let stage = 'init';
   try {
+    stage = 'fetch_session';
     const session = await dbGetSession(sessionId);
     if (!session) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
-
     if (!session.transcript) {
       return NextResponse.json({ error: 'No transcript to analyze' }, { status: 400 });
     }
 
-    // Run analysis
+    stage = 'analyze';
     console.log('[analyze] Starting analysis for session:', sessionId, 'transcript length:', session.transcript.length);
     const analysisResult = await analyzeSession({
       transcript: session.transcript,
@@ -35,17 +39,16 @@ export async function POST(
     });
     console.log('[analyze] Analysis complete. Moments:', analysisResult.moments.length, 'SimilarCases:', analysisResult.similarCases.length, 'PractitionerMatches:', analysisResult.practitionerMatches.length);
 
-    // Serialize to plain JSON to ensure no class instances or circular refs
+    stage = 'serialize';
     const serialized = JSON.parse(JSON.stringify(analysisResult));
 
-    // Store analysis result in session
+    stage = 'persist_session_analysis';
     const updated = await dbUpdateSessionAnalysis(sessionId, serialized);
-
     if (!updated) {
-      return NextResponse.json({ error: 'Failed to store analysis' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to store analysis', stage }, { status: 500 });
     }
 
-    // Extract and update client profile
+    stage = 'extract_profile';
     const profile = extractProfileFromAnalysis(
       session.clientCode,
       session.transcript,
@@ -53,9 +56,10 @@ export async function POST(
       session.treatmentGoals
     );
 
-    // Get existing DB profile to preserve gender/ageRange
+    stage = 'fetch_existing_profile';
     const existingDb = await dbGetClientProfile(session.clientCode);
 
+    stage = 'upsert_profile';
     await dbUpsertClientProfile({
       clientCode: session.clientCode,
       gender: existingDb?.gender || '',
@@ -78,7 +82,15 @@ export async function POST(
       analysisResult,
     });
   } catch (error) {
-    console.error('POST /api/sessions/[sessionId]/analyze error:', error);
-    return NextResponse.json({ error: 'Analysis failed' }, { status: 500 });
+    console.error('POST /api/sessions/[sessionId]/analyze error at stage:', stage, error);
+    const message = error instanceof Error ? error.message : String(error);
+    const name = error instanceof Error ? error.name : 'Error';
+    const stack = error instanceof Error && error.stack
+      ? error.stack.split('\n').slice(0, 6).join('\n')
+      : undefined;
+    return NextResponse.json(
+      { error: 'Analysis failed', stage, name, message, stack },
+      { status: 500 },
+    );
   }
 }
