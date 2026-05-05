@@ -4,6 +4,13 @@ import { analyzeSession } from '@/lib/analysis/transcript-analyzer';
 import { extractProfileFromAnalysis } from '@/lib/client-profile';
 import type { AnalysisResult } from '@/types';
 
+// The analysis pipeline runs multiple OpenAI calls (structure coding per
+// moment, risk detection, report generation) plus embedding + Supabase RPC
+// calls. End-to-end is 20-50s in production. Vercel's default function
+// timeout is 10s on Hobby / 15s on Pro — both kill the request mid-flight,
+// surfacing as a generic 500 to the client. 60s is the Hobby ceiling.
+export const maxDuration = 60;
+
 export async function POST(
   _req: Request,
   { params }: { params: Promise<{ sessionId: string }> }
