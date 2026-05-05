@@ -91,16 +91,24 @@ export async function analyzeSession(input: SessionInput): Promise<AnalysisResul
   // Step 1: Segment transcript
   const rawSegments = await segmentTranscript(transcript);
 
-  // Step 2: Code structures for each moment and build moments array
-  const moments: Moment[] = [];
-  for (let i = 0; i < rawSegments.length; i++) {
-    const segment = rawSegments[i];
-    const structureCoding = await codeStructures(segment.quote, segment.context);
+  // Step 2: Code structures for each moment and build moments array.
+  //
+  // Structure coding is one GPT-4o call per moment (~2-3s each). Run all
+  // calls in parallel — they're independent. Sequential await on a 20-moment
+  // session was 40-60s, blowing Vercel's 60s function ceiling and surfacing
+  // as a generic "Analysis failed" alert. Promise.all collapses that to the
+  // slowest single call.
+  const structureCodings = await Promise.all(
+    rawSegments.map((seg) => codeStructures(seg.quote, seg.context))
+  );
+
+  const moments: Moment[] = rawSegments.map((segment, i) => {
+    const structureCoding = structureCodings[i];
 
     const primaryStructures = structureCoding.structures
       .sort((a, b) => b.intensity - a.intensity)
       .slice(0, 3)
-      .map(s => s.name);
+      .map((s) => s.name);
 
     const valence = structureCoding.structures[0]?.valence || EmotionalValence.NEUTRAL;
     const avgIntensity =
@@ -110,21 +118,19 @@ export async function analyzeSession(input: SessionInput): Promise<AnalysisResul
 
     const therapistMove = classifyTherapistMoveForMoment(segment.therapistResponse);
 
-    const moment: Moment = {
+    return {
       id: i,
       timestamp: segment.timestamp,
       quote: segment.quote,
       context: segment.context,
       type: segment.type,
-      valence: valence,
+      valence,
       intensity: avgIntensity,
       structures: primaryStructures.length > 0 ? primaryStructures : [StructureName.EMOTION],
       therapistMove,
-      therapistQuote: segment.therapistResponse
+      therapistQuote: segment.therapistResponse,
     };
-
-    moments.push(moment);
-  }
+  });
 
   // Step 3: Detect risks
   const riskFlags = await detectRisks(transcript);
