@@ -27,11 +27,13 @@ Top structures: ${Object.entries(structureProfile)
 Recommended methods: ${practitionerMatches.map(m => m.name).join(', ')}`;
 
   try {
-    const response = await (client as any).chat.completions.create({
+    const response = await client.chat.completions.create({
       model: 'gpt-4o',
       max_tokens: 2000,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }]
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
     });
 
     const text = response.choices[0]?.message?.content || '';

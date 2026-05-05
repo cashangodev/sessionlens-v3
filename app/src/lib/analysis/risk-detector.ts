@@ -299,11 +299,13 @@ Return JSON: { riskFlags: [{ severity, signal, detail, recommendation }] }`;
   const userPrompt = `Assess risk in this transcript:\n\n${transcript}`;
 
   try {
-    const response = await (client as any).chat.completions.create({
+    const response = await client.chat.completions.create({
       model: 'gpt-4o',
       max_tokens: 1000,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }]
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
     });
 
     const text = response.choices[0]?.message?.content || "";
