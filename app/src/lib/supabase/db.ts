@@ -228,6 +228,7 @@ export async function dbUpsertClientProfile(profile: {
   clientCode: string;
   gender?: string;
   ageRange?: string;
+  email?: string;
   treatmentGoals?: string[];
   presentingConcerns?: string[];
   diagnosticConsiderations?: string[];
@@ -252,6 +253,7 @@ export async function dbUpsertClientProfile(profile: {
     client_code: profile.clientCode,
     gender: profile.gender ?? existing?.gender ?? '',
     age_range: profile.ageRange ?? existing?.age_range ?? '',
+    email: (profile.email ?? existing?.email ?? '') || null,
     treatment_goals: profile.treatmentGoals ?? existing?.treatment_goals ?? [],
     presenting_concerns: profile.presentingConcerns ?? existing?.presenting_concerns ?? [],
     diagnostic_considerations: profile.diagnosticConsiderations ?? existing?.diagnostic_considerations ?? [],
@@ -293,7 +295,7 @@ export async function dbCreateBlankClient(
   gender: string = '',
   ageRange: string = '',
   clinicalNotes: string = '',
-  _email: string = '',
+  email: string = '',
   presentingConcerns: string[] = [],
   treatmentGoals: string[] = []
 ): Promise<DbClientRow | null> {
@@ -302,6 +304,7 @@ export async function dbCreateBlankClient(
     gender,
     ageRange,
     clinicalNotes,
+    email,
     presentingConcerns,
     treatmentGoals,
     totalSessions: 0,
