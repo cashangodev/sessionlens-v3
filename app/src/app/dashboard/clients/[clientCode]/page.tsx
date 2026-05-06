@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useApi } from '@/hooks/use-api';
 import { RemoveClientModal, type RemoveAction } from '@/components/clients/RemoveClientModal';
+import { ScreeningResultsList } from '@/components/screening/ScreeningResultsList';
 import {
   ArrowLeft,
   Plus,
@@ -884,6 +885,11 @@ export default function ClientDetailPage() {
             )}
           </>
         )}
+      </div>
+
+      {/* Pre-session screening results */}
+      <div className="mb-8">
+        <ScreeningResultsList clientCode={clientCode} />
       </div>
 
       {/* Session History */}

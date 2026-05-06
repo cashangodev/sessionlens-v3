@@ -279,6 +279,39 @@ export async function recordResponses(input: {
   if (error) throw error;
 }
 
+/** Fetch every screening assignment for a client, hydrated with the
+ *  instrument metadata and per-item responses. Therapist-side only. */
+export async function getScreeningsForClient(clientId: string): Promise<Array<ScreeningAssignment & { responses: Record<string, number> }>> {
+  const { data: assignments, error } = await client()
+    .from('screening_assignments')
+    .select('*')
+    .eq('client_id', clientId)
+    .order('assigned_at', { ascending: false });
+  if (error) throw error;
+  if (!assignments || assignments.length === 0) return [];
+
+  const ids = assignments.map((a) => a.id);
+  const { data: responses, error: rErr } = await client()
+    .from('screening_responses')
+    .select('assignment_id, item_id, value')
+    .in('assignment_id', ids);
+  if (rErr) throw rErr;
+
+  const responsesByAssignment = new Map<string, Record<string, number>>();
+  for (const row of responses ?? []) {
+    const r = row as { assignment_id: string; item_id: string; value: number };
+    if (!responsesByAssignment.has(r.assignment_id)) {
+      responsesByAssignment.set(r.assignment_id, {});
+    }
+    responsesByAssignment.get(r.assignment_id)![r.item_id] = r.value;
+  }
+
+  return assignments.map((row) => ({
+    ...rowToAssignment(row),
+    responses: responsesByAssignment.get(row.id) ?? {},
+  }));
+}
+
 // ─── intake_notes ───────────────────────────────────────────────────────
 
 export async function createIntakeNote(input: {
