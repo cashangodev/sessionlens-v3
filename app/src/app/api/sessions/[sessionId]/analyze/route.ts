@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { dbGetSession, dbUpdateSessionAnalysis, dbUpsertClientProfile, dbGetClientProfile } from '@/lib/supabase/db';
+import { dbGetSession, dbUpdateSessionAnalysis, dbUpsertClientProfile, dbGetClientProfile, dbWriteAuditLog } from '@/lib/supabase/db';
 import { analyzeSession } from '@/lib/analysis/transcript-analyzer';
 import { extractProfileFromAnalysis } from '@/lib/client-profile';
 import type { AnalysisResult } from '@/types';
@@ -86,8 +86,26 @@ export async function POST(
     const message = error instanceof Error ? error.message : String(error);
     const name = error instanceof Error ? error.name : 'Error';
     const stack = error instanceof Error && error.stack
-      ? error.stack.split('\n').slice(0, 6).join('\n')
+      ? error.stack.split('\n').slice(0, 8).join('\n')
       : undefined;
+
+    // Persist the failure to audit_logs.metadata so we can read the actual
+    // error via SQL even if Vercel's runtime-log view collapses it.
+    // Fire-and-forget; do not block the response.
+    void dbWriteAuditLog({
+      action: 'session.read',
+      resourceType: 'session',
+      resourceId: sessionId,
+      metadata: {
+        analyze_failure: true,
+        stage,
+        name,
+        message,
+        stack,
+        ts: new Date().toISOString(),
+      },
+    });
+
     return NextResponse.json(
       { error: 'Analysis failed', stage, name, message, stack },
       { status: 500 },
