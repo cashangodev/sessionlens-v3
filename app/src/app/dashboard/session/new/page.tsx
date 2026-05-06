@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { DEMO_TRANSCRIPT } from '@/lib/analysis/demo-transcript';
 import { transcribeAudio, formatFileSize, estimateDuration, ACCEPTED_AUDIO_TYPES, MAX_FILE_SIZE_BYTES } from '@/lib/analysis/mock-transcription';
 import { useApi } from '@/hooks/use-api';
-import { SinceLastSessionBrief } from '@/components/journal/SinceLastSessionBrief';
 import {
   appendChunk,
   discardRecording,
@@ -1598,8 +1597,6 @@ export default function NewSessionPage() {
           <p className="text-gray-600 mb-6">
             Review <span className="font-mono font-semibold text-gray-900">{activeClientCode}</span> before starting a new session.
           </p>
-
-          <SinceLastSessionBrief clientCode={activeClientCode} />
 
           {/* Client Info Card */}
           <div className="bg-white rounded-md border border-gray-200 p-6 mb-6 space-y-4">
