@@ -1,0 +1,29 @@
+-- Drop the legacy sessions_audit_trigger.
+--
+-- Background: the trigger had two layers of schema drift that combined to
+-- silently break every UPDATE on the sessions table:
+--
+--   1) It inserted into audit_logs (action, resource_type, resource_id,
+--      change_summary, created_at). The current audit_logs schema (see
+--      004_audit_logs.sql) renamed those to (metadata, occurred_at), so the
+--      INSERT errored with `42703: column "change_summary" does not exist`.
+--
+--   2) Even after fixing the columns, the action value the trigger
+--      generated ("sessions.update") was not in audit_logs_action_check's
+--      allowed list, so the INSERT errored with the check-constraint
+--      violation.
+--
+-- In production, every analyze run completed the GPT-4o pipeline cleanly
+-- (~30s of work) and then died at the persist step when the trigger fired
+-- on `UPDATE sessions SET analysis_result = ...`. The route returned 500
+-- with stage=persist_session_analysis, surfacing as "Analysis failed" in
+-- the UI for two days.
+--
+-- The application already audits sensitive operations explicitly via
+-- dbWriteAuditLog (lib/supabase/db.ts) — the trigger duplicated that work.
+-- Drop it.
+--
+-- The audit_trigger_function() itself is left in place because the
+-- consent_records table still has consent_audit_trigger referencing it
+-- (also broken, but consent_records isn't touched by the live app).
+DROP TRIGGER IF EXISTS sessions_audit_trigger ON public.sessions;

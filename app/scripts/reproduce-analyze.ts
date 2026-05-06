@@ -51,11 +51,23 @@ async function main() {
     console.log('\n=== ANALYSIS COMPLETED ===');
     console.log('elapsed:', elapsed, 'ms');
     console.log('moments:', result.moments.length);
-    console.log('riskFlags:', result.riskFlags.length);
-    console.log('similarCases:', result.similarCases.length);
-    console.log('practitionerMatches:', result.practitionerMatches.length);
-    console.log('analysisStatus:', result.analysisStatus);
-    console.log('analysisWarnings:', result.analysisWarnings);
+
+    // Now reproduce the persist step that's failing in production.
+    console.log('\n=== ATTEMPTING PERSIST (anon key, same as prod) ===');
+    const serialized = JSON.parse(JSON.stringify(result));
+    const updateResp = await supabase
+      .from('sessions')
+      .update({
+        analysis_result: serialized,
+        status: 'complete',
+        analysis_complete_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('session_id', sessionId)
+      .select('session_id');
+    console.log('update data:', updateResp.data);
+    console.log('update error:', updateResp.error);
+    console.log('update status:', updateResp.status, updateResp.statusText);
   } catch (err) {
     const elapsed = Date.now() - t0;
     console.error('\n=== ANALYSIS FAILED ===');
