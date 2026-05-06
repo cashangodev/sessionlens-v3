@@ -2724,8 +2724,8 @@ export default function NewSessionPage() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-12 max-w-md w-full mx-4">
             <div className="text-center">
-              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-8">
-                <Loader2 className="w-10 h-10 text-primary animate-spin" />
+              <div className="flex items-center justify-center mx-auto mb-8">
+                <SparkLoader size={96} />
               </div>
               <h3 className="font-playfair text-3xl font-bold text-gray-900 mb-6">Analyzing Session</h3>
               <p className="text-gray-600 mb-10 font-medium min-h-7 text-sm leading-relaxed">{currentStages[currentStage] || 'Processing...'}</p>
@@ -2742,8 +2742,8 @@ export default function NewSessionPage() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-md p-10 max-w-lg w-full mx-4">
             <div className="text-center">
-              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Loader2 className="w-10 h-10 text-primary animate-spin" />
+              <div className="flex items-center justify-center mx-auto mb-6">
+                <SparkLoader size={96} />
               </div>
               <h3 className="font-playfair text-2xl font-bold text-gray-900 mb-2">Analyzing Sessions</h3>
               <p className="text-lg font-semibold text-primary mb-6">
@@ -2879,6 +2879,106 @@ function StepBadge({ number, label, active, completed, skip }: {
         {completed ? '✓' : number}
       </div>
       <span className={`text-sm font-medium ${active ? 'text-gray-900' : completed ? 'text-primary' : 'text-gray-400'} ${skip ? 'line-through' : ''}`}>{label}</span>
+    </div>
+  );
+}
+
+/**
+ * Loader echoing the landing page's "structure map" — 10 dots around a
+ * circle with a single soft spark traveling between two of them, jumping
+ * to a new pair every tick. Reads as "the system is following one thread
+ * of connection at a time," same metaphor as the marketing surface.
+ *
+ * Tick is faster here (1.6s vs 4s on landing) because this is a loading
+ * state — needs to feel active without becoming frenetic.
+ */
+function SparkLoader({ size = 80 }: { size?: number }) {
+  const cx = 50;
+  const cy = 50;
+  const r = 36;
+  const nodes = Array.from({ length: 10 }, (_, i) => {
+    const angle = (i / 10) * Math.PI * 2 - Math.PI / 2;
+    return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle), i };
+  });
+  const edges: Array<[number, number]> = [];
+  for (let i = 0; i < nodes.length; i++) {
+    for (const offset of [1, 2, 5]) {
+      const j = (i + offset) % nodes.length;
+      if (j > i) edges.push([i, j]);
+    }
+  }
+  const pairs: Array<[number, number]> = [
+    [0, 5], [1, 6], [3, 8], [7, 2], [4, 9],
+    [6, 1], [8, 3], [0, 7], [2, 9], [5, 0],
+  ];
+
+  const [tickIdx, setTickIdx] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setTickIdx((n) => n + 1), 1600);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const [a, b] = pairs[(tickIdx * 7 + 3) % pairs.length];
+
+  return (
+    <div className="spark-loader" style={{ width: size, height: size }}>
+      <svg viewBox="0 0 100 100" className="w-full h-auto" aria-label="Loading">
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#E2E8F0" strokeWidth="0.5" />
+        {edges.map(([ea, eb], idx) => (
+          <line
+            key={idx}
+            x1={nodes[ea].x}
+            y1={nodes[ea].y}
+            x2={nodes[eb].x}
+            y2={nodes[eb].y}
+            stroke="#CBD5E1"
+            strokeWidth="0.3"
+          />
+        ))}
+        <line
+          key={tickIdx}
+          className="spark-loader-spark"
+          x1={nodes[a].x}
+          y1={nodes[a].y}
+          x2={nodes[b].x}
+          y2={nodes[b].y}
+          stroke="#1D4343"
+          strokeWidth="1.2"
+          strokeLinecap="round"
+          pathLength={100}
+        />
+        {nodes.map((n) => (
+          <circle
+            key={n.i}
+            cx={n.x}
+            cy={n.y}
+            r={n.i % 3 === 0 ? 2.4 : 1.8}
+            fill="#1D4343"
+          />
+        ))}
+        <circle cx={cx} cy={cy} r="1.2" fill="#1D4343" />
+      </svg>
+      <style jsx>{`
+        .spark-loader :global(.spark-loader-spark) {
+          stroke-dasharray: 30 200;
+          stroke-dashoffset: 100;
+          opacity: 0;
+          animation: sparkLoaderTravel 1.4s cubic-bezier(0.4, 0, 0.6, 1) both;
+        }
+        @keyframes sparkLoaderTravel {
+          0%   { stroke-dashoffset: 100;  opacity: 0; }
+          15%  {                          opacity: 0.85; }
+          82%  {                          opacity: 0.85; }
+          100% { stroke-dashoffset: -130; opacity: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .spark-loader :global(.spark-loader-spark) {
+            animation: none;
+            stroke-dasharray: none;
+            opacity: 0;
+          }
+        }
+      `}</style>
     </div>
   );
 }
