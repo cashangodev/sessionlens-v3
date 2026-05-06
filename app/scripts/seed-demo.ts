@@ -15,8 +15,11 @@ import { createClient } from '@supabase/supabase-js';
 config({ path: resolve(__dirname, '../.env.local') });
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const DEV_THERAPIST_ID = 'a0000000-0000-0000-0000-000000000001';
+// Prefer service role so RLS doesn't get in the way of the seed.
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// DEMO_THERAPIST_ID lets us seed onto a real Clerk-mapped therapist
+// (passed via env). Falls back to the in-repo dev fixture id otherwise.
+const DEV_THERAPIST_ID = process.env.DEMO_THERAPIST_ID || 'a0000000-0000-0000-0000-000000000001';
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error('Missing SUPABASE env vars. Check .env.local');
@@ -1507,63 +1510,30 @@ async function main() {
   console.log(`Therapist ID: ${DEV_THERAPIST_ID}`);
   console.log('');
 
-  // Step 1: Delete ALL existing demo data (aggressive cleanup)
-  console.log('🗑️  Cleaning ALL existing demo data...');
+  // Step 1: Narrow cleanup — ONLY CL-4521 for this therapist.
+  // (Earlier versions wiped every client for the therapist, which is
+  // catastrophic on a real account. Stay scoped.)
+  console.log('🗑️  Cleaning prior CL-4521 data (scoped)...');
 
-  // First get all client IDs for this therapist
-  const { data: existingClients } = await supabase
+  const { data: prior } = await supabase
     .from('clients')
     .select('client_id')
-    .eq('therapist_id', DEV_THERAPIST_ID);
+    .eq('therapist_id', DEV_THERAPIST_ID)
+    .eq('client_code', 'CL-4521');
 
-  const clientIds = (existingClients || []).map((c: { client_id: string }) => c.client_id);
-
-  // Delete outcome scores for these clients
-  if (clientIds.length > 0) {
-    await supabase.from('outcome_scores').delete().in('client_id', clientIds);
-    console.log('  ✓ Outcome scores deleted');
+  for (const c of prior ?? []) {
+    await supabase.from('sessions').delete().eq('client_id', c.client_id);
   }
-
-  // Delete sessions for these clients
-  if (clientIds.length > 0) {
-    await supabase.from('sessions').delete().in('client_id', clientIds);
-    console.log('  ✓ Sessions deleted (by client_id)');
-  }
-
-  // Also delete sessions by therapist_id as backup
-  const { error: delSessionsErr } = await supabase
-    .from('sessions')
-    .delete()
-    .eq('therapist_id', DEV_THERAPIST_ID);
-
-  if (delSessionsErr) {
-    console.error('  Note: session cleanup by therapist_id:', delSessionsErr.message);
+  if ((prior ?? []).length > 0) {
+    await supabase
+      .from('clients')
+      .delete()
+      .eq('therapist_id', DEV_THERAPIST_ID)
+      .eq('client_code', 'CL-4521');
+    console.log(`  ✓ Cleaned ${prior!.length} prior CL-4521 row(s) and their sessions`);
   } else {
-    console.log('  ✓ Sessions deleted (by therapist_id)');
+    console.log('  ✓ No prior CL-4521 rows to clean');
   }
-
-  // Delete ALL clients for this therapist
-  const { error: delClientsErr } = await supabase
-    .from('clients')
-    .delete()
-    .eq('therapist_id', DEV_THERAPIST_ID);
-
-  if (delClientsErr) {
-    console.error('  Error deleting clients:', delClientsErr.message);
-    // Fallback: delete known client codes
-    for (const code of ['CL-4521', 'CL-7803', 'CL-2156']) {
-      await supabase.from('clients').delete().eq('client_code', code).eq('therapist_id', DEV_THERAPIST_ID);
-    }
-    console.log('  ✓ Clients cleaned up (fallback)');
-  } else {
-    console.log(`  ✓ ${clientIds.length} clients deleted`);
-  }
-
-  console.log('');
-
-  // Extra cleanup: delete CL-4521 by client_code directly (catches orphaned records)
-  await supabase.from('clients').delete().eq('client_code', 'CL-4521');
-  console.log('  ✓ CL-4521 force-cleaned by client_code');
   console.log('');
 
   // Step 2: Insert client
