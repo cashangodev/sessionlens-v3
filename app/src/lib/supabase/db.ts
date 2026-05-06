@@ -116,6 +116,7 @@ export interface DbClientRow {
   updated_at: string;
   outcome_tracking_enabled: boolean;
   outcome_scores: OutcomeScoreEntry[];
+  email: string | null;
 }
 
 export interface DbSessionRow {

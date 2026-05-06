@@ -14,7 +14,12 @@ import {
   Activity,
   X,
   RefreshCw,
+  Mail,
+  CheckCircle2,
+  AlertTriangle,
+  ClipboardList,
 } from 'lucide-react';
+import { ALL_INSTRUMENTS } from '@/lib/screening/catalog';
 
 type SortOption = 'recent' | 'alpha' | 'sessions';
 type ClientGender = '' | 'male' | 'female' | 'other';
@@ -76,6 +81,16 @@ export default function ClientsPage() {
   const [showMoreDetails, setShowMoreDetails] = useState(false);
   const [creating, setCreating] = useState(false);
 
+  // Screening invitation state. Map instrument_id -> required flag.
+  // The patient will see required items as gating and optional items as
+  // "we'd appreciate this if you have time" on the welcome page.
+  const [selectedInstruments, setSelectedInstruments] = useState<Map<string, boolean>>(new Map());
+  const [inviteFeedback, setInviteFeedback] = useState<
+    { kind: 'success'; sentTo: string; clientCode: string }
+    | { kind: 'error'; message: string }
+    | null
+  >(null);
+
   const searchParams = useSearchParams();
   const { data: clientsData, mutate: refreshClients } = useApi<{ clients: ClientInfo[] }>('/api/clients');
 
@@ -99,13 +114,31 @@ export default function ClientsPage() {
     setNewConcerns('');
     setNewGoals('');
     setShowMoreDetails(false);
+    setSelectedInstruments(new Map());
     setShowAddModal(true);
+  };
+
+  const toggleInstrument = (id: string) => {
+    setSelectedInstruments((prev) => {
+      const next = new Map(prev);
+      if (next.has(id)) next.delete(id); else next.set(id, true); // default to required
+      return next;
+    });
+  };
+
+  const setInstrumentRequired = (id: string, required: boolean) => {
+    setSelectedInstruments((prev) => {
+      const next = new Map(prev);
+      next.set(id, required);
+      return next;
+    });
   };
 
   const handleCreateClient = async () => {
     const code = newCode.trim();
     if (!code) return;
     setCreating(true);
+    setInviteFeedback(null);
     try {
       const concerns = newConcerns.trim()
         ? newConcerns.split(',').map((c) => c.trim()).filter(Boolean)
@@ -114,7 +147,7 @@ export default function ClientsPage() {
         ? newGoals.split(',').map((g) => g.trim()).filter(Boolean)
         : [];
 
-      await fetch('/api/clients', {
+      const createRes = await fetch('/api/clients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -127,10 +160,45 @@ export default function ClientsPage() {
           treatmentGoals: goals.length > 0 ? goals : undefined,
         }),
       });
+      if (!createRes.ok) {
+        const body = await createRes.json().catch(() => ({}));
+        setInviteFeedback({ kind: 'error', message: body.error || `Could not create client (HTTP ${createRes.status}).` });
+        setCreating(false);
+        return;
+      }
+
+      // If the therapist picked at least one screening instrument, fire the
+      // invitation. Email is required for invitations — the picker is gated
+      // on email being filled in, so we trust it here.
+      if (selectedInstruments.size > 0 && newEmail.trim()) {
+        const instruments = Array.from(selectedInstruments.entries()).map(([id, required]) => ({ id, required }));
+        const inviteRes = await fetch('/api/invitations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clientCode: code, instruments }),
+        });
+        const inviteBody = await inviteRes.json().catch(() => ({}));
+        if (!inviteRes.ok) {
+          setInviteFeedback({
+            kind: 'error',
+            message: `Client created, but the invitation didn't send: ${inviteBody.error || `HTTP ${inviteRes.status}`}`,
+          });
+          refreshClients();
+          setCreating(false);
+          return;
+        }
+        setInviteFeedback({ kind: 'success', sentTo: inviteBody.sentTo, clientCode: code });
+        refreshClients();
+        // Keep the modal open briefly so the user sees the success state.
+        setTimeout(() => setShowAddModal(false), 1800);
+        return;
+      }
+
       setShowAddModal(false);
       refreshClients();
     } catch (err) {
       console.error(err);
+      setInviteFeedback({ kind: 'error', message: err instanceof Error ? err.message : 'Something went wrong' });
     } finally {
       setCreating(false);
     }
@@ -423,7 +491,7 @@ export default function ClientsPage() {
               {/* Email */}
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Email <span className="font-normal text-gray-400">(optional — for your reference only)</span>
+                  Email <span className="font-normal text-gray-400">(needed for the invitation link)</span>
                 </label>
                 <input
                   type="email"
@@ -432,7 +500,87 @@ export default function ClientsPage() {
                   placeholder="client@example.com"
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                 />
+                <p className="text-xs text-gray-400 mt-1.5">
+                  Add an email to send a screening invitation before the first session.
+                </p>
               </div>
+
+              {/* Pre-session screening picker — only meaningful with an email */}
+              {newEmail.trim() && (
+                <div className="border border-primary/15 bg-primary/[0.02] rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <ClipboardList className="w-4 h-4 text-primary" />
+                    <h3 className="text-sm font-semibold text-gray-900">Pre-session screening</h3>
+                    <span className="text-xs text-gray-400 ml-auto">
+                      {selectedInstruments.size} selected
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 leading-relaxed mb-3">
+                    Pick the questionnaires the client should complete before session 1. Each can be required
+                    (gates the journal) or optional. The intake voice/text prompt is included by default.
+                  </p>
+                  <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+                    {ALL_INSTRUMENTS.filter((i) => i.id !== 'cssrs').map((inst) => {
+                      const checked = selectedInstruments.has(inst.id);
+                      const required = selectedInstruments.get(inst.id) ?? true;
+                      return (
+                        <label
+                          key={inst.id}
+                          className={`flex items-start gap-3 p-2.5 rounded-lg cursor-pointer transition-colors ${
+                            checked ? 'bg-white border border-primary/30' : 'hover:bg-white border border-transparent'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleInstrument(inst.id)}
+                            className="mt-1 accent-primary"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-semibold text-gray-900">{inst.name}</span>
+                              <span className="text-xs text-gray-500">·</span>
+                              <span className="text-xs text-gray-500 truncate">{inst.fullName}</span>
+                              <span className="text-[10px] text-gray-400 ml-auto whitespace-nowrap">
+                                ~{inst.estimatedMinutes} min
+                              </span>
+                            </div>
+                            {checked && (
+                              <div className="mt-2 flex items-center gap-2 text-xs">
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.preventDefault(); setInstrumentRequired(inst.id, true); }}
+                                  className={`px-2 py-1 rounded-md border transition-colors ${
+                                    required
+                                      ? 'bg-primary text-white border-primary'
+                                      : 'bg-white text-gray-600 border-gray-200 hover:border-primary/40'
+                                  }`}
+                                >
+                                  Required
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.preventDefault(); setInstrumentRequired(inst.id, false); }}
+                                  className={`px-2 py-1 rounded-md border transition-colors ${
+                                    !required
+                                      ? 'bg-gray-700 text-white border-gray-700'
+                                      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                                  }`}
+                                >
+                                  Optional
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-3 leading-relaxed">
+                    C-SSRS (suicide risk) is auto-added if PHQ-9 item 9 or CORE-10 item 6 is endorsed — you don't need to pick it manually.
+                  </p>
+                </div>
+              )}
 
               {/* Expandable: More Details */}
               <div>
@@ -503,6 +651,26 @@ export default function ClientsPage() {
               </div>
             </div>
 
+            {/* Inline feedback (success / error) */}
+            {inviteFeedback && (
+              <div className={`px-6 py-3 border-t flex items-start gap-2 text-sm ${
+                inviteFeedback.kind === 'success'
+                  ? 'bg-emerald-50 border-emerald-100 text-emerald-800'
+                  : 'bg-red-50 border-red-100 text-red-800'
+              }`}>
+                {inviteFeedback.kind === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                )}
+                <p className="leading-relaxed">
+                  {inviteFeedback.kind === 'success'
+                    ? `Client ${inviteFeedback.clientCode} created. Invitation sent to ${inviteFeedback.sentTo}.`
+                    : inviteFeedback.message}
+                </p>
+              </div>
+            )}
+
             {/* Modal footer */}
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex gap-3 flex-shrink-0">
               <button
@@ -513,11 +681,15 @@ export default function ClientsPage() {
               </button>
               <button
                 onClick={handleCreateClient}
-                disabled={!newCode.trim() || creating}
+                disabled={!newCode.trim() || creating || (selectedInstruments.size > 0 && !newEmail.trim())}
                 className="flex-1 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-dark shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {creating && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                {creating ? 'Creating...' : 'Create Client'}
+                {creating
+                  ? (selectedInstruments.size > 0 ? 'Creating & sending…' : 'Creating…')
+                  : (selectedInstruments.size > 0
+                      ? <><Mail className="w-3.5 h-3.5" />Create & send invite</>
+                      : 'Create client')}
               </button>
             </div>
           </div>
