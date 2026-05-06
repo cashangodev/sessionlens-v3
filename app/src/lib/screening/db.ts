@@ -15,6 +15,11 @@ function client() {
   const key = serviceKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   return supabaseCreateClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, key, {
     auth: { persistSession: false, autoRefreshToken: false },
+    // Bypass Next.js fetch cache. Without this, the API hits return stale
+    // data on second-and-later loads of the same screening_assignments
+    // query — same issue the journal db helpers hit before. (memory:
+    // sessionpolaris_codebase)
+    global: { fetch: (input, init) => fetch(input as RequestInfo, { ...init, cache: 'no-store' }) },
   });
 }
 
@@ -300,6 +305,19 @@ export async function createIntakeNote(input: {
     .single();
   if (error || !data) throw error || new Error('Insert returned no row');
   return data.id as string;
+}
+
+export async function getIntakeNoteForInvitation(invitationId: string): Promise<{ id: string; createdAt: Date } | null> {
+  const { data, error } = await client()
+    .from('intake_notes')
+    .select('id, created_at')
+    .eq('invitation_id', invitationId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return { id: data.id, createdAt: new Date(data.created_at) };
 }
 
 export async function getIntakeNoteForClient(clientId: string): Promise<{
