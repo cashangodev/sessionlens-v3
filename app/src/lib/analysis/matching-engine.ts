@@ -223,60 +223,44 @@ export async function matchSessionMoments(
     // Collect all session structure names for category overlap
     const sessionCategories = moments.flatMap((m) => m.structures as string[]);
 
-    // Search for semantically similar moments in the archive
-    const allSearchResults: (SemanticSearchResult & {
-      sourceMoment: Moment;
-      combinedScore: number;
-    })[] = [];
-
-    for (const moment of keyMoments) {
-      console.log('[matching-engine] Embedding moment:', moment.quote.substring(0, 60));
-      const embedding = await embedMoment(moment.quote, moment.context);
-      console.log('[matching-engine] Embedding result length:', embedding.length);
-
-      if (embedding.length === 0) {
-        console.warn('[matching-engine] Empty embedding — skipping moment');
-        continue;
-      }
-
-      const { data, error } = await supabase.rpc('search_moments_semantic', {
-        query_embedding: embedding,
-        limit_count: SEMANTIC_SEARCH_LIMIT,
-      });
-
-      console.log('[matching-engine] RPC returned', data?.length ?? 0, 'results, error:', error);
-
-      if (error) {
-        console.error('[matching-engine] Semantic search failed:', error);
-        continue;
-      }
-
-      const results = (data as SemanticSearchResult[]) ?? [];
-
-      // Re-rank each result with the 3-layer scoring
-      for (const result of results) {
-        const structuralScore = computeStructuralAlignment(
-          structureProfile,
-          result.structures_present ?? []
-        );
-        const metadataScore = computeMetadataRelevance(
-          moment,
-          result,
-          sessionCategories
-        );
-        const combinedScore = computeCombinedScore(
-          result.semantic_similarity,
-          structuralScore,
-          metadataScore
-        );
-
-        allSearchResults.push({
-          ...result,
-          sourceMoment: moment,
-          combinedScore,
+    // Search for semantically similar moments in the archive. Run all 3
+    // embedding + RPC pairs in parallel — they're independent. Sequential
+    // was ~9s on the cross-region path (Vercel us-east-1 → OpenAI →
+    // Supabase eu-west-1 → back); parallel cuts to the slowest single call.
+    const perMomentResults = await Promise.all(
+      keyMoments.map(async (moment) => {
+        const embedding = await embedMoment(moment.quote, moment.context);
+        if (embedding.length === 0) return [] as Array<SemanticSearchResult & { sourceMoment: Moment; combinedScore: number }>;
+        const { data, error } = await supabase.rpc('search_moments_semantic', {
+          query_embedding: embedding,
+          limit_count: SEMANTIC_SEARCH_LIMIT,
         });
-      }
-    }
+        if (error) {
+          console.error('[matching-engine] Semantic search failed:', error);
+          return [];
+        }
+        const results = (data as SemanticSearchResult[]) ?? [];
+        return results.map((result) => {
+          const structuralScore = computeStructuralAlignment(
+            structureProfile,
+            result.structures_present ?? []
+          );
+          const metadataScore = computeMetadataRelevance(
+            moment,
+            result,
+            sessionCategories
+          );
+          const combinedScore = computeCombinedScore(
+            result.semantic_similarity,
+            structuralScore,
+            metadataScore
+          );
+          return { ...result, sourceMoment: moment, combinedScore };
+        });
+      })
+    );
+
+    const allSearchResults = perMomentResults.flat();
 
     if (allSearchResults.length === 0) {
       return [];

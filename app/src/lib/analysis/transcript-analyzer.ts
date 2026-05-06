@@ -88,16 +88,33 @@ function generateQuickInsight(
 export async function analyzeSession(input: SessionInput): Promise<AnalysisResult> {
   const { transcript, sessionNumber } = input;
 
-  // Step 1: Segment transcript
-  const rawSegments = await segmentTranscript(transcript);
-
-  // Step 2: Code structures for each moment and build moments array.
+  // Aggressive parallelization. The pipeline used to be 11 sequential awaits,
+  // running 41s locally and >60s in production (the Vercel function ceiling),
+  // which silently killed the lambda mid-flight and surfaced as a generic
+  // "Analysis failed" alert with no error visible in catches.
   //
-  // Structure coding is one GPT-4o call per moment (~2-3s each). Run all
-  // calls in parallel — they're independent. Sequential await on a 20-moment
-  // session was 40-60s, blowing Vercel's 60s function ceiling and surfacing
-  // as a generic "Analysis failed" alert. Promise.all collapses that to the
-  // slowest single call.
+  // Dependency graph:
+  //   transcript → segmentTranscript ─→ codeStructures (parallel) ─→ moments
+  //   transcript → detectRisks
+  //   moments → buildStructureProfile (sync, fast)
+  //   moments + structureProfile → matchSessionMoments
+  //   moments → analyzeCognitiveDistortions
+  //   moments + structureProfile + riskFlags → matchPractitionerMethods
+  //   moments + riskFlags + structureProfile + practitionerMatches → generateReports
+  //
+  // Run independent branches concurrently. Any branch wrapped in try/catch
+  // already; we promote those to .catch() handlers on the promises.
+
+  const warnings: string[] = [];
+
+  // Phase 0: segmentation + risk detection only need the raw transcript and
+  // run in parallel. Saves 5-8s vs. sequential.
+  const segmentationPromise = segmentTranscript(transcript);
+  const riskFlagsPromise = detectRisks(transcript);
+
+  const rawSegments = await segmentationPromise;
+
+  // Phase 1: structure coding fan-out — N independent OpenAI calls, parallel.
   const structureCodings = await Promise.all(
     rawSegments.map((seg) => codeStructures(seg.quote, seg.context))
   );
@@ -132,41 +149,36 @@ export async function analyzeSession(input: SessionInput): Promise<AnalysisResul
     };
   });
 
-  // Step 3: Detect risks
-  const riskFlags = await detectRisks(transcript);
-
-  // Step 4: Code therapist moves
   const therapistResponses = moments.map(m => m.therapistQuote);
   const therapistMoves = codeTherapistMoves(therapistResponses);
-
-  // Step 5: Build structure profile
   const structureProfile = await buildStructureProfile(moments);
 
-  // Track which analysis steps succeeded/failed
-  const warnings: string[] = [];
+  // Phase 2: three independent network-bound steps run concurrently — risk
+  // detection (already kicked off), similar-case matching (3 embeddings + 3
+  // RPCs), CBT distortion analysis. Cuts ~max(9s, 5s, 3s) = 9s instead of 17s
+  // sequential.
+  const similarCasesPromise = matchSessionMoments(moments, structureProfile)
+    .catch((err) => {
+      console.error('[analyzeSession] matchSessionMoments failed:', err);
+      warnings.push('Similar case matching unavailable — Supabase not configured');
+      return [] as SimilarCase[];
+    });
 
-  // Step 6: Match similar cases (3-layer matching engine: semantic + structural + metadata)
-  let similarCases: SimilarCase[] = [];
-  try {
-    similarCases = await matchSessionMoments(moments, structureProfile);
-  } catch (err) {
-    console.error('[analyzeSession] Step 6 (matchSessionMoments) failed:', err);
-    warnings.push('Similar case matching unavailable — Supabase not configured');
-  }
-
-  // Step 7: CBT cognitive distortion analysis (Diagnosis-of-Thought framework)
-  let cbtAnalysis;
-  try {
-    cbtAnalysis = await analyzeCognitiveDistortions(
-      moments.map(m => ({ quote: m.quote, context: m.context }))
-    );
-  } catch (err) {
-    console.error('[analyzeSession] Step 7 (CBT analysis) failed:', err);
+  const cbtAnalysisPromise = analyzeCognitiveDistortions(
+    moments.map(m => ({ quote: m.quote, context: m.context }))
+  ).catch((err) => {
+    console.error('[analyzeSession] CBT analysis failed:', err);
     warnings.push('CBT cognitive distortion analysis failed — using empty defaults');
-    cbtAnalysis = { distortions: [], overallDistortionLoad: 0, treatmentReadiness: 0.5, dominantPatterns: [], automaticThoughts: [], behavioralPatterns: [] };
-  }
+    return { distortions: [], overallDistortionLoad: 0, treatmentReadiness: 0.5, dominantPatterns: [], automaticThoughts: [], behavioralPatterns: [] };
+  });
 
-  // Step 8: Match practitioners (semantic vector search against 20 evidence-based methods)
+  const [riskFlags, similarCases, cbtAnalysis] = await Promise.all([
+    riskFlagsPromise,
+    similarCasesPromise,
+    cbtAnalysisPromise,
+  ]);
+
+  // Phase 3: practitioner matching depends on riskFlags. Single embed + RPC.
   let practitionerMatches: PractitionerMatch[] = [];
   try {
     practitionerMatches = await matchPractitionerMethods(
@@ -175,14 +187,13 @@ export async function analyzeSession(input: SessionInput): Promise<AnalysisResul
       riskFlags
     );
   } catch (err) {
-    console.error('[analyzeSession] Step 8 (matchPractitionerMethods) failed:', err);
+    console.error('[analyzeSession] matchPractitionerMethods failed:', err);
     warnings.push('Practitioner matching unavailable — Supabase not configured');
   }
 
-  // Step 9: Build quick insight
   const quickInsight = generateQuickInsight(moments, riskFlags, structureProfile, sessionNumber);
 
-  // Step 10: Generate reports
+  // Phase 4: report generation depends on practitionerMatches.
   let clinicianReport = '';
   let patientReport = '';
   try {
@@ -196,7 +207,7 @@ export async function analyzeSession(input: SessionInput): Promise<AnalysisResul
     clinicianReport = reports.clinicianReport;
     patientReport = reports.patientReport;
   } catch (err) {
-    console.error('[analyzeSession] Step 10 (generateReports) failed:', err);
+    console.error('[analyzeSession] generateReports failed:', err);
     warnings.push('Report generation failed — clinician and patient reports unavailable');
   }
 
