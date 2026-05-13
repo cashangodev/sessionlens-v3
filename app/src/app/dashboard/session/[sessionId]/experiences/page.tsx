@@ -288,6 +288,15 @@ export default function ExperiencesPage() {
   const [expandedPractitioner, setExpandedPractitioner] = useState<string | null>(null);
   const [expandedCase, setExpandedCase] = useState<string | null>(null);
 
+  // Section-level minimise toggles — Experience Map and Hidden Content are
+  // information-dense panels that the clinician wants the option to collapse
+  // out of the way once they've reviewed them.
+  const [experienceMapOpen, setExperienceMapOpen] = useState(true);
+  const [hiddenContentOpen, setHiddenContentOpen] = useState(true);
+  // Which Known-Unknown theme is "popped out" as a deep dive. null = show only
+  // the chip row, no expanded card.
+  const [selectedHiddenTopic, setSelectedHiddenTopic] = useState<string | null>(null);
+
   // Next-session probe tracker — doctor pins Known-Unknown entries they want to
   // come back to. Stored in localStorage scoped per session. Toast confirms the
   // action; the pinned set drives the badge color and pin/unpin button label.
@@ -673,8 +682,15 @@ export default function ExperiencesPage() {
       {networkData.stats.totalMoments > 0 && (
         <section>
           <div className="bg-white rounded-md border border-gray-200 overflow-hidden">
-            {/* Header */}
-            <div className="p-6 sm:p-7 border-b border-gray-100">
+            {/* Header — clickable to minimise the dense graph body */}
+            <button
+              type="button"
+              onClick={() => setExperienceMapOpen(!experienceMapOpen)}
+              aria-expanded={experienceMapOpen}
+              className={`w-full text-left p-6 sm:p-7 hover:bg-gray-50/60 transition ${
+                experienceMapOpen ? 'border-b border-gray-100' : ''
+              }`}
+            >
               <div className="flex items-start gap-3">
                 <Network className="w-5 h-5 text-primary flex-shrink-0 mt-1" />
                 <div className="flex-1 min-w-0">
@@ -689,10 +705,16 @@ export default function ExperiencesPage() {
                   </div>
                   <p className="text-sm text-gray-600 mt-1">How this client's experience connects across {networkData.stats.totalMoments} coded moment{networkData.stats.totalMoments !== 1 ? 's' : ''}</p>
                 </div>
+                <ChevronDown
+                  className={`w-5 h-5 text-gray-400 flex-shrink-0 mt-1 transition-transform ${
+                    experienceMapOpen ? 'rotate-180' : ''
+                  }`}
+                />
               </div>
-            </div>
+            </button>
 
             {/* Graph + Insights */}
+            {experienceMapOpen && (
             <div className="grid lg:grid-cols-5 gap-6 p-6 sm:p-7">
               {/* Left: Graph */}
               <div className="lg:col-span-3 bg-gradient-to-br from-gray-50 to-white rounded-xl p-4 border border-gray-100">
@@ -759,6 +781,7 @@ export default function ExperiencesPage() {
                 </div>
               </div>
             </div>
+            )}
           </div>
         </section>
       )}
@@ -778,175 +801,241 @@ export default function ExperiencesPage() {
             small correlation-factor badges so the same icon doesn't carry
             two different meanings on the same page. */}
         {realCases.length > 0 && analysis.analysisStatus !== 'mock' && (
-          <div className="bg-white rounded-md border border-gray-200 p-6 mb-4">
-            <div className="flex items-start gap-3 mb-4">
-              <Search className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <h4 className="font-playfair text-lg font-bold text-gray-900">
-                  Hidden content this client may carry but hasn&apos;t named yet
-                </h4>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Childhood material, trauma echoes, and shame-laden topics that comparable clients commonly disclosed only later in treatment — worth gentle invitation, not direct excavation.
-                </p>
+          <div className="bg-white rounded-md border border-gray-200 mb-4 overflow-hidden">
+            {/* Clickable header — collapses the whole subsection. Topic chips
+                live inside the open body so the section header itself stays
+                quiet and consistent with the Experience Map's pattern. */}
+            <button
+              type="button"
+              onClick={() => setHiddenContentOpen(!hiddenContentOpen)}
+              aria-expanded={hiddenContentOpen}
+              className={`w-full text-left p-6 hover:bg-gray-50/60 transition ${
+                hiddenContentOpen ? 'border-b border-gray-100' : ''
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <Search className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h4 className="font-playfair text-lg font-bold text-gray-900">
+                    Hidden content this client may carry but hasn&apos;t named yet
+                  </h4>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Childhood material, trauma echoes, and shame-laden topics that comparable clients commonly disclosed only later in treatment — worth gentle invitation, not direct excavation.
+                  </p>
+                </div>
+                <ChevronDown
+                  className={`w-5 h-5 text-gray-400 flex-shrink-0 mt-1 transition-transform ${
+                    hiddenContentOpen ? 'rotate-180' : ''
+                  }`}
+                />
               </div>
-            </div>
+            </button>
 
-            {knownUnknowns.length === 0 ? (
-              <div className="text-center py-8 px-4 bg-gray-50 rounded-xl border border-gray-100">
-                <CheckCircle2 className="w-7 h-7 text-emerald-500 mx-auto mb-2" />
-                <p className="text-sm font-medium text-gray-700 mb-1">
-                  Nothing to surface
-                </p>
-                <p className="text-xs text-gray-500 max-w-sm mx-auto">
-                  This session already covers the themes that similar cases described. No additional probes suggested.
-                </p>
-              </div>
-            ) : (
-              // Rich case-study card per entry — the research-engine pitch.
-              // Each entry shows: hero %, theme + type badge, verbatim quotes
-              // from comparable clients, clinician observation + concrete probe
-              // question, and a pin-for-next-session action.
-              <div className="space-y-4">
-                {knownUnknowns.map((entry) => {
-                  const isPinned = pinnedProbes.has(entry.id);
-                  const themeTypeLabel =
-                    entry.themeType === 'concern'
-                      ? 'Presenting Concern'
-                      : entry.themeType === 'structure'
-                        ? 'Structural Pattern'
-                        : 'Thematic Pattern';
-                  return (
-                    <article
-                      key={entry.id}
-                      className={`relative rounded-md border-2 overflow-hidden transition-all ${
-                        isPinned
-                          ? 'border-primary/30 bg-primary/[0.02] '
-                          : 'border-amber-200/70 bg-white hover:border-amber-300'
-                      }`}
-                    >
-                      {/* Left accent bar */}
-                      <div
-                        className={`absolute left-0 top-0 bottom-0 w-1 ${
-                          isPinned ? 'bg-primary' : 'bg-amber-400'
-                        }`}
-                      />
-
-                      {/* HEADER: hero metric + theme + type badge */}
-                      <div className="pl-5 pr-5 pt-5 pb-4 flex items-start gap-4 border-b border-gray-100">
-                        {/* Big % box — hero visual weight */}
-                        <div className="flex-shrink-0 flex flex-col items-center justify-center w-20 h-20 rounded-md bg-amber-50 border border-amber-200">
-                          <p className="text-2xl font-bold text-amber-700 font-mono leading-none">
-                            {entry.percentage}<span className="text-sm">%</span>
-                          </p>
-                          <p className="text-[10px] text-amber-600/70 mt-1 font-mono">
-                            {entry.caseCount}/{entry.totalNeighbors} cases
-                          </p>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <h5 className="font-playfair text-xl font-bold text-gray-900 leading-tight">
-                              {entry.theme}
-                            </h5>
-                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                              {themeTypeLabel}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-600 leading-relaxed">
-                            <span className="font-semibold text-gray-800">{entry.caseCount} of {entry.totalNeighbors}</span> comparable clients carried this — but it hasn&apos;t come up yet in this session&apos;s coded moments, CBT distortions, or clinical priority. Comparable cases often disclosed it only after several sessions.
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* QUOTES: verbatim from comparable clients (no popover hide!) */}
-                      {entry.supportingCases.length > 0 && (
-                        <div className="pl-5 pr-5 pt-4 pb-3 bg-gray-50/40 border-b border-gray-100">
-                          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                            <MessageSquareQuote className="w-3 h-3" />
-                            How comparable clients described carrying it (once they did name it)
-                          </p>
-                          <ul className="space-y-2.5">
-                            {entry.supportingCases.slice(0, 3).map((c, idx) => (
-                              <li key={`${entry.id}-q-${idx}`} className="flex items-start gap-2.5">
-                                <span className="text-amber-400 text-base leading-none mt-0.5 flex-shrink-0">&ldquo;</span>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm text-gray-800 italic leading-relaxed">
-                                    {c.representativeQuote}
-                                  </p>
-                                  <p className="text-[10px] font-mono text-gray-400 mt-0.5">
-                                    &mdash; {c.patientCode} <span className="not-italic text-gray-400/80">(anonymized)</span>
-                                  </p>
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                          {entry.supportingCases.length > 3 && (
-                            <p className="text-[10px] text-gray-400 mt-2 italic">
-                              + {entry.supportingCases.length - 3} more comparable case{entry.supportingCases.length - 3 === 1 ? '' : 's'} in the archive
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      {/* CLINICAL MOVE: observation + concrete probe */}
-                      <div className="pl-5 pr-5 pt-4 pb-4">
-                        <div className="flex items-start gap-2.5 mb-3">
-                          <Lightbulb className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <p className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wider mb-1">
-                              Why it stays hidden &middot; how to invite it
-                            </p>
-                            <p className="text-sm text-gray-700 leading-relaxed">
-                              {entry.clinicalMove.observation}
-                            </p>
-                          </div>
-                        </div>
-                        {entry.clinicalMove.probe && (
-                          <div className="ml-7 mt-2 p-3 bg-emerald-50/60 border border-emerald-100 rounded-lg">
-                            <div className="flex items-start gap-2">
-                              <HelpCircle className="w-3.5 h-3.5 text-emerald-700 flex-shrink-0 mt-0.5" />
-                              <p className="text-sm text-gray-800 leading-relaxed">
-                                <span className="font-semibold text-emerald-800">Gentle invitation:</span>{' '}
-                                {entry.clinicalMove.probe}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* ACTION: pin for next session */}
-                        <div className="mt-4 flex items-center justify-between gap-2 pt-3 border-t border-gray-100">
-                          <span className="text-[11px] text-gray-400">
-                            Source cases: {entry.supportingCases.map((c) => c.patientCode).join(', ')}
-                          </span>
+            {hiddenContentOpen && (
+              <div className="p-6">
+                {knownUnknowns.length === 0 ? (
+                  <div className="text-center py-8 px-4 bg-gray-50 rounded-xl border border-gray-100">
+                    <CheckCircle2 className="w-7 h-7 text-emerald-500 mx-auto mb-2" />
+                    <p className="text-sm font-medium text-gray-700 mb-1">
+                      Nothing to surface
+                    </p>
+                    <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                      This session already covers the themes that similar cases described. No additional probes suggested.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Topic chips — always visible while the section is open.
+                        Each chip is a deep-dive trigger; clicking pops out
+                        that theme's full case-study card below. Clicking the
+                        active chip closes the popout (chips-only view). */}
+                    <div className="flex flex-wrap gap-2">
+                      {knownUnknowns.map((entry) => {
+                        const isActive = selectedHiddenTopic === entry.id;
+                        const isPinned = pinnedProbes.has(entry.id);
+                        return (
                           <button
+                            key={entry.id}
                             type="button"
-                            onClick={() => toggleProbe(entry.id, entry.theme)}
-                            className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
-                              isPinned
-                                ? 'bg-primary text-white hover:bg-primary-dark'
-                                : 'bg-white border border-gray-200 text-gray-600 hover:border-primary/40 hover:text-primary'
+                            onClick={() => setSelectedHiddenTopic(isActive ? null : entry.id)}
+                            aria-pressed={isActive}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-medium transition ${
+                              isActive
+                                ? 'bg-amber-100 border-amber-400 text-amber-900 shadow-sm'
+                                : isPinned
+                                  ? 'bg-primary/5 border-primary/30 text-primary hover:bg-primary/10'
+                                  : 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'
                             }`}
                           >
-                            {isPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
-                            {isPinned ? 'Pinned to invite next session' : 'Pin to invite next session'}
+                            {isPinned && <Pin className="w-3 h-3 flex-shrink-0" />}
+                            <span>{entry.theme}</span>
+                            <span className="text-[10px] font-mono opacity-70">
+                              {entry.percentage}%
+                            </span>
                           </button>
+                        );
+                      })}
+                    </div>
+
+                    {!selectedHiddenTopic && (
+                      <p className="text-xs text-gray-400 italic">
+                        Click a topic to see how comparable clients carried it — and how to gently invite it.
+                      </p>
+                    )}
+
+                    {/* Deep-dive card for the selected theme only */}
+                    {knownUnknowns
+                      .filter((entry) => entry.id === selectedHiddenTopic)
+                      .map((entry) => {
+                        const isPinned = pinnedProbes.has(entry.id);
+                        const themeTypeLabel =
+                          entry.themeType === 'concern'
+                            ? 'Presenting Concern'
+                            : entry.themeType === 'structure'
+                              ? 'Structural Pattern'
+                              : 'Thematic Pattern';
+                        return (
+                          <article
+                            key={entry.id}
+                            className={`relative rounded-md border-2 overflow-hidden transition-all ${
+                              isPinned
+                                ? 'border-primary/30 bg-primary/[0.02] '
+                                : 'border-amber-200/70 bg-white'
+                            }`}
+                          >
+                            {/* Left accent bar */}
+                            <div
+                              className={`absolute left-0 top-0 bottom-0 w-1 ${
+                                isPinned ? 'bg-primary' : 'bg-amber-400'
+                              }`}
+                            />
+
+                            {/* HEADER: hero metric + theme + type badge */}
+                            <div className="pl-5 pr-5 pt-5 pb-4 flex items-start gap-4 border-b border-gray-100">
+                              {/* Big % box — hero visual weight */}
+                              <div className="flex-shrink-0 flex flex-col items-center justify-center w-20 h-20 rounded-md bg-amber-50 border border-amber-200">
+                                <p className="text-2xl font-bold text-amber-700 font-mono leading-none">
+                                  {entry.percentage}<span className="text-sm">%</span>
+                                </p>
+                                <p className="text-[10px] text-amber-600/70 mt-1 font-mono">
+                                  {entry.caseCount}/{entry.totalNeighbors} cases
+                                </p>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                  <h5 className="font-playfair text-xl font-bold text-gray-900 leading-tight">
+                                    {entry.theme}
+                                  </h5>
+                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                                    {themeTypeLabel}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-600 leading-relaxed">
+                                  <span className="font-semibold text-gray-800">{entry.caseCount} of {entry.totalNeighbors}</span> comparable clients carried this — but it hasn&apos;t come up yet in this session&apos;s coded moments, CBT distortions, or clinical priority. Comparable cases often disclosed it only after several sessions.
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedHiddenTopic(null)}
+                                aria-label="Close deep dive"
+                                className="p-1 text-gray-300 hover:text-gray-500 transition flex-shrink-0"
+                              >
+                                <ChevronUp className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            {/* QUOTES: verbatim from comparable clients */}
+                            {entry.supportingCases.length > 0 && (
+                              <div className="pl-5 pr-5 pt-4 pb-3 bg-gray-50/40 border-b border-gray-100">
+                                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                                  <MessageSquareQuote className="w-3 h-3" />
+                                  How comparable clients described carrying it (once they did name it)
+                                </p>
+                                <ul className="space-y-2.5">
+                                  {entry.supportingCases.slice(0, 3).map((c, idx) => (
+                                    <li key={`${entry.id}-q-${idx}`} className="flex items-start gap-2.5">
+                                      <span className="text-amber-400 text-base leading-none mt-0.5 flex-shrink-0">&ldquo;</span>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm text-gray-800 italic leading-relaxed">
+                                          {c.representativeQuote}
+                                        </p>
+                                        <p className="text-[10px] font-mono text-gray-400 mt-0.5">
+                                          &mdash; {c.patientCode} <span className="not-italic text-gray-400/80">(anonymized)</span>
+                                        </p>
+                                      </div>
+                                    </li>
+                                  ))}
+                                </ul>
+                                {entry.supportingCases.length > 3 && (
+                                  <p className="text-[10px] text-gray-400 mt-2 italic">
+                                    + {entry.supportingCases.length - 3} more comparable case{entry.supportingCases.length - 3 === 1 ? '' : 's'} in the archive
+                                  </p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* CLINICAL MOVE: observation + concrete probe */}
+                            <div className="pl-5 pr-5 pt-4 pb-4">
+                              <div className="flex items-start gap-2.5 mb-3">
+                                <Lightbulb className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                                <div className="flex-1">
+                                  <p className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wider mb-1">
+                                    Why it stays hidden &middot; how to invite it
+                                  </p>
+                                  <p className="text-sm text-gray-700 leading-relaxed">
+                                    {entry.clinicalMove.observation}
+                                  </p>
+                                </div>
+                              </div>
+                              {entry.clinicalMove.probe && (
+                                <div className="ml-7 mt-2 p-3 bg-emerald-50/60 border border-emerald-100 rounded-lg">
+                                  <div className="flex items-start gap-2">
+                                    <HelpCircle className="w-3.5 h-3.5 text-emerald-700 flex-shrink-0 mt-0.5" />
+                                    <p className="text-sm text-gray-800 leading-relaxed">
+                                      <span className="font-semibold text-emerald-800">Gentle invitation:</span>{' '}
+                                      {entry.clinicalMove.probe}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* ACTION: pin for next session */}
+                              <div className="mt-4 flex items-center justify-between gap-2 pt-3 border-t border-gray-100">
+                                <span className="text-[11px] text-gray-400">
+                                  Source cases: {entry.supportingCases.map((c) => c.patientCode).join(', ')}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleProbe(entry.id, entry.theme)}
+                                  className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                                    isPinned
+                                      ? 'bg-primary text-white hover:bg-primary-dark'
+                                      : 'bg-white border border-gray-200 text-gray-600 hover:border-primary/40 hover:text-primary'
+                                  }`}
+                                >
+                                  {isPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+                                  {isPinned ? 'Pinned to invite next session' : 'Pin to invite next session'}
+                                </button>
+                              </div>
+                            </div>
+                          </article>
+                        );
+                      })}
+
+                    {/* Pinned-probes summary toast/strip */}
+                    {pinnedProbes.size > 0 && (
+                      <div className="flex items-start gap-2.5 p-3 bg-primary/5 border border-primary/15 rounded-lg">
+                        <Pin className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-xs font-semibold text-primary">
+                            {pinnedProbes.size} {pinnedProbes.size === 1 ? 'topic' : 'topics'} pinned to invite next session
+                          </p>
+                          <p className="text-[11px] text-gray-600 mt-0.5">
+                            Hidden content worth gently making space for. These will appear in your pre-session prep when you open this client next time.
+                          </p>
                         </div>
                       </div>
-                    </article>
-                  );
-                })}
-
-                {/* Pinned-probes summary toast/strip */}
-                {pinnedProbes.size > 0 && (
-                  <div className="flex items-start gap-2.5 p-3 bg-primary/5 border border-primary/15 rounded-lg">
-                    <Pin className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-xs font-semibold text-primary">
-                        {pinnedProbes.size} {pinnedProbes.size === 1 ? 'topic' : 'topics'} pinned to invite next session
-                      </p>
-                      <p className="text-[11px] text-gray-600 mt-0.5">
-                        Hidden content worth gently making space for. These will appear in your pre-session prep when you open this client next time.
-                      </p>
-                    </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -999,7 +1088,7 @@ export default function ExperiencesPage() {
           </div>
         ) : (
           <div className="space-y-3 mt-4">
-            {realCases.map((c) => {
+            {realCases.slice(0, 3).map((c) => {
               const caseKey = `case-${c.id}`;
               const isExpanded = expandedCase === caseKey;
               const scorePercent = Math.round(c.matchScore * 100);
